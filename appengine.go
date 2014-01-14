@@ -9,9 +9,8 @@
 package appengine
 
 import (
-	"net/http"
-
 	"code.google.com/p/goprotobuf/proto"
+	"github.com/golang/appengine/internal"
 )
 
 // Context represents the context of an in-flight HTTP request.
@@ -36,8 +35,7 @@ type Context interface {
 	// Developer-facing APIs wrap these methods to provide a more friendly API.
 
 	// Internal use only.
-	// TODO(dsymonds): Use *appengine_internal.CallOptions for opts.
-	Call(service, method string, in, out proto.Message, opts interface{}) error
+	Call(service, method string, in, out proto.Message, opts *internal.CallOptions) error
 	// Internal use only. Use AppID instead.
 	FullyQualifiedAppID() string
 	// Internal use only.
