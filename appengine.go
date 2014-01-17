@@ -13,6 +13,13 @@ import (
 	"github.com/golang/appengine/internal"
 )
 
+// IsDevAppServer reports whether the App Engine app is running in the
+// development App Server.
+func IsDevAppServer() bool {
+	// TODO(dsymonds): Detect this.
+	return false
+}
+
 // Context represents the context of an in-flight HTTP request.
 type Context interface {
 	// Debugf formats its arguments according to the format, analogous to fmt.Printf,
