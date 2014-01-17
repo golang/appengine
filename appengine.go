@@ -41,3 +41,10 @@ type Context interface {
 	// Internal use only.
 	Request() interface{}
 }
+
+// BlobKey is a key for a blobstore blob.
+//
+// Conceptually, this type belongs in the blobstore package, but it lives in
+// the appengine package to avoid a circular dependency: blobstore depends on
+// datastore, and datastore needs to refer to the BlobKey type.
+type BlobKey string
