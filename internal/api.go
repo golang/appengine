@@ -5,16 +5,36 @@
 package internal
 
 import (
-	"errors"
+	"bytes"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
 
 	"code.google.com/p/goprotobuf/proto"
+	runtimepb "github.com/golang/appengine/internal/runtime"
 )
 
-func call(service, method string, data []byte, requestID string) ([]byte, error) {
-	return nil, errors.New("TODO: API calls")
-}
+const (
+	apiPath = "/rpc_http"
+)
+
+var (
+	apiHost = "appengine.googleapis.com:10001" // var for testing
+
+	// Incoming headers.
+	ticketHeader = os.Getenv("HTTP_X_APPENGINE_API_TICKET")
+
+	// Outgoing headers.
+	apiEndpointHeader      = http.CanonicalHeaderKey("X-Google-RPC-Service-Endpoint")
+	apiEndpointHeaderValue = []string{"app-engine-apis"}
+	apiMethodHeader        = http.CanonicalHeaderKey("X-Google-RPC-Service-Method")
+	apiMethodHeaderValue   = []string{"/APIHost.Call"}
+	apiContentType         = http.CanonicalHeaderKey("Content-Type")
+	apiContentTypeValue    = []string{"application/octet-stream"}
+)
 
 // context represents the context of an in-flight HTTP request.
 // It implements the appengine.Context interface.
@@ -44,13 +64,56 @@ func (c *context) Call(service, method string, in, out proto.Message, opts *Call
 		return err
 	}
 
-	// TODO(dsymonds): this isn't right
-	requestID := c.req.Header.Get("X-Appengine-Internal-Request-Id")
-	res, err := call(service, method, data, requestID)
+	ticket := c.req.Header.Get(ticketHeader)
+	req := &runtimepb.APIRequest{
+		ApiPackage:     &service,
+		Call:           &method,
+		Pb:             data,
+		SecurityTicket: &ticket,
+	}
+	hreqBody, err := proto.Marshal(req)
 	if err != nil {
 		return err
 	}
-	return proto.Unmarshal(res, out)
+
+	// TODO(dsymonds): deadline handling, trace info
+
+	hreq := &http.Request{
+		Method: "POST",
+		URL: &url.URL{
+			Scheme: "http",
+			Host:   apiHost,
+			Path:   apiPath,
+		},
+		Header: http.Header{
+			apiEndpointHeader: apiEndpointHeaderValue,
+			apiMethodHeader:   apiMethodHeaderValue,
+			apiContentType:    apiContentTypeValue,
+		},
+		Body:          ioutil.NopCloser(bytes.NewReader(hreqBody)),
+		ContentLength: int64(len(hreqBody)),
+		Host:          apiHost,
+	}
+
+	hresp, err := http.DefaultClient.Do(hreq)
+	if err != nil {
+		return err
+	}
+	defer hresp.Body.Close()
+	if hresp.StatusCode != 200 {
+		return fmt.Errorf("appengine: service bridge returned HTTP %d", hresp.StatusCode)
+	}
+	hrespBody, err := ioutil.ReadAll(hresp.Body)
+	if err != nil {
+		return err
+	}
+
+	res := &runtimepb.APIResponse{}
+	if err := proto.Unmarshal(hrespBody, res); err != nil {
+		return err
+	}
+	// TODO(dsymonds): Check res.Error, etc.
+	return proto.Unmarshal(res.Pb, out)
 }
 
 func (c *context) Request() interface{} {
