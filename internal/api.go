@@ -6,53 +6,10 @@ package internal
 
 import (
 	"errors"
-	"flag"
-	"fmt"
 	"log"
 	"net/http"
-	"strings"
-	"sync"
 
 	"code.google.com/p/goprotobuf/proto"
-)
-
-var (
-	portFlag = flag.Int("port", 0, "HTTP service port")
-)
-
-// serveHTTP serves App Engine HTTP requests.
-func serveHTTP() {
-	err := http.ListenAndServe(fmt.Sprintf(":%d", *portFlag), http.HandlerFunc(handleFilteredHTTP))
-	if err != nil {
-		log.Fatal("appengine: ", err)
-	}
-}
-
-func handleFilteredHTTP(w http.ResponseWriter, r *http.Request) {
-	// Create a private copy of the Request that includes headers that are
-	// private to the runtime and strip those headers from the request that the
-	// user application sees.
-	creq := *r
-	r.Header = make(http.Header)
-	for name, values := range creq.Header {
-		if !strings.HasPrefix(name, "X-Appengine-Internal-") {
-			r.Header[name] = values
-		}
-	}
-	ctxsMu.Lock()
-	ctxs[r] = &context{req: &creq}
-	ctxsMu.Unlock()
-
-	http.DefaultServeMux.ServeHTTP(w, r)
-
-	ctxsMu.Lock()
-	delete(ctxs, r)
-	ctxsMu.Unlock()
-}
-
-var (
-	ctxsMu sync.Mutex
-	ctxs   = make(map[*http.Request]*context)
 )
 
 func call(service, method string, data []byte, requestID string) ([]byte, error) {
@@ -66,17 +23,7 @@ type context struct {
 }
 
 func NewContext(req *http.Request) *context {
-	ctxsMu.Lock()
-	defer ctxsMu.Unlock()
-	c := ctxs[req]
-
-	if c == nil {
-		// Someone passed in an http.Request that is not in-flight.
-		// We panic here rather than panicking at a later point
-		// so that backtraces will be more sensible.
-		log.Panic("appengine: NewContext passed an unknown http.Request")
-	}
-	return c
+	return &context{req: req}
 }
 
 func (c *context) Call(service, method string, in, out proto.Message, opts *CallOptions) error {

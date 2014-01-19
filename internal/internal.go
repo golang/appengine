@@ -9,7 +9,6 @@
 package internal
 
 import (
-	"flag"
 	"fmt"
 	"time"
 
@@ -108,28 +107,6 @@ func (e *CallError) Error() string {
 
 func (e *CallError) IsTimeout() bool {
 	return e.Timeout
-}
-
-// Main is designed so that the generated main package is:
-//
-//	package main
-//
-//	import (
-//		"github.com/golang/appengine/internal"
-//
-//		_ "myapp/package0"
-//		_ "myapp/package1"
-//	)
-//
-//	func main() {
-//		internal.Main()
-//	}
-//
-// The "myapp/packageX" packages are expected to register HTTP handlers
-// in their init functions.
-func Main() {
-	flag.Parse()
-	serveHTTP()
 }
 
 // NamespaceMods is a map from API service to a function that will mutate an RPC request to attach a namespace.
