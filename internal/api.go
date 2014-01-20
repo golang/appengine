@@ -97,22 +97,55 @@ func (c *context) Call(service, method string, in, out proto.Message, opts *Call
 
 	hresp, err := http.DefaultClient.Do(hreq)
 	if err != nil {
-		return err
+		// TODO(dsymonds): Check for timeout, return CallError with Timeout=true.
+		return &CallError{
+			Detail: fmt.Sprintf("service bridge HTTP failed: %v", err),
+			Code:   int32(runtimepb.APIResponse_RPC_ERROR),
+		}
 	}
 	defer hresp.Body.Close()
 	if hresp.StatusCode != 200 {
-		return fmt.Errorf("appengine: service bridge returned HTTP %d", hresp.StatusCode)
+		return &CallError{
+			Detail: fmt.Sprintf("service bridge returned HTTP %d", hresp.StatusCode),
+			Code:   int32(runtimepb.APIResponse_RPC_ERROR),
+		}
 	}
 	hrespBody, err := ioutil.ReadAll(hresp.Body)
 	if err != nil {
-		return err
+		return &CallError{
+			Detail: fmt.Sprintf("service bridge response bad: %v", err),
+			Code:   int32(runtimepb.APIResponse_RPC_ERROR),
+		}
 	}
 
 	res := &runtimepb.APIResponse{}
 	if err := proto.Unmarshal(hrespBody, res); err != nil {
 		return err
 	}
-	// TODO(dsymonds): Check res.Error, etc.
+	if *res.Error != int32(runtimepb.APIResponse_OK) {
+		if *res.Error == int32(runtimepb.APIResponse_RPC_ERROR) {
+			switch res.GetRpcError() {
+			case runtimepb.APIResponse_DEADLINE_EXCEEDED:
+				// TODO(dsymonds): Add a DEADLINE_EXCEEDED error code?
+				return &CallError{
+					Detail:  "Deadline exceeded",
+					Code:    int32(runtimepb.APIResponse_CANCELLED),
+					Timeout: true,
+				}
+			case runtimepb.APIResponse_APPLICATION_ERROR:
+				return &APIError{
+					Service: *req.ApiPackage,
+					Detail:  res.GetErrorMessage(),
+					Code:    res.GetRpcApplicationError(),
+				}
+
+			}
+		}
+		return &CallError{
+			Detail: res.GetErrorMessage(),
+			Code:   *res.Error,
+		}
+	}
 	return proto.Unmarshal(res.Pb, out)
 }
 

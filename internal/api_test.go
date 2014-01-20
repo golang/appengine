@@ -24,6 +24,15 @@ func init() {
 }
 
 func fakeAPIHandler(w http.ResponseWriter, r *http.Request) {
+	writeAPIResponse := func(res *runtimepb.APIResponse) {
+		hresBody, err := proto.Marshal(res)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Failed encoding API response: %v", err), 500)
+			return
+		}
+		w.Write(hresBody)
+	}
+
 	if r.URL.Path != "/rpc_http" {
 		http.NotFound(w, r)
 		return
@@ -39,8 +48,10 @@ func fakeAPIHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if *apiReq.SecurityTicket != "s3cr3t" {
-		// TODO: APIResponse with SECURITY_VIOLATION instead.
-		http.Error(w, fmt.Sprintf("Bad security ticket"), 500)
+		writeAPIResponse(&runtimepb.APIResponse{
+			Error:        proto.Int32(int32(runtimepb.APIResponse_SECURITY_VIOLATION)),
+			ErrorMessage: proto.String("bad security ticket"),
+		})
 		return
 	}
 
@@ -58,36 +69,53 @@ func fakeAPIHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		resOut = res
 	}
+	if service == "errors" {
+		switch method {
+		case "Non200":
+			http.Error(w, "I'm a little teapot.", 418)
+			return
+		case "ShortResponse":
+			w.Header().Set("Content-Length", "100")
+			w.Write([]byte("way too short"))
+			return
+		case "OverQuota":
+			writeAPIResponse(&runtimepb.APIResponse{
+				Error:        proto.Int32(int32(runtimepb.APIResponse_OVER_QUOTA)),
+				ErrorMessage: proto.String("you are hogging the resources!"),
+			})
+			return
+		}
+	}
 
 	encOut, err := proto.Marshal(resOut)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Failed encoding response: %v", err), 500)
 		return
 	}
-	apiRes := &runtimepb.APIResponse{
+	writeAPIResponse(&runtimepb.APIResponse{
 		Error: proto.Int32(int32(runtimepb.APIResponse_OK)),
 		Pb:    encOut,
-	}
-	hresBody, err := proto.Marshal(apiRes)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Failed encoding API response: %v", err), 500)
-		return
-	}
-	w.Write(hresBody)
+	})
+}
+
+func setup() (c *context, cleanup func()) {
+	origAPIHost := apiHost
+	srv := httptest.NewServer(http.HandlerFunc(fakeAPIHandler))
+	apiHost = strings.TrimPrefix(srv.URL, "http://")
+	return NewContext(&http.Request{
+			Header: http.Header{
+				ticketHeader: []string{"s3cr3t"},
+			},
+		}), func() {
+			srv.Close()
+			apiHost = origAPIHost
+		}
 }
 
 func TestAPICall(t *testing.T) {
-	defer func(orig string) { apiHost = orig }(apiHost)
+	c, cleanup := setup()
+	defer cleanup()
 
-	srv := httptest.NewServer(http.HandlerFunc(fakeAPIHandler))
-	defer srv.Close()
-	apiHost = strings.TrimPrefix(srv.URL, "http://")
-
-	c := NewContext(&http.Request{
-		Header: http.Header{
-			ticketHeader: []string{"s3cr3t"},
-		},
-	})
 	req := &basepb.StringProto{
 		Value: proto.String("Doctor Who"),
 	}
@@ -98,5 +126,30 @@ func TestAPICall(t *testing.T) {
 	}
 	if got, want := *res.Value, "David Tennant"; got != want {
 		t.Errorf("Response is %q, want %q", got, want)
+	}
+}
+
+func TestAPICallRPCFailure(t *testing.T) {
+	c, cleanup := setup()
+	defer cleanup()
+
+	testCases := []struct {
+		method string
+		code   runtimepb.APIResponse_ERROR
+	}{
+		{"Non200", runtimepb.APIResponse_RPC_ERROR},
+		{"ShortResponse", runtimepb.APIResponse_RPC_ERROR},
+		{"OverQuota", runtimepb.APIResponse_OVER_QUOTA},
+	}
+	for _, tc := range testCases {
+		err := c.Call("errors", tc.method, &basepb.VoidProto{}, &basepb.VoidProto{}, nil)
+		ce, ok := err.(*CallError)
+		if !ok {
+			t.Errorf("%s: API call error is %T (%v), want *CallError", tc.method, err, err)
+			continue
+		}
+		if ce.Code != int32(tc.code) {
+			t.Errorf("%s: ce.Code = %d, want %d", tc.method, ce.Code, tc.code)
+		}
 	}
 }
