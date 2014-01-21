@@ -9,6 +9,8 @@
 package appengine
 
 import (
+	"net/http"
+
 	"code.google.com/p/goprotobuf/proto"
 	"github.com/golang/appengine/internal"
 )
@@ -47,6 +49,13 @@ type Context interface {
 	FullyQualifiedAppID() string
 	// Internal use only.
 	Request() interface{}
+}
+
+// NewContext returns a context for an in-flight HTTP request.
+func NewContext(req *http.Request) Context {
+	// TODO(dsymonds): Restore this doc comment when it is true:
+	//	Repeated calls will return the same value.
+	return internal.NewContext(req)
 }
 
 // BlobKey is a key for a blobstore blob.
