@@ -171,8 +171,8 @@ func (c *context) FullyQualifiedAppID() string {
 	// TODO(dsymonds): Memoize this.
 
 	// gae_project has everything except the partition prefix.
-	appID := string(mustGetMetadata("attributes/gae_project"))
-	if part := string(mustGetMetadata("attributes/gae_partition")); part != "" {
+	appID := string(mustGetMetadata("instance/attributes/gae_project"))
+	if part := string(mustGetMetadata("instance/attributes/gae_partition")); part != "" {
 		appID = part + "~" + appID
 	}
 
