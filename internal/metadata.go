@@ -10,6 +10,7 @@ package internal
 //	https://developers.google.com/compute/docs/metadata
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"

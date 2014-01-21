@@ -10,6 +10,8 @@ package internal
 
 import (
 	"fmt"
+	"log"
+	"net/http"
 	"time"
 
 	"code.google.com/p/goprotobuf/proto"
@@ -107,6 +109,30 @@ func (e *CallError) Error() string {
 
 func (e *CallError) IsTimeout() bool {
 	return e.Timeout
+}
+
+// Main is designed so that the complete generated main package is:
+//
+//      package main
+//
+//      import (
+//              "github.com/golang/appengine/internal"
+//
+//              _ "myapp/package0"
+//              _ "myapp/package1"
+//      )
+//
+//      func main() {
+//              internal.Main()
+//      }
+//
+// The "myapp/packageX" packages are expected to register HTTP handlers
+// in their init functions.
+func Main() {
+	// TODO(dsymonds): Serve to an http.Handler that intercepts and wraps HTTP requests instead.
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("http.ListenAndServe: %v", err)
+	}
 }
 
 // NamespaceMods is a map from API service to a function that will mutate an RPC request to attach a namespace.
