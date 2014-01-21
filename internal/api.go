@@ -168,5 +168,13 @@ func (c *context) Criticalf(format string, args ...interface{}) { c.logf("CRITIC
 // This may contain a partition prefix (e.g. "s~" for High Replication apps),
 // or a domain prefix (e.g. "example.com:").
 func (c *context) FullyQualifiedAppID() string {
-	return "s~todo" // TODO
+	// TODO(dsymonds): Memoize this.
+
+	// gae_project has everything except the partition prefix.
+	appID := string(mustGetMetadata("attributes/gae_project"))
+	if part := string(mustGetMetadata("attributes/gae_partition")); part != "" {
+		appID = part + "~" + appID
+	}
+
+	return appID
 }
