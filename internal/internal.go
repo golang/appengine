@@ -129,8 +129,7 @@ func (e *CallError) IsTimeout() bool {
 // The "myapp/packageX" packages are expected to register HTTP handlers
 // in their init functions.
 func Main() {
-	// TODO(dsymonds): Serve to an http.Handler that intercepts and wraps HTTP requests instead.
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := http.ListenAndServe(":8080", http.HandlerFunc(handleHTTP)); err != nil {
 		log.Fatalf("http.ListenAndServe: %v", err)
 	}
 }

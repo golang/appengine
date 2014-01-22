@@ -52,9 +52,8 @@ type Context interface {
 }
 
 // NewContext returns a context for an in-flight HTTP request.
+// Repeated calls will return the same value.
 func NewContext(req *http.Request) Context {
-	// TODO(dsymonds): Restore this doc comment when it is true:
-	//	Repeated calls will return the same value.
 	return internal.NewContext(req)
 }
 

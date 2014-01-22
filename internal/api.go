@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"sync"
 
 	"code.google.com/p/goprotobuf/proto"
 	runtimepb "github.com/golang/appengine/internal/runtime"
@@ -36,6 +37,26 @@ var (
 	apiContentTypeValue    = []string{"application/octet-stream"}
 )
 
+func handleHTTP(w http.ResponseWriter, r *http.Request) {
+	ctxs.Lock()
+	ctxs.m[r] = &context{req: r}
+	ctxs.Unlock()
+	defer func() {
+		ctxs.Lock()
+		delete(ctxs.m, r)
+		ctxs.Unlock()
+	}()
+
+	http.DefaultServeMux.ServeHTTP(w, r)
+}
+
+var ctxs = struct {
+	sync.Mutex
+	m map[*http.Request]*context
+}{
+	m: make(map[*http.Request]*context),
+}
+
 // context represents the context of an in-flight HTTP request.
 // It implements the appengine.Context interface.
 type context struct {
@@ -43,7 +64,17 @@ type context struct {
 }
 
 func NewContext(req *http.Request) *context {
-	return &context{req: req}
+	ctxs.Lock()
+	c := ctxs.m[req]
+	ctxs.Unlock()
+
+	if c == nil {
+		// Someone passed in an http.Request that is not in-flight.
+		// We panic here rather than panicking at a later point
+		// so that stack traces will be more sensible.
+		log.Panic("appengine: NewContext passed an unknown http.Request")
+	}
+	return c
 }
 
 func (c *context) Call(service, method string, in, out proto.Message, opts *CallOptions) error {

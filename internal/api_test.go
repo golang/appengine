@@ -102,11 +102,13 @@ func setup() (c *context, cleanup func()) {
 	origAPIHost := apiHost
 	srv := httptest.NewServer(http.HandlerFunc(fakeAPIHandler))
 	apiHost = strings.TrimPrefix(srv.URL, "http://")
-	return NewContext(&http.Request{
-			Header: http.Header{
-				ticketHeader: []string{"s3cr3t"},
+	return &context{
+			req: &http.Request{
+				Header: http.Header{
+					ticketHeader: []string{"s3cr3t"},
+				},
 			},
-		}), func() {
+		}, func() {
 			srv.Close()
 			apiHost = origAPIHost
 		}
