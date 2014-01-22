@@ -11,7 +11,6 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"sync"
 
 	"code.google.com/p/goprotobuf/proto"
@@ -26,7 +25,7 @@ var (
 	apiHost = "appengine.googleapis.com:10001" // var for testing
 
 	// Incoming headers.
-	ticketHeader = os.Getenv("HTTP_X_APPENGINE_API_TICKET")
+	ticketHeader = http.CanonicalHeaderKey("X-AppEngine-API-Ticket")
 
 	// Outgoing headers.
 	apiEndpointHeader      = http.CanonicalHeaderKey("X-Google-RPC-Service-Endpoint")
