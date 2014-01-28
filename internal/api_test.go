@@ -55,6 +55,13 @@ func fakeAPIHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
+	if got, want := r.Header.Get(dapperHeader), "trace-001"; got != want {
+		writeAPIResponse(&runtimepb.APIResponse{
+			Error:        proto.Int32(int32(runtimepb.APIResponse_BAD_REQUEST)),
+			ErrorMessage: proto.String(fmt.Sprintf("trace info = %q, want %q", got, want)),
+		})
+		return
+	}
 
 	service, method := *apiReq.ApiPackage, *apiReq.Call
 	var resOut proto.Message
@@ -107,6 +114,7 @@ func setup() (c *context, cleanup func()) {
 			req: &http.Request{
 				Header: http.Header{
 					ticketHeader: []string{"s3cr3t"},
+					dapperHeader: []string{"trace-001"},
 				},
 			},
 		}, func() {

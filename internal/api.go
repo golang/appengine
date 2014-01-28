@@ -31,6 +31,7 @@ var (
 
 	// Incoming headers.
 	ticketHeader = http.CanonicalHeaderKey("X-AppEngine-API-Ticket")
+	dapperHeader = http.CanonicalHeaderKey("X-Google-DapperTraceInfo")
 
 	// Outgoing headers.
 	apiEndpointHeader      = http.CanonicalHeaderKey("X-Google-RPC-Service-Endpoint")
@@ -127,7 +128,7 @@ func (c *context) Call(service, method string, in, out proto.Message, opts *Call
 		return err
 	}
 
-	// TODO(dsymonds): deadline handling, trace info
+	// TODO(dsymonds): deadline handling
 
 	hreq := &http.Request{
 		Method: "POST",
@@ -144,6 +145,9 @@ func (c *context) Call(service, method string, in, out proto.Message, opts *Call
 		Body:          ioutil.NopCloser(bytes.NewReader(hreqBody)),
 		ContentLength: int64(len(hreqBody)),
 		Host:          apiHost,
+	}
+	if info := c.req.Header.Get(dapperHeader); info != "" {
+		hreq.Header.Set(dapperHeader, info)
 	}
 
 	hresp, err := http.DefaultClient.Do(hreq)
