@@ -11,9 +11,13 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
+	"time"
 
 	"code.google.com/p/goprotobuf/proto"
+	basepb "github.com/golang/appengine/internal/base"
+	logpb "github.com/golang/appengine/internal/log"
 	runtimepb "github.com/golang/appengine/internal/runtime"
 )
 
@@ -37,14 +41,25 @@ var (
 )
 
 func handleHTTP(w http.ResponseWriter, r *http.Request) {
+	c := &context{req: r}
+	stopFlushing := make(chan int)
+
 	ctxs.Lock()
-	ctxs.m[r] = &context{req: r}
+	ctxs.m[r] = c
 	ctxs.Unlock()
 	defer func() {
+		stopFlushing <- 1 // any logging beyond this point will be dropped
+		c.flushLog(false) // flush any pending logs
+
 		ctxs.Lock()
 		delete(ctxs.m, r)
 		ctxs.Unlock()
 	}()
+
+	// Start goroutine responsible for flushing app logs.
+	// This is done after adding c to ctx.m (and stopped before removing it)
+	// because flushing logs requires making an API call.
+	go c.logFlusher(stopFlushing)
 
 	http.DefaultServeMux.ServeHTTP(w, r)
 }
@@ -60,6 +75,11 @@ var ctxs = struct {
 // It implements the appengine.Context interface.
 type context struct {
 	req *http.Request
+
+	pendingLogs struct {
+		sync.Mutex
+		lines []*logpb.UserAppLogLine
+	}
 }
 
 func NewContext(req *http.Request) *context {
@@ -183,16 +203,44 @@ func (c *context) Request() interface{} {
 	return c.req
 }
 
-func (c *context) logf(level, format string, args ...interface{}) {
-	// TODO(dsymonds): This isn't complete.
-	log.Printf(level+": "+format, args...)
+func (c *context) addLogLine(ll *logpb.UserAppLogLine) {
+	// Truncate long log lines.
+	// TODO(dsymonds): Check if this is still necessary.
+	const lim = 8 << 10
+	if len(*ll.Message) > lim {
+		suffix := fmt.Sprintf("...(length %d)", len(*ll.Message))
+		ll.Message = proto.String((*ll.Message)[:lim-len(suffix)] + suffix)
+	}
+
+	c.pendingLogs.Lock()
+	c.pendingLogs.lines = append(c.pendingLogs.lines, ll)
+	c.pendingLogs.Unlock()
 }
 
-func (c *context) Debugf(format string, args ...interface{})    { c.logf("DEBUG", format, args...) }
-func (c *context) Infof(format string, args ...interface{})     { c.logf("INFO", format, args...) }
-func (c *context) Warningf(format string, args ...interface{})  { c.logf("WARNING", format, args...) }
-func (c *context) Errorf(format string, args ...interface{})    { c.logf("ERROR", format, args...) }
-func (c *context) Criticalf(format string, args ...interface{}) { c.logf("CRITICAL", format, args...) }
+var logLevelName = map[int64]string{
+	0: "DEBUG",
+	1: "INFO",
+	2: "WARNING",
+	3: "ERROR",
+	4: "CRITICAL",
+}
+
+func (c *context) logf(level int64, format string, args ...interface{}) {
+	s := fmt.Sprintf(format, args...)
+	s = strings.TrimRight(s, "\n") // Remove any trailing newline characters.
+	c.addLogLine(&logpb.UserAppLogLine{
+		TimestampUsec: proto.Int64(time.Now().UnixNano() / 1e3),
+		Level:         &level,
+		Message:       &s,
+	})
+	log.Print(logLevelName[level] + ": " + s)
+}
+
+func (c *context) Debugf(format string, args ...interface{})    { c.logf(0, format, args...) }
+func (c *context) Infof(format string, args ...interface{})     { c.logf(1, format, args...) }
+func (c *context) Warningf(format string, args ...interface{})  { c.logf(2, format, args...) }
+func (c *context) Errorf(format string, args ...interface{})    { c.logf(3, format, args...) }
+func (c *context) Criticalf(format string, args ...interface{}) { c.logf(4, format, args...) }
 
 // FullyQualifiedAppID returns the fully-qualified application ID.
 // This may contain a partition prefix (e.g. "s~" for High Replication apps),
@@ -207,4 +255,82 @@ func (c *context) FullyQualifiedAppID() string {
 	}
 
 	return appID
+}
+
+// flushLog attempts to flush any pending logs to the appserver.
+// It should not be called concurrently.
+func (c *context) flushLog(force bool) (flushed bool) {
+	c.pendingLogs.Lock()
+	// Grab up to 30 MB. We can get away with up to 32 MB, but let's be cautious.
+	n, rem := 0, 30<<20
+	for ; n < len(c.pendingLogs.lines); n++ {
+		ll := c.pendingLogs.lines[n]
+		// Each log line will require about 3 bytes of overhead.
+		nb := proto.Size(ll) + 3
+		if nb > rem {
+			break
+		}
+		rem -= nb
+	}
+	lines := c.pendingLogs.lines[:n]
+	c.pendingLogs.lines = c.pendingLogs.lines[n:]
+	c.pendingLogs.Unlock()
+
+	if len(lines) == 0 && !force {
+		// Nothing to flush.
+		return false
+	}
+
+	rescueLogs := false
+	defer func() {
+		if rescueLogs {
+			c.pendingLogs.Lock()
+			c.pendingLogs.lines = append(lines, c.pendingLogs.lines...)
+			c.pendingLogs.Unlock()
+		}
+	}()
+
+	buf, err := proto.Marshal(&logpb.UserAppLogGroup{
+		LogLine: lines,
+	})
+	if err != nil {
+		log.Printf("internal.flushLog: marshaling UserAppLogGroup: %v", err)
+		rescueLogs = true
+		return false
+	}
+
+	req := &logpb.FlushRequest{
+		Logs: buf,
+	}
+	res := &basepb.VoidProto{}
+	if err := c.Call("logservice", "Flush", req, res, nil); err != nil {
+		log.Printf("internal.flushLog: Flush RPC: %v", err)
+		rescueLogs = true
+		return false
+	}
+	return true
+}
+
+const (
+	// Log flushing parameters.
+	flushInterval      = 1 * time.Second
+	forceFlushInterval = 60 * time.Second
+)
+
+func (c *context) logFlusher(stop <-chan int) {
+	lastFlush := time.Now()
+	tick := time.NewTicker(flushInterval)
+	for {
+		select {
+		case <-stop:
+			// Request finished.
+			tick.Stop()
+			return
+		case <-tick.C:
+			force := time.Now().Sub(lastFlush) > forceFlushInterval
+			if c.flushLog(force) {
+				lastFlush = time.Now()
+			}
+		}
+	}
 }
