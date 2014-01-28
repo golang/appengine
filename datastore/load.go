@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/golang/appengine"
-
 	pb "github.com/golang/appengine/internal/datastore"
 )
 

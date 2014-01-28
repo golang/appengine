@@ -13,8 +13,8 @@ import (
 	"strings"
 
 	"code.google.com/p/goprotobuf/proto"
-	"github.com/golang/appengine"
 
+	"github.com/golang/appengine"
 	pb "github.com/golang/appengine/internal/datastore"
 )
 

@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	"code.google.com/p/goprotobuf/proto"
+
 	pb "github.com/golang/appengine/internal/datastore"
 )
 

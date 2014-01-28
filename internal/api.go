@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"code.google.com/p/goprotobuf/proto"
+
 	basepb "github.com/golang/appengine/internal/base"
 	logpb "github.com/golang/appengine/internal/log"
 	runtimepb "github.com/golang/appengine/internal/runtime"

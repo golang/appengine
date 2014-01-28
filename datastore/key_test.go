@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"code.google.com/p/goprotobuf/proto"
+
 	"github.com/golang/appengine"
 	"github.com/golang/appengine/internal"
 )

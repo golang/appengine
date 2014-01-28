@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"code.google.com/p/goprotobuf/proto"
+
 	basepb "github.com/golang/appengine/internal/base"
 	runtimepb "github.com/golang/appengine/internal/runtime"
 )

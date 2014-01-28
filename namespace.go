@@ -9,6 +9,7 @@ import (
 	"regexp"
 
 	"code.google.com/p/goprotobuf/proto"
+
 	"github.com/golang/appengine/internal"
 	basepb "github.com/golang/appengine/internal/base"
 )

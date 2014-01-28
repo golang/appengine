@@ -8,9 +8,9 @@ import (
 	"errors"
 
 	"code.google.com/p/goprotobuf/proto"
+
 	"github.com/golang/appengine"
 	"github.com/golang/appengine/internal"
-
 	basepb "github.com/golang/appengine/internal/base"
 	pb "github.com/golang/appengine/internal/datastore"
 )

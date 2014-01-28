@@ -23,9 +23,9 @@ import (
 	"net/mail"
 
 	"code.google.com/p/goprotobuf/proto"
+
 	"github.com/golang/appengine"
 	"github.com/golang/appengine/internal"
-
 	bpb "github.com/golang/appengine/internal/base"
 	pb "github.com/golang/appengine/internal/mail"
 )
