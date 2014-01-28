@@ -63,6 +63,7 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 	// because flushing logs requires making an API call.
 	go c.logFlusher(stopFlushing)
 
+	// TODO(dsymonds): Catch panics and log them with level=critical.
 	http.DefaultServeMux.ServeHTTP(w, r)
 }
 
