@@ -30,8 +30,10 @@ var (
 	apiHost = "appengine.googleapis.com:10001" // var for testing
 
 	// Incoming headers.
-	ticketHeader = http.CanonicalHeaderKey("X-AppEngine-API-Ticket")
-	dapperHeader = http.CanonicalHeaderKey("X-Google-DapperTraceInfo")
+	ticketHeader       = http.CanonicalHeaderKey("X-AppEngine-API-Ticket")
+	dapperHeader       = http.CanonicalHeaderKey("X-Google-DapperTraceInfo")
+	defNamespaceHeader = http.CanonicalHeaderKey("X-AppEngine-Default-Namespace")
+	curNamespaceHeader = http.CanonicalHeaderKey("X-AppEngine-Current-Namespace")
 
 	// Outgoing headers.
 	apiEndpointHeader      = http.CanonicalHeaderKey("X-Google-RPC-Service-Endpoint")
@@ -100,18 +102,17 @@ func NewContext(req *http.Request) *context {
 }
 
 func (c *context) Call(service, method string, in, out proto.Message, opts *CallOptions) error {
-	/* TODO
 	if service == "__go__" {
 		if method == "GetNamespace" {
-			out.(*basepb.StringProto).Value = proto.String(c.req.Header.Get("X-AppEngine-Current-Namespace"))
+			out.(*basepb.StringProto).Value = proto.String(c.req.Header.Get(curNamespaceHeader))
 			return nil
 		}
 		if method == "GetDefaultNamespace" {
-			out.(*basepb.StringProto).Value = proto.String(c.req.Header.Get("X-AppEngine-Default-Namespace"))
+			out.(*basepb.StringProto).Value = proto.String(c.req.Header.Get(defNamespaceHeader))
 			return nil
 		}
 	}
-	*/
+
 	data, err := proto.Marshal(in)
 	if err != nil {
 		return err
