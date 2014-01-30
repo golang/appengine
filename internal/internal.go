@@ -10,8 +10,10 @@ package internal
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"code.google.com/p/goprotobuf/proto"
@@ -129,8 +131,26 @@ func (e *CallError) IsTimeout() bool {
 // The "myapp/packageX" packages are expected to register HTTP handlers
 // in their init functions.
 func Main() {
+	installHealthChecker(http.DefaultServeMux)
+
 	if err := http.ListenAndServe(":8080", http.HandlerFunc(handleHTTP)); err != nil {
 		log.Fatalf("http.ListenAndServe: %v", err)
+	}
+}
+
+func installHealthChecker(mux *http.ServeMux) {
+	// If no health check handler has been installed by this point, add a trivial one.
+	const healthPath = "/_ah/health"
+	hreq := &http.Request{
+		Method: "GET",
+		URL: &url.URL{
+			Path: healthPath,
+		},
+	}
+	if _, pat := mux.Handler(hreq); pat != healthPath {
+		mux.HandleFunc(healthPath, func(w http.ResponseWriter, r *http.Request) {
+			io.WriteString(w, "ok")
+		})
 	}
 }
 
