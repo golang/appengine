@@ -23,3 +23,10 @@ for f in $(find $PKG/internal -name '*.proto'); do
 	echo 1>&2 "* $f"
 	protoc --go_out=. $f
 done
+
+# Fix up import lines.
+# This should be fixed upstream.
+# https://code.google.com/p/goprotobuf/issues/detail?id=32
+for f in $(find $PKG/internal -name '*.pb.go'); do
+  sed -i '/^import.*\.pb"$/s,/[^/]*\.pb"$,",' $f
+done

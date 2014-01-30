@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package datastore is a generated protocol buffer package.
+Package appengine is a generated protocol buffer package.
 
 It is generated from these files:
 	github.com/golang/appengine/internal/datastore/datastore_v3.proto
@@ -48,7 +48,7 @@ It has these top-level messages:
 	BeginTransactionRequest
 	CommitResponse
 */
-package datastore
+package appengine
 
 import proto "code.google.com/p/goprotobuf/proto"
 import json "encoding/json"
@@ -741,13 +741,13 @@ func (m *PropertyValue_ReferenceValue_PathElement) GetName() string {
 }
 
 type Property struct {
-	Meaning               *Property_Meaning               `protobuf:"varint,1,opt,name=meaning,enum=datastore.Property_Meaning,def=0" json:"meaning,omitempty"`
+	Meaning               *Property_Meaning               `protobuf:"varint,1,opt,name=meaning,enum=appengine.Property_Meaning,def=0" json:"meaning,omitempty"`
 	MeaningUri            *string                         `protobuf:"bytes,2,opt,name=meaning_uri" json:"meaning_uri,omitempty"`
 	Name                  *string                         `protobuf:"bytes,3,req,name=name" json:"name,omitempty"`
 	Value                 *PropertyValue                  `protobuf:"bytes,5,req,name=value" json:"value,omitempty"`
 	Multiple              *bool                           `protobuf:"varint,4,req,name=multiple" json:"multiple,omitempty"`
 	Searchable            *bool                           `protobuf:"varint,6,opt,name=searchable,def=0" json:"searchable,omitempty"`
-	FtsTokenizationOption *Property_FtsTokenizationOption `protobuf:"varint,8,opt,name=fts_tokenization_option,enum=datastore.Property_FtsTokenizationOption" json:"fts_tokenization_option,omitempty"`
+	FtsTokenizationOption *Property_FtsTokenizationOption `protobuf:"varint,8,opt,name=fts_tokenization_option,enum=appengine.Property_FtsTokenizationOption" json:"fts_tokenization_option,omitempty"`
 	Locale                *string                         `protobuf:"bytes,9,opt,name=locale,def=en" json:"locale,omitempty"`
 	XXX_unrecognized      []byte                          `json:"-"`
 }
@@ -948,7 +948,7 @@ type EntityProto struct {
 	Key              *Reference        `protobuf:"bytes,13,req,name=key" json:"key,omitempty"`
 	EntityGroup      *Path             `protobuf:"bytes,16,req,name=entity_group" json:"entity_group,omitempty"`
 	Owner            *User             `protobuf:"bytes,17,opt,name=owner" json:"owner,omitempty"`
-	Kind             *EntityProto_Kind `protobuf:"varint,4,opt,name=kind,enum=datastore.EntityProto_Kind" json:"kind,omitempty"`
+	Kind             *EntityProto_Kind `protobuf:"varint,4,opt,name=kind,enum=appengine.EntityProto_Kind" json:"kind,omitempty"`
 	KindUri          *string           `protobuf:"bytes,5,opt,name=kind_uri" json:"kind_uri,omitempty"`
 	Property         []*Property       `protobuf:"bytes,14,rep,name=property" json:"property,omitempty"`
 	RawProperty      []*Property       `protobuf:"bytes,15,rep,name=raw_property" json:"raw_property,omitempty"`
@@ -1074,7 +1074,7 @@ func (m *Index) GetProperty() []*Index_Property {
 
 type Index_Property struct {
 	Name             *string                   `protobuf:"bytes,3,req,name=name" json:"name,omitempty"`
-	Direction        *Index_Property_Direction `protobuf:"varint,4,opt,name=direction,enum=datastore.Index_Property_Direction,def=1" json:"direction,omitempty"`
+	Direction        *Index_Property_Direction `protobuf:"varint,4,opt,name=direction,enum=appengine.Index_Property_Direction,def=1" json:"direction,omitempty"`
 	XXX_unrecognized []byte                    `json:"-"`
 }
 
@@ -1102,7 +1102,7 @@ type CompositeIndex struct {
 	AppId             *string               `protobuf:"bytes,1,req,name=app_id" json:"app_id,omitempty"`
 	Id                *int64                `protobuf:"varint,2,req,name=id" json:"id,omitempty"`
 	Definition        *Index                `protobuf:"bytes,3,req,name=definition" json:"definition,omitempty"`
-	State             *CompositeIndex_State `protobuf:"varint,4,req,name=state,enum=datastore.CompositeIndex_State" json:"state,omitempty"`
+	State             *CompositeIndex_State `protobuf:"varint,4,req,name=state,enum=appengine.CompositeIndex_State" json:"state,omitempty"`
 	OnlyUseIfRequired *bool                 `protobuf:"varint,6,opt,name=only_use_if_required,def=0" json:"only_use_if_required,omitempty"`
 	XXX_unrecognized  []byte                `json:"-"`
 }
@@ -1315,7 +1315,7 @@ type Query struct {
 	Filter              []*Query_Filter   `protobuf:"group,4,rep" json:"filter,omitempty"`
 	SearchQuery         *string           `protobuf:"bytes,8,opt,name=search_query" json:"search_query,omitempty"`
 	Order               []*Query_Order    `protobuf:"group,9,rep" json:"order,omitempty"`
-	Hint                *Query_Hint       `protobuf:"varint,18,opt,name=hint,enum=datastore.Query_Hint" json:"hint,omitempty"`
+	Hint                *Query_Hint       `protobuf:"varint,18,opt,name=hint,enum=appengine.Query_Hint" json:"hint,omitempty"`
 	Count               *int32            `protobuf:"varint,23,opt,name=count" json:"count,omitempty"`
 	Offset              *int32            `protobuf:"varint,12,opt,name=offset,def=0" json:"offset,omitempty"`
 	Limit               *int32            `protobuf:"varint,16,opt,name=limit" json:"limit,omitempty"`
@@ -1537,7 +1537,7 @@ func (m *Query) GetPersistOffset() bool {
 }
 
 type Query_Filter struct {
-	Op               *Query_Filter_Operator `protobuf:"varint,6,req,name=op,enum=datastore.Query_Filter_Operator" json:"op,omitempty"`
+	Op               *Query_Filter_Operator `protobuf:"varint,6,req,name=op,enum=appengine.Query_Filter_Operator" json:"op,omitempty"`
 	Property         []*Property            `protobuf:"bytes,14,rep,name=property" json:"property,omitempty"`
 	XXX_unrecognized []byte                 `json:"-"`
 }
@@ -1562,7 +1562,7 @@ func (m *Query_Filter) GetProperty() []*Property {
 
 type Query_Order struct {
 	Property         *string                `protobuf:"bytes,10,req,name=property" json:"property,omitempty"`
-	Direction        *Query_Order_Direction `protobuf:"varint,11,opt,name=direction,enum=datastore.Query_Order_Direction,def=1" json:"direction,omitempty"`
+	Direction        *Query_Order_Direction `protobuf:"varint,11,opt,name=direction,enum=appengine.Query_Order_Direction,def=1" json:"direction,omitempty"`
 	XXX_unrecognized []byte                 `json:"-"`
 }
 
@@ -2143,7 +2143,7 @@ type PutRequest struct {
 	Force            *bool                    `protobuf:"varint,7,opt,name=force,def=0" json:"force,omitempty"`
 	MarkChanges      *bool                    `protobuf:"varint,8,opt,name=mark_changes,def=0" json:"mark_changes,omitempty"`
 	Snapshot         []*Snapshot              `protobuf:"bytes,9,rep,name=snapshot" json:"snapshot,omitempty"`
-	AutoIdPolicy     *PutRequest_AutoIdPolicy `protobuf:"varint,10,opt,name=auto_id_policy,enum=datastore.PutRequest_AutoIdPolicy,def=0" json:"auto_id_policy,omitempty"`
+	AutoIdPolicy     *PutRequest_AutoIdPolicy `protobuf:"varint,10,opt,name=auto_id_policy,enum=appengine.PutRequest_AutoIdPolicy,def=0" json:"auto_id_policy,omitempty"`
 	XXX_unrecognized []byte                   `json:"-"`
 }
 
@@ -2775,15 +2775,15 @@ func (m *CommitResponse_Version) GetVersion() int64 {
 }
 
 func init() {
-	proto.RegisterEnum("datastore.Property_Meaning", Property_Meaning_name, Property_Meaning_value)
-	proto.RegisterEnum("datastore.Property_FtsTokenizationOption", Property_FtsTokenizationOption_name, Property_FtsTokenizationOption_value)
-	proto.RegisterEnum("datastore.EntityProto_Kind", EntityProto_Kind_name, EntityProto_Kind_value)
-	proto.RegisterEnum("datastore.Index_Property_Direction", Index_Property_Direction_name, Index_Property_Direction_value)
-	proto.RegisterEnum("datastore.CompositeIndex_State", CompositeIndex_State_name, CompositeIndex_State_value)
-	proto.RegisterEnum("datastore.Snapshot_Status", Snapshot_Status_name, Snapshot_Status_value)
-	proto.RegisterEnum("datastore.Query_Hint", Query_Hint_name, Query_Hint_value)
-	proto.RegisterEnum("datastore.Query_Filter_Operator", Query_Filter_Operator_name, Query_Filter_Operator_value)
-	proto.RegisterEnum("datastore.Query_Order_Direction", Query_Order_Direction_name, Query_Order_Direction_value)
-	proto.RegisterEnum("datastore.Error_ErrorCode", Error_ErrorCode_name, Error_ErrorCode_value)
-	proto.RegisterEnum("datastore.PutRequest_AutoIdPolicy", PutRequest_AutoIdPolicy_name, PutRequest_AutoIdPolicy_value)
+	proto.RegisterEnum("appengine.Property_Meaning", Property_Meaning_name, Property_Meaning_value)
+	proto.RegisterEnum("appengine.Property_FtsTokenizationOption", Property_FtsTokenizationOption_name, Property_FtsTokenizationOption_value)
+	proto.RegisterEnum("appengine.EntityProto_Kind", EntityProto_Kind_name, EntityProto_Kind_value)
+	proto.RegisterEnum("appengine.Index_Property_Direction", Index_Property_Direction_name, Index_Property_Direction_value)
+	proto.RegisterEnum("appengine.CompositeIndex_State", CompositeIndex_State_name, CompositeIndex_State_value)
+	proto.RegisterEnum("appengine.Snapshot_Status", Snapshot_Status_name, Snapshot_Status_value)
+	proto.RegisterEnum("appengine.Query_Hint", Query_Hint_name, Query_Hint_value)
+	proto.RegisterEnum("appengine.Query_Filter_Operator", Query_Filter_Operator_name, Query_Filter_Operator_value)
+	proto.RegisterEnum("appengine.Query_Order_Direction", Query_Order_Direction_name, Query_Order_Direction_value)
+	proto.RegisterEnum("appengine.Error_ErrorCode", Error_ErrorCode_name, Error_ErrorCode_value)
+	proto.RegisterEnum("appengine.PutRequest_AutoIdPolicy", PutRequest_AutoIdPolicy_name, PutRequest_AutoIdPolicy_value)
 }
