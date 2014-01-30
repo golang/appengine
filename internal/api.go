@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -65,8 +66,56 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 	// because flushing logs requires making an API call.
 	go c.logFlusher(stopFlushing)
 
-	// TODO(dsymonds): Catch panics and log them with level=critical.
+	executeRequestSafely(c, w, r)
+}
+
+func executeRequestSafely(c *context, w http.ResponseWriter, r *http.Request) {
+	defer func() {
+		if x := recover(); x != nil {
+			c.logf(4, "%s", renderPanic(x)) // 4 == critical
+		}
+	}()
+
 	http.DefaultServeMux.ServeHTTP(w, r)
+}
+
+func renderPanic(x interface{}) string {
+	buf := make([]byte, 16<<10) // 16 KB should be plenty
+	buf = buf[:runtime.Stack(buf, false)]
+
+	// Remove the first few stack frames:
+	//   this func
+	//   the recover closure in the caller
+	// That will root the stack trace at the site of the panic.
+	const (
+		skipStart  = "internal.renderPanic"
+		skipFrames = 2
+	)
+	start := bytes.Index(buf, []byte(skipStart))
+	p := start
+	for i := 0; i < skipFrames*2 && p+1 < len(buf); i++ {
+		p = bytes.IndexByte(buf[p+1:], '\n') + p + 1
+		if p < 0 {
+			break
+		}
+	}
+	if p >= 0 {
+		// buf[start:p+1] is the block to remove.
+		// Copy buf[p+1:] over buf[start:] and shrink buf.
+		copy(buf[start:], buf[p+1:])
+		buf = buf[:len(buf)-(p+1-start)]
+	}
+
+	// Add panic heading.
+	head := fmt.Sprintf("panic: %v\n\n", x)
+	if len(head) > len(buf) {
+		// Extremely unlikely to happen.
+		return head
+	}
+	copy(buf[len(head):], buf)
+	copy(buf, head)
+
+	return string(buf)
 }
 
 var ctxs = struct {
