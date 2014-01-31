@@ -210,13 +210,13 @@ func (c *context) Call(service, method string, in, out proto.Message, opts *Call
 		}
 	}
 	defer hresp.Body.Close()
+	hrespBody, err := ioutil.ReadAll(hresp.Body)
 	if hresp.StatusCode != 200 {
 		return &CallError{
-			Detail: fmt.Sprintf("service bridge returned HTTP %d", hresp.StatusCode),
+			Detail: fmt.Sprintf("service bridge returned HTTP %d (%q)", hresp.StatusCode, hrespBody),
 			Code:   int32(runtimepb.APIResponse_RPC_ERROR),
 		}
 	}
-	hrespBody, err := ioutil.ReadAll(hresp.Body)
 	if err != nil {
 		return &CallError{
 			Detail: fmt.Sprintf("service bridge response bad: %v", err),
