@@ -5,11 +5,14 @@
 package internal
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -27,6 +30,8 @@ func init() {
 
 type fakeAPIHandler struct {
 	die chan int // closed when the test server is going down
+
+	LogFlushes int32 // atomic
 }
 
 func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -107,6 +112,12 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			resOut = &basepb.VoidProto{}
 		}
 	}
+	if service == "logservice" && method == "Flush" {
+		// Pretend log flushing is slow.
+		time.Sleep(50 * time.Millisecond)
+		atomic.AddInt32(&f.LogFlushes, 1)
+		resOut = &basepb.VoidProto{}
+	}
 
 	encOut, err := proto.Marshal(resOut)
 	if err != nil {
@@ -119,14 +130,14 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func setup() (c *context, cleanup func()) {
+func setup() (f *fakeAPIHandler, c *context, cleanup func()) {
 	origAPIHost := apiHost
-	f := &fakeAPIHandler{
+	f = &fakeAPIHandler{
 		die: make(chan int),
 	}
 	srv := httptest.NewServer(f)
 	apiHost = strings.TrimPrefix(srv.URL, "http://")
-	return &context{
+	return f, &context{
 			req: &http.Request{
 				Header: http.Header{
 					ticketHeader: []string{"s3cr3t"},
@@ -141,7 +152,7 @@ func setup() (c *context, cleanup func()) {
 }
 
 func TestAPICall(t *testing.T) {
-	c, cleanup := setup()
+	_, c, cleanup := setup()
 	defer cleanup()
 
 	req := &basepb.StringProto{
@@ -158,7 +169,7 @@ func TestAPICall(t *testing.T) {
 }
 
 func TestAPICallRPCFailure(t *testing.T) {
-	c, cleanup := setup()
+	_, c, cleanup := setup()
 	defer cleanup()
 
 	testCases := []struct {
@@ -183,5 +194,48 @@ func TestAPICallRPCFailure(t *testing.T) {
 		if ce.Code != int32(tc.code) {
 			t.Errorf("%s: ce.Code = %d, want %d", tc.method, ce.Code, tc.code)
 		}
+	}
+}
+
+func TestDelayedLogFlushing(t *testing.T) {
+	f, c, cleanup := setup()
+	defer cleanup()
+
+	http.HandleFunc("/quick_log", func(w http.ResponseWriter, r *http.Request) {
+		c := NewContext(r)
+		c.Infof("It's a lovely day.")
+		w.WriteHeader(200)
+		w.Write(make([]byte, 100<<10)) // write 100 KB to force HTTP flush
+	})
+
+	r := &http.Request{
+		Method: "GET",
+		URL: &url.URL{
+			Scheme: "http",
+			Path:   "/quick_log",
+		},
+		Header: c.req.Header,
+		Body:   ioutil.NopCloser(bytes.NewReader(nil)),
+	}
+	w := httptest.NewRecorder()
+
+	// Check that log flushing does not hold up the HTTP response.
+	start := time.Now()
+	handleHTTP(w, r)
+	if d := time.Since(start); d > 10*time.Millisecond {
+		t.Errorf("handleHTTP took %v, want under 10ms", d)
+	}
+	const hdr = "X-AppEngine-Log-Flush-Count"
+	if h := w.HeaderMap.Get(hdr); h != "1" {
+		t.Errorf("%s header = %q, want %q", hdr, h, "1")
+	}
+	if f := atomic.LoadInt32(&f.LogFlushes); f != 0 {
+		t.Errorf("After HTTP response: f.LogFlushes = %d, want 0", f)
+	}
+
+	// Check that the log flush eventually comes in.
+	time.Sleep(100 * time.Millisecond)
+	if f := atomic.LoadInt32(&f.LogFlushes); f != 1 {
+		t.Errorf("After 100ms: f.LogFlushes = %d, want 1", f)
 	}
 }

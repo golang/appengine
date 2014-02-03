@@ -46,6 +46,7 @@ var (
 	apiDeadlineHeader      = http.CanonicalHeaderKey("X-Google-RPC-Service-Deadline")
 	apiContentType         = http.CanonicalHeaderKey("Content-Type")
 	apiContentTypeValue    = []string{"application/octet-stream"}
+	logFlushHeader         = http.CanonicalHeaderKey("X-AppEngine-Log-Flush-Count")
 
 	apiHTTPClient = &http.Client{
 		Transport: &http.Transport{
@@ -55,16 +56,16 @@ var (
 )
 
 func handleHTTP(w http.ResponseWriter, r *http.Request) {
-	c := &context{req: r}
+	c := &context{
+		req:       r,
+		outHeader: w.Header(),
+	}
 	stopFlushing := make(chan int)
 
 	ctxs.Lock()
 	ctxs.m[r] = c
 	ctxs.Unlock()
 	defer func() {
-		stopFlushing <- 1 // any logging beyond this point will be dropped
-		c.flushLog(false) // flush any pending logs
-
 		ctxs.Lock()
 		delete(ctxs.m, r)
 		ctxs.Unlock()
@@ -75,17 +76,38 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 	// because flushing logs requires making an API call.
 	go c.logFlusher(stopFlushing)
 
-	executeRequestSafely(c, w, r)
+	executeRequestSafely(c, r)
+	c.outHeader = nil // make sure header changes aren't respected any more
+
+	stopFlushing <- 1 // any logging beyond this point will be dropped
+
+	// Flush any pending logs asynchronously.
+	c.pendingLogs.Lock()
+	flushes := c.pendingLogs.flushes
+	if len(c.pendingLogs.lines) > 0 {
+		flushes++
+	}
+	c.pendingLogs.Unlock()
+	go c.flushLog(false)
+	w.Header().Set(logFlushHeader, strconv.Itoa(flushes))
+
+	// Avoid nil Write call if c.Write is never called.
+	if c.outCode != 0 {
+		w.WriteHeader(c.outCode)
+	}
+	if c.outBody != nil {
+		w.Write(c.outBody)
+	}
 }
 
-func executeRequestSafely(c *context, w http.ResponseWriter, r *http.Request) {
+func executeRequestSafely(c *context, r *http.Request) {
 	defer func() {
 		if x := recover(); x != nil {
 			c.logf(4, "%s", renderPanic(x)) // 4 == critical
 		}
 	}()
 
-	http.DefaultServeMux.ServeHTTP(w, r)
+	http.DefaultServeMux.ServeHTTP(c, r)
 }
 
 func renderPanic(x interface{}) string {
@@ -135,13 +157,18 @@ var ctxs = struct {
 }
 
 // context represents the context of an in-flight HTTP request.
-// It implements the appengine.Context interface.
+// It implements the appengine.Context and http.ResponseWriter interfaces.
 type context struct {
 	req *http.Request
 
+	outCode   int
+	outHeader http.Header
+	outBody   []byte
+
 	pendingLogs struct {
 		sync.Mutex
-		lines []*logpb.UserAppLogLine
+		lines   []*logpb.UserAppLogLine
+		flushes int
 	}
 }
 
@@ -163,6 +190,42 @@ var errTimeout = &CallError{
 	Detail:  "Deadline exceeded",
 	Code:    int32(runtimepb.APIResponse_CANCELLED),
 	Timeout: true,
+}
+
+func (c *context) Header() http.Header { return c.outHeader }
+
+// Copied from $GOROOT/src/pkg/net/http/transfer.go. Some response status
+// codes do not permit a response body (nor response entity headers such as
+// Content-Length, Content-Type, etc).
+func bodyAllowedForStatus(status int) bool {
+	switch {
+	case status >= 100 && status <= 199:
+		return false
+	case status == 204:
+		return false
+	case status == 304:
+		return false
+	}
+	return true
+}
+
+func (c *context) Write(b []byte) (int, error) {
+	if c.outCode == 0 {
+		c.WriteHeader(http.StatusOK)
+	}
+	if len(b) > 0 && !bodyAllowedForStatus(c.outCode) {
+		return 0, http.ErrBodyNotAllowed
+	}
+	c.outBody = append(c.outBody, b...)
+	return len(b), nil
+}
+
+func (c *context) WriteHeader(code int) {
+	if c.outCode != 0 {
+		c.Errorf("WriteHeader called multiple times on request.")
+		return
+	}
+	c.outCode = code
 }
 
 func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error) {
@@ -401,6 +464,9 @@ func (c *context) flushLog(force bool) (flushed bool) {
 		Logs: buf,
 	}
 	res := &basepb.VoidProto{}
+	c.pendingLogs.Lock()
+	c.pendingLogs.flushes++
+	c.pendingLogs.Unlock()
 	if err := c.Call("logservice", "Flush", req, res, nil); err != nil {
 		log.Printf("internal.flushLog: Flush RPC: %v", err)
 		rescueLogs = true
