@@ -12,8 +12,10 @@ import (
 	"net/http"
 	"net/url"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"code.google.com/p/goprotobuf/proto"
@@ -41,8 +43,15 @@ var (
 	apiEndpointHeaderValue = []string{"app-engine-apis"}
 	apiMethodHeader        = http.CanonicalHeaderKey("X-Google-RPC-Service-Method")
 	apiMethodHeaderValue   = []string{"/APIHost.Call"}
+	apiDeadlineHeader      = http.CanonicalHeaderKey("X-Google-RPC-Service-Deadline")
 	apiContentType         = http.CanonicalHeaderKey("Content-Type")
 	apiContentTypeValue    = []string{"application/octet-stream"}
+
+	apiHTTPClient = &http.Client{
+		Transport: &http.Transport{
+			Proxy: http.ProxyFromEnvironment,
+		},
+	}
 )
 
 func handleHTTP(w http.ResponseWriter, r *http.Request) {
@@ -150,6 +159,73 @@ func NewContext(req *http.Request) *context {
 	return c
 }
 
+var errTimeout = &CallError{
+	Detail:  "Deadline exceeded",
+	Code:    int32(runtimepb.APIResponse_CANCELLED),
+	Timeout: true,
+}
+
+func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error) {
+	hreq := &http.Request{
+		Method: "POST",
+		URL: &url.URL{
+			Scheme: "http",
+			Host:   apiHost,
+			Path:   apiPath,
+		},
+		Header: http.Header{
+			apiEndpointHeader: apiEndpointHeaderValue,
+			apiMethodHeader:   apiMethodHeaderValue,
+			apiContentType:    apiContentTypeValue,
+			apiDeadlineHeader: []string{strconv.FormatFloat(timeout.Seconds(), 'f', -1, 64)},
+		},
+		Body:          ioutil.NopCloser(bytes.NewReader(body)),
+		ContentLength: int64(len(body)),
+		Host:          apiHost,
+	}
+	if info := c.req.Header.Get(dapperHeader); info != "" {
+		hreq.Header.Set(dapperHeader, info)
+	}
+
+	tr := apiHTTPClient.Transport.(*http.Transport)
+
+	var timedOut int32 // atomic; set to 1 if timed out
+	t := time.AfterFunc(timeout, func() {
+		atomic.StoreInt32(&timedOut, 1)
+		tr.CancelRequest(hreq)
+	})
+	defer t.Stop()
+	defer func() {
+		// Check if timeout was exceeded.
+		if atomic.LoadInt32(&timedOut) != 0 {
+			err = errTimeout
+		}
+	}()
+
+	hresp, err := apiHTTPClient.Do(hreq)
+	if err != nil {
+		return nil, &CallError{
+			Detail: fmt.Sprintf("service bridge HTTP failed: %v", err),
+			Code:   int32(runtimepb.APIResponse_RPC_ERROR),
+		}
+	}
+	defer hresp.Body.Close()
+	hrespBody, err := ioutil.ReadAll(hresp.Body)
+	if hresp.StatusCode != 200 {
+		return nil, &CallError{
+			Detail: fmt.Sprintf("service bridge returned HTTP %d (%q)", hresp.StatusCode, hrespBody),
+			Code:   int32(runtimepb.APIResponse_RPC_ERROR),
+		}
+	}
+	if err != nil {
+		return nil, &CallError{
+			Detail: fmt.Sprintf("service bridge response bad: %v", err),
+			Code:   int32(runtimepb.APIResponse_RPC_ERROR),
+		}
+	}
+	return hrespBody, nil
+}
+
 func (c *context) Call(service, method string, in, out proto.Message, opts *CallOptions) error {
 	if service == "__go__" {
 		if method == "GetNamespace" {
@@ -160,6 +236,12 @@ func (c *context) Call(service, method string, in, out proto.Message, opts *Call
 			out.(*basepb.StringProto).Value = proto.String(c.req.Header.Get(defNamespaceHeader))
 			return nil
 		}
+	}
+
+	// Default RPC timeout is 5s.
+	timeout := 5 * time.Second
+	if opts != nil && opts.Timeout > 0 {
+		timeout = opts.Timeout
 	}
 
 	data, err := proto.Marshal(in)
@@ -179,49 +261,9 @@ func (c *context) Call(service, method string, in, out proto.Message, opts *Call
 		return err
 	}
 
-	// TODO(dsymonds): deadline handling
-
-	hreq := &http.Request{
-		Method: "POST",
-		URL: &url.URL{
-			Scheme: "http",
-			Host:   apiHost,
-			Path:   apiPath,
-		},
-		Header: http.Header{
-			apiEndpointHeader: apiEndpointHeaderValue,
-			apiMethodHeader:   apiMethodHeaderValue,
-			apiContentType:    apiContentTypeValue,
-		},
-		Body:          ioutil.NopCloser(bytes.NewReader(hreqBody)),
-		ContentLength: int64(len(hreqBody)),
-		Host:          apiHost,
-	}
-	if info := c.req.Header.Get(dapperHeader); info != "" {
-		hreq.Header.Set(dapperHeader, info)
-	}
-
-	hresp, err := http.DefaultClient.Do(hreq)
+	hrespBody, err := c.post(hreqBody, timeout)
 	if err != nil {
-		// TODO(dsymonds): Check for timeout, return CallError with Timeout=true.
-		return &CallError{
-			Detail: fmt.Sprintf("service bridge HTTP failed: %v", err),
-			Code:   int32(runtimepb.APIResponse_RPC_ERROR),
-		}
-	}
-	defer hresp.Body.Close()
-	hrespBody, err := ioutil.ReadAll(hresp.Body)
-	if hresp.StatusCode != 200 {
-		return &CallError{
-			Detail: fmt.Sprintf("service bridge returned HTTP %d (%q)", hresp.StatusCode, hrespBody),
-			Code:   int32(runtimepb.APIResponse_RPC_ERROR),
-		}
-	}
-	if err != nil {
-		return &CallError{
-			Detail: fmt.Sprintf("service bridge response bad: %v", err),
-			Code:   int32(runtimepb.APIResponse_RPC_ERROR),
-		}
+		return err
 	}
 
 	res := &runtimepb.APIResponse{}

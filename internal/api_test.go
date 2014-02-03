@@ -11,6 +11,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"code.google.com/p/goprotobuf/proto"
 
@@ -24,7 +25,11 @@ func init() {
 	ticketHeader = testTicketHeader
 }
 
-func fakeAPIHandler(w http.ResponseWriter, r *http.Request) {
+type fakeAPIHandler struct {
+	die chan int // closed when the test server is going down
+}
+
+func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	writeAPIResponse := func(res *runtimepb.APIResponse) {
 		hresBody, err := proto.Marshal(res)
 		if err != nil {
@@ -92,6 +97,14 @@ func fakeAPIHandler(w http.ResponseWriter, r *http.Request) {
 				ErrorMessage: proto.String("you are hogging the resources!"),
 			})
 			return
+		case "RunSlowly":
+			// Avoid blocking test shutdown by aborting early when the test is over.
+			select {
+			case <-time.After(5 * time.Second):
+			case <-f.die:
+				return
+			}
+			resOut = &basepb.VoidProto{}
 		}
 	}
 
@@ -108,7 +121,10 @@ func fakeAPIHandler(w http.ResponseWriter, r *http.Request) {
 
 func setup() (c *context, cleanup func()) {
 	origAPIHost := apiHost
-	srv := httptest.NewServer(http.HandlerFunc(fakeAPIHandler))
+	f := &fakeAPIHandler{
+		die: make(chan int),
+	}
+	srv := httptest.NewServer(f)
 	apiHost = strings.TrimPrefix(srv.URL, "http://")
 	return &context{
 			req: &http.Request{
@@ -118,6 +134,7 @@ func setup() (c *context, cleanup func()) {
 				},
 			},
 		}, func() {
+			close(f.die)
 			srv.Close()
 			apiHost = origAPIHost
 		}
@@ -151,9 +168,13 @@ func TestAPICallRPCFailure(t *testing.T) {
 		{"Non200", runtimepb.APIResponse_RPC_ERROR},
 		{"ShortResponse", runtimepb.APIResponse_RPC_ERROR},
 		{"OverQuota", runtimepb.APIResponse_OVER_QUOTA},
+		{"RunSlowly", runtimepb.APIResponse_CANCELLED},
 	}
 	for _, tc := range testCases {
-		err := c.Call("errors", tc.method, &basepb.VoidProto{}, &basepb.VoidProto{}, nil)
+		opts := &CallOptions{
+			Timeout: 100 * time.Millisecond,
+		}
+		err := c.Call("errors", tc.method, &basepb.VoidProto{}, &basepb.VoidProto{}, opts)
 		ce, ok := err.(*CallError)
 		if !ok {
 			t.Errorf("%s: API call error is %T (%v), want *CallError", tc.method, err, err)
