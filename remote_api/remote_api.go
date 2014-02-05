@@ -87,7 +87,7 @@ func handle(w http.ResponseWriter, req *http.Request) {
 	remRes := &pb.Response{}
 	if err == nil {
 		remRes.Response = rawRes.buf
-	} else if ae, ok := err.(*appengine_internal.APIError); ok {
+	} else if ae, ok := err.(*internal.APIError); ok {
 		remRes.ApplicationError = &pb.ApplicationError{
 			Code:   &ae.Code,
 			Detail: &ae.Detail,

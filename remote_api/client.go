@@ -76,7 +76,7 @@ func (c *context) Warningf(format string, args ...interface{})  { c.logf("WARNIN
 func (c *context) Errorf(format string, args ...interface{})    { c.logf("ERROR", format, args...) }
 func (c *context) Criticalf(format string, args ...interface{}) { c.logf("CRITICAL", format, args...) }
 
-func (c *context) Call(service, method string, in, out appengine_internal.ProtoMessage, opts *appengine_internal.CallOptions) error {
+func (c *context) Call(service, method string, in, out proto.Message, opts *internal.CallOptions) error {
 	req, err := proto.Marshal(in)
 	if err != nil {
 		return fmt.Errorf("error marshalling request: %v", err)
@@ -114,7 +114,7 @@ func (c *context) Call(service, method string, in, out appengine_internal.ProtoM
 	}
 
 	if ae := remResp.GetApplicationError(); ae != nil {
-		return &appengine_internal.APIError{
+		return &internal.APIError{
 			Code:    ae.GetCode(),
 			Detail:  ae.GetDetail(),
 			Service: service,
