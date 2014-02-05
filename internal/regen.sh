@@ -1,6 +1,6 @@
 #!/bin/bash -e
 
-PKG=github.com/golang/appengine
+PKG=google.golang.org/appengine
 
 function die() {
 	echo 1>&2 $*

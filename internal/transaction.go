@@ -7,7 +7,7 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	pb "github.com/golang/appengine/internal/datastore"
+	pb "google.golang.org/appengine/internal/datastore"
 )
 
 var transactionSetters = make(map[reflect.Type]reflect.Value)

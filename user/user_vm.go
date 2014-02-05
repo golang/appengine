@@ -7,7 +7,7 @@ package user
 import (
 	"net/http"
 
-	"github.com/golang/appengine"
+	"google.golang.org/appengine"
 )
 
 const (

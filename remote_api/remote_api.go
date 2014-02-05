@@ -17,10 +17,10 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	"github.com/golang/appengine"
-	"github.com/golang/appengine/user"
-	"github.com/golang/appengine/internal"
-	pb "github.com/golang/appengine/internal/remote_api"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/internal"
+	pb "google.golang.org/appengine/internal/remote_api"
+	"google.golang.org/appengine/user"
 )
 
 func init() {

@@ -118,7 +118,7 @@ func (e *CallError) IsTimeout() bool {
 //      package main
 //
 //      import (
-//              "github.com/golang/appengine/internal"
+//              "google.golang.org/appengine/internal"
 //
 //              _ "myapp/package0"
 //              _ "myapp/package1"

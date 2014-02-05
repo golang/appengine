@@ -10,8 +10,8 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	"github.com/golang/appengine/internal"
-	basepb "github.com/golang/appengine/internal/base"
+	"google.golang.org/appengine/internal"
+	basepb "google.golang.org/appengine/internal/base"
 )
 
 // Namespace returns a replacement context that operates within the given namespace.

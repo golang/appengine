@@ -52,8 +52,8 @@ import (
 	"reflect"
 	"runtime"
 
-	"github.com/golang/appengine"
-	"github.com/golang/appengine/taskqueue"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/taskqueue"
 )
 
 // Function represents a function that may have a delayed invocation.

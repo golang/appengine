@@ -13,7 +13,7 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	"github.com/golang/appengine/internal"
+	"google.golang.org/appengine/internal"
 )
 
 // IsDevAppServer reports whether the App Engine app is running in the

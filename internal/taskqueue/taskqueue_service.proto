@@ -1,6 +1,6 @@
 syntax = "proto2";
 
-import "github.com/golang/appengine/internal/datastore/datastore_v3.proto";
+import "google.golang.org/appengine/internal/datastore/datastore_v3.proto";
 
 package appengine;
 

@@ -14,8 +14,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/appengine"
-	"github.com/golang/appengine/taskqueue"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/taskqueue"
 )
 
 type CustomType struct {

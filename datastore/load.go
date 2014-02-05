@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/golang/appengine"
-	pb "github.com/golang/appengine/internal/datastore"
+	"google.golang.org/appengine"
+	pb "google.golang.org/appengine/internal/datastore"
 )
 
 var (

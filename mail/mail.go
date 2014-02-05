@@ -24,10 +24,10 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	"github.com/golang/appengine"
-	"github.com/golang/appengine/internal"
-	bpb "github.com/golang/appengine/internal/base"
-	pb "github.com/golang/appengine/internal/mail"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/internal"
+	bpb "google.golang.org/appengine/internal/base"
+	pb "google.golang.org/appengine/internal/mail"
 )
 
 // A Message represents an email message.

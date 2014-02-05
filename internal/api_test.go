@@ -18,8 +18,8 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	basepb "github.com/golang/appengine/internal/base"
-	runtimepb "github.com/golang/appengine/internal/runtime"
+	basepb "google.golang.org/appengine/internal/base"
+	runtimepb "google.golang.org/appengine/internal/runtime"
 )
 
 const testTicketHeader = "X-Magic-Ticket-Header"

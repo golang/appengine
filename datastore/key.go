@@ -15,9 +15,9 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	"github.com/golang/appengine"
-	basepb "github.com/golang/appengine/internal/base"
-	pb "github.com/golang/appengine/internal/datastore"
+	"google.golang.org/appengine"
+	basepb "google.golang.org/appengine/internal/base"
+	pb "google.golang.org/appengine/internal/datastore"
 )
 
 // Key represents the datastore key for a stored entity, and is immutable.

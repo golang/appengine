@@ -20,9 +20,9 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	basepb "github.com/golang/appengine/internal/base"
-	logpb "github.com/golang/appengine/internal/log"
-	runtimepb "github.com/golang/appengine/internal/runtime"
+	basepb "google.golang.org/appengine/internal/base"
+	logpb "google.golang.org/appengine/internal/log"
+	runtimepb "google.golang.org/appengine/internal/runtime"
 )
 
 const (

@@ -13,8 +13,8 @@ package module
 import (
 	"code.google.com/p/goprotobuf/proto"
 
-	"github.com/golang/appengine"
-	pb "github.com/golang/appengine/internal/modules"
+	"google.golang.org/appengine"
+	pb "google.golang.org/appengine/internal/modules"
 )
 
 // List returns the names of modules belonging to this application.

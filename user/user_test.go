@@ -11,9 +11,9 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	"github.com/golang/appengine"
-	"github.com/golang/appengine/internal/aetesting"
-	pb "github.com/golang/appengine/internal/user"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/internal/aetesting"
+	pb "google.golang.org/appengine/internal/user"
 )
 
 func baseReq() *http.Request {

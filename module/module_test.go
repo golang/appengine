@@ -10,8 +10,8 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	"github.com/golang/appengine/internal/aetesting"
-	pb "github.com/golang/appengine/internal/modules"
+	"google.golang.org/appengine/internal/aetesting"
+	pb "google.golang.org/appengine/internal/modules"
 )
 
 const version = "test-version"

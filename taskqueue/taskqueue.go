@@ -25,11 +25,11 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	"github.com/golang/appengine"
-	"github.com/golang/appengine/internal"
-	basepb "github.com/golang/appengine/internal/base"
-	dspb "github.com/golang/appengine/internal/datastore"
-	pb "github.com/golang/appengine/internal/taskqueue"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/internal"
+	basepb "google.golang.org/appengine/internal/base"
+	dspb "google.golang.org/appengine/internal/datastore"
+	pb "google.golang.org/appengine/internal/taskqueue"
 )
 
 var (

@@ -37,9 +37,9 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	"github.com/golang/appengine"
-	"github.com/golang/appengine/internal"
-	pb "github.com/golang/appengine/internal/memcache"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/internal"
+	pb "google.golang.org/appengine/internal/memcache"
 )
 
 var (

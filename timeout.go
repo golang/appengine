@@ -9,7 +9,7 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	"github.com/golang/appengine/internal"
+	"google.golang.org/appengine/internal"
 )
 
 // IsTimeoutError reports whether err is a timeout error.

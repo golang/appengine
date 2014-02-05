@@ -12,8 +12,8 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	"github.com/golang/appengine"
-	"github.com/golang/appengine/internal"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/internal"
 )
 
 func TestKeyEncoding(t *testing.T) {

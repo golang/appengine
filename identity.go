@@ -7,9 +7,9 @@ package appengine
 import (
 	"time"
 
-	"github.com/golang/appengine/internal"
-	pb "github.com/golang/appengine/internal/app_identity"
-	modpb "github.com/golang/appengine/internal/modules"
+	"google.golang.org/appengine/internal"
+	pb "google.golang.org/appengine/internal/app_identity"
+	modpb "google.golang.org/appengine/internal/modules"
 )
 
 // AppID returns the application ID for the current application.
