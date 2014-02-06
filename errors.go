@@ -19,14 +19,6 @@ func IsOverQuota(err error) bool {
 	return ok && callErr.Code == 4
 }
 
-// IsCapabilityDisabled reports whether err represents an API call failure
-// due to the API being disabled. See the appengine/capability package for
-// a way to detect this condition in advance.
-func IsCapabilityDisabled(err error) bool {
-	callErr, ok := err.(*internal.CallError)
-	return ok && callErr.Code == 6
-}
-
 // MultiError is returned by batch operations when there are errors with
 // particular elements. Errors will be in a one-to-one correspondence with
 // the input elements; successful elements will have a nil entry.
