@@ -151,7 +151,8 @@ func renderPanic(x interface{}) string {
 
 var ctxs = struct {
 	sync.Mutex
-	m map[*http.Request]*context
+	m  map[*http.Request]*context
+	bg *context // background context, lazily initialized
 }{
 	m: make(map[*http.Request]*context),
 }
@@ -184,6 +185,37 @@ func NewContext(req *http.Request) *context {
 		log.Panic("appengine: NewContext passed an unknown http.Request")
 	}
 	return c
+}
+
+func BackgroundContext() *context {
+	ctxs.Lock()
+	defer ctxs.Unlock()
+
+	if ctxs.bg != nil {
+		return ctxs.bg
+	}
+
+	// Compute background security ticket.
+	appID := string(mustGetMetadata("instance/attributes/gae_project"))
+	escAppID := strings.Replace(strings.Replace(appID, ":", "_", -1), ".", "_", -1)
+	majVersion := VersionID()
+	if i := strings.Index(majVersion, "_"); i >= 0 {
+		majVersion = majVersion[:i]
+	}
+	ticket := fmt.Sprintf("%s/%s.%s.%s", escAppID, ModuleName(), majVersion, InstanceID())
+
+	ctxs.bg = &context{
+		req: &http.Request{
+			Header: http.Header{
+				ticketHeader: []string{ticket},
+			},
+		},
+	}
+
+	// TODO(dsymonds): Wire up the shutdown handler to do a final flush.
+	go ctxs.bg.logFlusher(make(chan int))
+
+	return ctxs.bg
 }
 
 var errTimeout = &CallError{
