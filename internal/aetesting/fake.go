@@ -18,13 +18,25 @@ import (
 
 // FakeSingleContext returns a context whose Call invocations will be serviced
 // by f, which should be a function that has two arguments of the input and output
-// protocol buffer type.
+// protocol buffer type, and one error return.
 func FakeSingleContext(t *testing.T, service, method string, f interface{}) appengine.Context {
 	fv := reflect.ValueOf(f)
 	if fv.Kind() != reflect.Func {
-		panic("not a function")
+		t.Fatal("not a function")
 	}
-	// TODO(dsymonds): check fv's signature more closely.
+	ft := fv.Type()
+	if ft.NumIn() != 2 || ft.NumOut() != 1 {
+		t.Fatalf("f has %d in and %d out, want 2 in and 1 out", ft.NumIn(), ft.NumOut())
+	}
+	for i := 0; i < 2; i++ {
+		at := ft.In(i)
+		if !at.Implements(protoMessageType) {
+			t.Fatalf("arg %d does not implement proto.Message", i)
+		}
+	}
+	if ft.Out(0) != errorType {
+		t.Fatalf("f's return is %v, want error", ft.Out(0))
+	}
 	return &single{
 		t:       t,
 		service: service,
@@ -32,6 +44,11 @@ func FakeSingleContext(t *testing.T, service, method string, f interface{}) appe
 		f:       fv,
 	}
 }
+
+var (
+	protoMessageType = reflect.TypeOf((*proto.Message)(nil)).Elem()
+	errorType        = reflect.TypeOf((*error)(nil)).Elem()
+)
 
 type single struct {
 	t               *testing.T
