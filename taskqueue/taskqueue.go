@@ -175,7 +175,6 @@ func newAddReq(c appengine.Context, task *Task, queueName string) (*pb.TaskQueue
 		if task.Tag != "" {
 			req.Tag = []byte(task.Tag)
 		}
-		// TODO(dsymonds): More fields will need to be set.
 	} else {
 		// HTTP-based task
 		if v, ok := pb.TaskQueueAddRequest_RequestMethod_value[method]; ok {
