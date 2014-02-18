@@ -23,7 +23,7 @@ import (
 
 	basepb "google.golang.org/appengine/internal/base"
 	logpb "google.golang.org/appengine/internal/log"
-	runtimepb "google.golang.org/appengine/internal/runtime"
+	remotepb "google.golang.org/appengine/internal/remote_api"
 )
 
 const (
@@ -45,7 +45,7 @@ var (
 	apiEndpointHeader      = http.CanonicalHeaderKey("X-Google-RPC-Service-Endpoint")
 	apiEndpointHeaderValue = []string{"app-engine-apis"}
 	apiMethodHeader        = http.CanonicalHeaderKey("X-Google-RPC-Service-Method")
-	apiMethodHeaderValue   = []string{"/APIHost.Call"}
+	apiMethodHeaderValue   = []string{"/VMRemoteAPI.CallRemoteAPI"}
 	apiDeadlineHeader      = http.CanonicalHeaderKey("X-Google-RPC-Service-Deadline")
 	apiContentType         = http.CanonicalHeaderKey("Content-Type")
 	apiContentTypeValue    = []string{"application/octet-stream"}
@@ -238,7 +238,7 @@ func BackgroundContext() *context {
 
 var errTimeout = &CallError{
 	Detail:  "Deadline exceeded",
-	Code:    int32(runtimepb.APIResponse_CANCELLED),
+	Code:    int32(remotepb.RpcError_CANCELLED),
 	Timeout: true,
 }
 
@@ -319,7 +319,7 @@ func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error)
 	if err != nil {
 		return nil, &CallError{
 			Detail: fmt.Sprintf("service bridge HTTP failed: %v", err),
-			Code:   int32(runtimepb.APIResponse_RPC_ERROR),
+			Code:   int32(remotepb.RpcError_UNKNOWN),
 		}
 	}
 	defer hresp.Body.Close()
@@ -327,13 +327,13 @@ func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error)
 	if hresp.StatusCode != 200 {
 		return nil, &CallError{
 			Detail: fmt.Sprintf("service bridge returned HTTP %d (%q)", hresp.StatusCode, hrespBody),
-			Code:   int32(runtimepb.APIResponse_RPC_ERROR),
+			Code:   int32(remotepb.RpcError_UNKNOWN),
 		}
 	}
 	if err != nil {
 		return nil, &CallError{
 			Detail: fmt.Sprintf("service bridge response bad: %v", err),
-			Code:   int32(runtimepb.APIResponse_RPC_ERROR),
+			Code:   int32(remotepb.RpcError_UNKNOWN),
 		}
 	}
 	return hrespBody, nil
@@ -371,11 +371,11 @@ func (c *context) Call(service, method string, in, out proto.Message, opts *Call
 	}
 
 	ticket := c.req.Header.Get(ticketHeader)
-	req := &runtimepb.APIRequest{
-		ApiPackage:     &service,
-		Call:           &method,
-		Pb:             data,
-		SecurityTicket: &ticket,
+	req := &remotepb.Request{
+		ServiceName: &service,
+		Method:      &method,
+		Request:     data,
+		RequestId:   &ticket,
 	}
 	hreqBody, err := proto.Marshal(req)
 	if err != nil {
@@ -387,35 +387,36 @@ func (c *context) Call(service, method string, in, out proto.Message, opts *Call
 		return err
 	}
 
-	res := &runtimepb.APIResponse{}
+	res := &remotepb.Response{}
 	if err := proto.Unmarshal(hrespBody, res); err != nil {
 		return err
 	}
-	if *res.Error != int32(runtimepb.APIResponse_OK) {
-		if *res.Error == int32(runtimepb.APIResponse_RPC_ERROR) {
-			switch res.GetRpcError() {
-			case runtimepb.APIResponse_DEADLINE_EXCEEDED:
-				// TODO(dsymonds): Add a DEADLINE_EXCEEDED error code?
-				return &CallError{
-					Detail:  "Deadline exceeded",
-					Code:    int32(runtimepb.APIResponse_CANCELLED),
-					Timeout: true,
-				}
-			case runtimepb.APIResponse_APPLICATION_ERROR:
-				return &APIError{
-					Service: *req.ApiPackage,
-					Detail:  res.GetErrorMessage(),
-					Code:    res.GetRpcApplicationError(),
-				}
-
-			}
+	if res.RpcError != nil {
+		ce := &CallError{
+			Detail: res.RpcError.GetDetail(),
+			Code:   *res.RpcError.Code,
 		}
-		return &CallError{
-			Detail: res.GetErrorMessage(),
-			Code:   *res.Error,
+		switch remotepb.RpcError_ErrorCode(ce.Code) {
+		case remotepb.RpcError_CANCELLED, remotepb.RpcError_DEADLINE_EXCEEDED:
+			ce.Timeout = true
+		}
+		return ce
+	}
+	if res.ApplicationError != nil {
+		return &APIError{
+			Service: *req.ServiceName,
+			Detail:  res.ApplicationError.GetDetail(),
+			Code:    *res.ApplicationError.Code,
 		}
 	}
-	return proto.Unmarshal(res.Pb, out)
+	if res.Exception != nil || res.JavaException != nil {
+		// This shouldn't happen, but let's be defensive.
+		return &CallError{
+			Detail: "service bridge returned exception",
+			Code:   int32(remotepb.RpcError_UNKNOWN),
+		}
+	}
+	return proto.Unmarshal(res.Response, out)
 }
 
 func (c *context) Request() interface{} {

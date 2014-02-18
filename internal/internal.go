@@ -17,6 +17,8 @@ import (
 	"time"
 
 	"code.google.com/p/goprotobuf/proto"
+
+	remotepb "google.golang.org/appengine/internal/remote_api"
 )
 
 type CallOptions struct {
@@ -78,7 +80,7 @@ func (e *APIError) IsTimeout() bool {
 }
 
 // CallError is the type returned by appengine.Context's Call method when an
-// API call fails in a generic way, such as APIResponse::CAPABILITY_DISABLED.
+// API call fails in a generic way, such as RpcError::CAPABILITY_DISABLED.
 type CallError struct {
 	Detail string
 	Code   int32
@@ -88,16 +90,14 @@ type CallError struct {
 
 func (e *CallError) Error() string {
 	var msg string
-	switch e.Code {
-	case 0: // OK
+	switch remotepb.RpcError_ErrorCode(e.Code) {
+	case remotepb.RpcError_UNKNOWN:
 		return e.Detail
-	case 4: // OVER_QUOTA
+	case remotepb.RpcError_OVER_QUOTA:
 		msg = "Over quota"
-	case 6: // CAPABILITY_DISABLED
+	case remotepb.RpcError_CAPABILITY_DISABLED:
 		msg = "Capability disabled"
-	case 9: // BUFFER_ERROR
-		msg = "Buffer error"
-	case 11: // CANCELLED
+	case remotepb.RpcError_CANCELLED:
 		msg = "Canceled"
 	default:
 		msg = fmt.Sprintf("Call error %d", e.Code)

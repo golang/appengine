@@ -19,7 +19,7 @@ import (
 	"code.google.com/p/goprotobuf/proto"
 
 	basepb "google.golang.org/appengine/internal/base"
-	runtimepb "google.golang.org/appengine/internal/runtime"
+	remotepb "google.golang.org/appengine/internal/remote_api"
 )
 
 const testTicketHeader = "X-Magic-Ticket-Header"
@@ -35,7 +35,7 @@ type fakeAPIHandler struct {
 }
 
 func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	writeAPIResponse := func(res *runtimepb.APIResponse) {
+	writeResponse := func(res *remotepb.Response) {
 		hresBody, err := proto.Marshal(res)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed encoding API response: %v", err), 500)
@@ -53,32 +53,36 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Bad body: %v", err), 500)
 		return
 	}
-	apiReq := &runtimepb.APIRequest{}
+	apiReq := &remotepb.Request{}
 	if err := proto.Unmarshal(hreqBody, apiReq); err != nil {
 		http.Error(w, fmt.Sprintf("Bad encoded API request: %v", err), 500)
 		return
 	}
-	if *apiReq.SecurityTicket != "s3cr3t" {
-		writeAPIResponse(&runtimepb.APIResponse{
-			Error:        proto.Int32(int32(runtimepb.APIResponse_SECURITY_VIOLATION)),
-			ErrorMessage: proto.String("bad security ticket"),
+	if *apiReq.RequestId != "s3cr3t" {
+		writeResponse(&remotepb.Response{
+			RpcError: &remotepb.RpcError{
+				Code:   proto.Int32(int32(remotepb.RpcError_SECURITY_VIOLATION)),
+				Detail: proto.String("bad security ticket"),
+			},
 		})
 		return
 	}
 	if got, want := r.Header.Get(dapperHeader), "trace-001"; got != want {
-		writeAPIResponse(&runtimepb.APIResponse{
-			Error:        proto.Int32(int32(runtimepb.APIResponse_BAD_REQUEST)),
-			ErrorMessage: proto.String(fmt.Sprintf("trace info = %q, want %q", got, want)),
+		writeResponse(&remotepb.Response{
+			RpcError: &remotepb.RpcError{
+				Code:   proto.Int32(int32(remotepb.RpcError_BAD_REQUEST)),
+				Detail: proto.String(fmt.Sprintf("trace info = %q, want %q", got, want)),
+			},
 		})
 		return
 	}
 
-	service, method := *apiReq.ApiPackage, *apiReq.Call
+	service, method := *apiReq.ServiceName, *apiReq.Method
 	var resOut proto.Message
 	if service == "actordb" && method == "LookupActor" {
 		req := &basepb.StringProto{}
 		res := &basepb.StringProto{}
-		if err := proto.Unmarshal(apiReq.Pb, req); err != nil {
+		if err := proto.Unmarshal(apiReq.Request, req); err != nil {
 			http.Error(w, fmt.Sprintf("Bad encoded request: %v", err), 500)
 			return
 		}
@@ -97,9 +101,11 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("way too short"))
 			return
 		case "OverQuota":
-			writeAPIResponse(&runtimepb.APIResponse{
-				Error:        proto.Int32(int32(runtimepb.APIResponse_OVER_QUOTA)),
-				ErrorMessage: proto.String("you are hogging the resources!"),
+			writeResponse(&remotepb.Response{
+				RpcError: &remotepb.RpcError{
+					Code:   proto.Int32(int32(remotepb.RpcError_OVER_QUOTA)),
+					Detail: proto.String("you are hogging the resources!"),
+				},
 			})
 			return
 		case "RunSlowly":
@@ -124,9 +130,8 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Failed encoding response: %v", err), 500)
 		return
 	}
-	writeAPIResponse(&runtimepb.APIResponse{
-		Error: proto.Int32(int32(runtimepb.APIResponse_OK)),
-		Pb:    encOut,
+	writeResponse(&remotepb.Response{
+		Response: encOut,
 	})
 }
 
@@ -174,12 +179,12 @@ func TestAPICallRPCFailure(t *testing.T) {
 
 	testCases := []struct {
 		method string
-		code   runtimepb.APIResponse_ERROR
+		code   remotepb.RpcError_ErrorCode
 	}{
-		{"Non200", runtimepb.APIResponse_RPC_ERROR},
-		{"ShortResponse", runtimepb.APIResponse_RPC_ERROR},
-		{"OverQuota", runtimepb.APIResponse_OVER_QUOTA},
-		{"RunSlowly", runtimepb.APIResponse_CANCELLED},
+		{"Non200", remotepb.RpcError_UNKNOWN},
+		{"ShortResponse", remotepb.RpcError_UNKNOWN},
+		{"OverQuota", remotepb.RpcError_OVER_QUOTA},
+		{"RunSlowly", remotepb.RpcError_CANCELLED},
 	}
 	for _, tc := range testCases {
 		opts := &CallOptions{
