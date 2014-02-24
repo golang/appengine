@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package appengine is a generated protocol buffer package.
+Package taskqueue is a generated protocol buffer package.
 
 It is generated from these files:
 	google.golang.org/appengine/internal/taskqueue/taskqueue_service.proto
@@ -49,12 +49,12 @@ It has these top-level messages:
 	TaskQueueModifyTaskLeaseRequest
 	TaskQueueModifyTaskLeaseResponse
 */
-package appengine
+package taskqueue
 
 import proto "code.google.com/p/goprotobuf/proto"
 import json "encoding/json"
 import math "math"
-import appengine1 "google.golang.org/appengine/internal/datastore"
+import appengine "google.golang.org/appengine/internal/datastore"
 
 // Reference proto, json, and math imports to suppress error if they are not otherwise used.
 var _ = proto.Marshal
@@ -452,7 +452,7 @@ type TaskQueueAddRequest struct {
 	Url              []byte                             `protobuf:"bytes,4,opt,name=url" json:"url,omitempty"`
 	Header           []*TaskQueueAddRequest_Header      `protobuf:"group,6,rep" json:"header,omitempty"`
 	Body             []byte                             `protobuf:"bytes,9,opt,name=body" json:"body,omitempty"`
-	Transaction      *appengine1.Transaction            `protobuf:"bytes,10,opt,name=transaction" json:"transaction,omitempty"`
+	Transaction      *appengine.Transaction             `protobuf:"bytes,10,opt,name=transaction" json:"transaction,omitempty"`
 	AppId            []byte                             `protobuf:"bytes,11,opt,name=app_id" json:"app_id,omitempty"`
 	Crontimetable    *TaskQueueAddRequest_CronTimetable `protobuf:"group,12,opt,name=CronTimetable" json:"crontimetable,omitempty"`
 	Description      []byte                             `protobuf:"bytes,15,opt,name=description" json:"description,omitempty"`
@@ -519,7 +519,7 @@ func (m *TaskQueueAddRequest) GetBody() []byte {
 	return nil
 }
 
-func (m *TaskQueueAddRequest) GetTransaction() *appengine1.Transaction {
+func (m *TaskQueueAddRequest) GetTransaction() *appengine.Transaction {
 	if m != nil {
 		return m.Transaction
 	}

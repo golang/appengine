@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package appengine is a generated protocol buffer package.
+Package mail is a generated protocol buffer package.
 
 It is generated from these files:
 	google.golang.org/appengine/internal/mail/mail_service.proto
@@ -14,7 +14,7 @@ It has these top-level messages:
 	MailHeader
 	MailMessage
 */
-package appengine
+package mail
 
 import proto "code.google.com/p/goprotobuf/proto"
 import json "encoding/json"

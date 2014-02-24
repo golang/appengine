@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package appengine is a generated protocol buffer package.
+Package app_identity is a generated protocol buffer package.
 
 It is generated from these files:
 	google.golang.org/appengine/internal/app_identity/app_identity_service.proto
@@ -22,7 +22,7 @@ It has these top-level messages:
 	GetDefaultGcsBucketNameRequest
 	GetDefaultGcsBucketNameResponse
 */
-package appengine
+package app_identity
 
 import proto "code.google.com/p/goprotobuf/proto"
 import json "encoding/json"

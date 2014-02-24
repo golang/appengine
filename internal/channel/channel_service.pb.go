@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package appengine is a generated protocol buffer package.
+Package channel is a generated protocol buffer package.
 
 It is generated from these files:
 	google.golang.org/appengine/internal/channel/channel_service.proto
@@ -14,7 +14,7 @@ It has these top-level messages:
 	CreateChannelResponse
 	SendMessageRequest
 */
-package appengine
+package channel
 
 import proto "code.google.com/p/goprotobuf/proto"
 import json "encoding/json"

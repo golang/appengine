@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package appengine is a generated protocol buffer package.
+Package log is a generated protocol buffer package.
 
 It is generated from these files:
 	google.golang.org/appengine/internal/log/log_service.proto
@@ -24,7 +24,7 @@ It has these top-level messages:
 	LogUsageRequest
 	LogUsageResponse
 */
-package appengine
+package log
 
 import proto "code.google.com/p/goprotobuf/proto"
 import json "encoding/json"

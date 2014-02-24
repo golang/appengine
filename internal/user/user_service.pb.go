@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package appengine is a generated protocol buffer package.
+Package user is a generated protocol buffer package.
 
 It is generated from these files:
 	google.golang.org/appengine/internal/user/user_service.proto
@@ -19,7 +19,7 @@ It has these top-level messages:
 	CheckOAuthSignatureRequest
 	CheckOAuthSignatureResponse
 */
-package appengine
+package user
 
 import proto "code.google.com/p/goprotobuf/proto"
 import json "encoding/json"

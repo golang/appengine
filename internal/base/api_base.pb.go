@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package appengine_base is a generated protocol buffer package.
+Package base is a generated protocol buffer package.
 
 It is generated from these files:
 	google.golang.org/appengine/internal/base/api_base.proto
@@ -17,7 +17,7 @@ It has these top-level messages:
 	BytesProto
 	VoidProto
 */
-package appengine_base
+package base
 
 import proto "code.google.com/p/goprotobuf/proto"
 import json "encoding/json"

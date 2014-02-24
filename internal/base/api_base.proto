@@ -1,6 +1,7 @@
 // Built-in base types for API calls. Primarily useful as return types.
 
 syntax = "proto2";
+option go_package = "base";
 
 package appengine.base;
 

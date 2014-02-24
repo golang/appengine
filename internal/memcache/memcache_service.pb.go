@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package appengine is a generated protocol buffer package.
+Package memcache is a generated protocol buffer package.
 
 It is generated from these files:
 	google.golang.org/appengine/internal/memcache/memcache_service.proto
@@ -29,7 +29,7 @@ It has these top-level messages:
 	MemcacheGrabTailRequest
 	MemcacheGrabTailResponse
 */
-package appengine
+package memcache
 
 import proto "code.google.com/p/goprotobuf/proto"
 import json "encoding/json"

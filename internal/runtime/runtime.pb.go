@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package appengine is a generated protocol buffer package.
+Package runtime is a generated protocol buffer package.
 
 It is generated from these files:
 	google.golang.org/appengine/internal/runtime/runtime.proto
@@ -12,7 +12,7 @@ It has these top-level messages:
 	APIRequest
 	APIResponse
 */
-package appengine
+package runtime
 
 import proto "code.google.com/p/goprotobuf/proto"
 import json "encoding/json"

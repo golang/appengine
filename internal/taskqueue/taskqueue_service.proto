@@ -1,4 +1,5 @@
 syntax = "proto2";
+option go_package = "taskqueue";
 
 import "google.golang.org/appengine/internal/datastore/datastore_v3.proto";
 

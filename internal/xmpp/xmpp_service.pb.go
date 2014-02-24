@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package appengine is a generated protocol buffer package.
+Package xmpp is a generated protocol buffer package.
 
 It is generated from these files:
 	google.golang.org/appengine/internal/xmpp/xmpp_service.proto
@@ -21,7 +21,7 @@ It has these top-level messages:
 	XmppInviteRequest
 	XmppInviteResponse
 */
-package appengine
+package xmpp
 
 import proto "code.google.com/p/goprotobuf/proto"
 import json "encoding/json"

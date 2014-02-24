@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package appengine is a generated protocol buffer package.
+Package datastore is a generated protocol buffer package.
 
 It is generated from these files:
 	google.golang.org/appengine/internal/datastore/datastore_v3.proto
@@ -48,7 +48,7 @@ It has these top-level messages:
 	BeginTransactionRequest
 	CommitResponse
 */
-package appengine
+package datastore
 
 import proto "code.google.com/p/goprotobuf/proto"
 import json "encoding/json"

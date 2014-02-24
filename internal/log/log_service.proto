@@ -1,4 +1,5 @@
 syntax = "proto2";
+option go_package = "log";
 
 package appengine;
 
