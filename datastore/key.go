@@ -16,7 +16,7 @@ import (
 	"code.google.com/p/goprotobuf/proto"
 
 	"google.golang.org/appengine"
-	basepb "google.golang.org/appengine/internal/base"
+	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/datastore"
 )
 
@@ -253,9 +253,7 @@ func NewKey(c appengine.Context, kind, stringID string, intID int64, parent *Key
 	if parent != nil {
 		namespace = parent.namespace
 	} else {
-		s := &basepb.StringProto{}
-		c.Call("__go__", "GetNamespace", &basepb.VoidProto{}, s, nil)
-		namespace = s.GetValue() // "" if the RPC fails
+		namespace = internal.VirtAPI(c, "GetNamespace")
 	}
 
 	return &Key{

@@ -321,14 +321,15 @@ func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error)
 	return hrespBody, nil
 }
 
+var virtualMethodHeaders = map[string]string{
+	"GetNamespace":        curNamespaceHeader,
+	"GetDefaultNamespace": defNamespaceHeader,
+}
+
 func (c *context) Call(service, method string, in, out proto.Message, opts *CallOptions) error {
 	if service == "__go__" {
-		if method == "GetNamespace" {
-			out.(*basepb.StringProto).Value = proto.String(c.req.Header.Get(curNamespaceHeader))
-			return nil
-		}
-		if method == "GetDefaultNamespace" {
-			out.(*basepb.StringProto).Value = proto.String(c.req.Header.Get(defNamespaceHeader))
+		if hdr, ok := virtualMethodHeaders[method]; ok {
+			out.(*basepb.StringProto).Value = proto.String(c.req.Header.Get(hdr))
 			return nil
 		}
 	}
@@ -529,4 +530,25 @@ func (c *context) logFlusher(stop <-chan int) {
 			}
 		}
 	}
+}
+
+// caller is a subset of appengine.Context.
+type caller interface {
+	Call(service, method string, in, out proto.Message, opts *CallOptions) error
+}
+
+var virtualOpts = &CallOptions{
+	// Virtual API calls should happen nearly instantaneously.
+	Timeout: 1 * time.Millisecond,
+}
+
+// VirtAPI invokes a virtual API call for the __go__ service.
+// It is for methods that accept a VoidProto and return a StringProto.
+// It returns an empty string if the call fails.
+func VirtAPI(c caller, method string) string {
+	s := &basepb.StringProto{}
+	if err := c.Call("__go__", method, &basepb.VoidProto{}, s, virtualOpts); err != nil {
+		log.Printf("/__go__.%s failed: %v", method, err)
+	}
+	return s.GetValue()
 }

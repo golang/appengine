@@ -27,7 +27,6 @@ import (
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
-	basepb "google.golang.org/appengine/internal/base"
 	dspb "google.golang.org/appengine/internal/datastore"
 	pb "google.golang.org/appengine/internal/taskqueue"
 )
@@ -198,18 +197,15 @@ func newAddReq(c appengine.Context, task *Task, queueName string) (*pb.TaskQueue
 		// Namespace headers.
 		if _, ok := task.Header[currentNamespace]; !ok {
 			// Fetch the current namespace of this request.
-			s := &basepb.StringProto{}
-			c.Call("__go__", "GetNamespace", &basepb.VoidProto{}, s, nil)
+			ns := internal.VirtAPI(c, "GetNamespace")
 			req.Header = append(req.Header, &pb.TaskQueueAddRequest_Header{
 				Key:   []byte(currentNamespace),
-				Value: []byte(s.GetValue()),
+				Value: []byte(ns),
 			})
 		}
 		if _, ok := task.Header[defaultNamespace]; !ok {
 			// Fetch the X-AppEngine-Default-Namespace header of this request.
-			s := &basepb.StringProto{}
-			c.Call("__go__", "GetDefaultNamespace", &basepb.VoidProto{}, s, nil)
-			if ns := s.GetValue(); ns != "" {
+			if ns := internal.VirtAPI(c, "GetDefaultNamespace"); ns != "" {
 				req.Header = append(req.Header, &pb.TaskQueueAddRequest_Header{
 					Key:   []byte(defaultNamespace),
 					Value: []byte(ns),
