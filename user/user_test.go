@@ -11,7 +11,7 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	"google.golang.org/appengine"
+	"google.golang.org/appengine/internal"
 	"google.golang.org/appengine/internal/aetesting"
 	pb "google.golang.org/appengine/internal/user"
 )
@@ -21,13 +21,6 @@ func baseReq() *http.Request {
 		Header: http.Header{},
 	}
 }
-
-type fakeContext struct {
-	appengine.Context
-	req *http.Request
-}
-
-func (f fakeContext) Request() interface{} { return f.req }
 
 type basicUserTest struct {
 	nickname, email, authDomain, admin string
@@ -50,7 +43,7 @@ func TestBasicUserAPI(t *testing.T) {
 		req.Header.Set("X-AppEngine-Auth-Domain", tc.authDomain)
 		req.Header.Set("X-AppEngine-User-Is-Admin", tc.admin)
 
-		c := fakeContext{req: req}
+		c := internal.ContextForTesting(req)
 
 		if ga := IsAdmin(c); ga != tc.isAdmin {
 			t.Errorf("test %d: expected IsAdmin(c) = %v, got %v", i, tc.isAdmin, ga)

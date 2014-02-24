@@ -324,6 +324,13 @@ func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error)
 var virtualMethodHeaders = map[string]string{
 	"GetNamespace":        curNamespaceHeader,
 	"GetDefaultNamespace": defNamespaceHeader,
+
+	"user:Email":             http.CanonicalHeaderKey("X-AppEngine-User-Email"),
+	"user:AuthDomain":        http.CanonicalHeaderKey("X-AppEngine-Auth-Domain"),
+	"user:ID":                http.CanonicalHeaderKey("X-AppEngine-User-Id"),
+	"user:IsAdmin":           http.CanonicalHeaderKey("X-AppEngine-User-Is-Admin"),
+	"user:FederatedIdentity": http.CanonicalHeaderKey("X-AppEngine-Federated-Identity"),
+	"user:FederatedProvider": http.CanonicalHeaderKey("X-AppEngine-Federated-Provider"),
 }
 
 func (c *context) Call(service, method string, in, out proto.Message, opts *CallOptions) error {
@@ -530,6 +537,10 @@ func (c *context) logFlusher(stop <-chan int) {
 			}
 		}
 	}
+}
+
+func ContextForTesting(req *http.Request) *context {
+	return &context{req: req}
 }
 
 // caller is a subset of appengine.Context.
