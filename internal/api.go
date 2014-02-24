@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"runtime"
@@ -51,6 +52,11 @@ var (
 	apiHTTPClient = &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
+			// Dial with a timeout in case apiHost is MIA.
+			// The connection should normally be very fast.
+			Dial: func(network, addr string) (net.Conn, error) {
+				return net.DialTimeout(network, addr, 500*time.Millisecond)
+			},
 		},
 	}
 )

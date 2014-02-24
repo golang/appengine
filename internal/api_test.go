@@ -197,6 +197,24 @@ func TestAPICallRPCFailure(t *testing.T) {
 	}
 }
 
+func TestAPICallDialFailure(t *testing.T) {
+	// See what happens if the API host is unresponsive.
+	// This should time out quickly, not hang forever.
+	_, c, cleanup := setup()
+	defer cleanup()
+	apiHost = "appengine.googleapis.com:10001"
+
+	start := time.Now()
+	err := c.Call("foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{}, nil)
+	const max = 1 * time.Second
+	if taken := time.Since(start); taken > max {
+		t.Errorf("Dial hang took too long: %v > %v", taken, max)
+	}
+	if err == nil {
+		t.Error("Call did not fail")
+	}
+}
+
 func TestDelayedLogFlushing(t *testing.T) {
 	f, c, cleanup := setup()
 	defer cleanup()
