@@ -22,16 +22,16 @@ func TestInstallingHealthChecker(t *testing.T) {
 		defer resp.Body.Close()
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			t.Errorf("%s: reading body: %v", err)
+			t.Errorf("%s: reading body: %v", desc, err)
 			return
 		}
 
 		if resp.StatusCode != wantCode {
-			t.Errorf("%s: got HTTP %d, want %d", resp.StatusCode, wantCode)
+			t.Errorf("%s: got HTTP %d, want %d", desc, resp.StatusCode, wantCode)
 			return
 		}
 		if wantBody != "" && string(body) != wantBody {
-			t.Errorf("%s: got HTTP body %q, want %q", body, wantBody)
+			t.Errorf("%s: got HTTP body %q, want %q", desc, body, wantBody)
 			return
 		}
 	}
