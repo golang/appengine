@@ -6,6 +6,7 @@ package internal
 
 import (
 	"net/http"
+	"os"
 )
 
 // These functions are implementations of the wrapper functions
@@ -34,6 +35,42 @@ func ServerSoftware() string {
 	return "Google App Engine/1.x.x"
 }
 
-func ModuleName() string { return string(mustGetMetadata("instance/attributes/gae_backend_name")) }
-func VersionID() string  { return string(mustGetMetadata("instance/attributes/gae_backend_version")) }
-func InstanceID() string { return string(mustGetMetadata("instance/attributes/gae_backend_instance")) }
+// TODO(dsymonds): Remove the metadata fetches.
+
+func ModuleName() string {
+	if s := os.Getenv("GAE_MODULE_NAME"); s != "" {
+		return s
+	}
+	return string(mustGetMetadata("instance/attributes/gae_backend_name"))
+}
+
+func VersionID() string {
+	if s := os.Getenv("GAE_MODULE_VERSION"); s != "" {
+		return s
+	}
+	return string(mustGetMetadata("instance/attributes/gae_backend_version"))
+}
+
+func InstanceID() string {
+	if s := os.Getenv("GAE_MODULE_INSTANCE"); s != "" {
+		return s
+	}
+	return string(mustGetMetadata("instance/attributes/gae_backend_instance"))
+}
+
+func fullyQualifiedAppID() string {
+	// gae_project has everything except the partition prefix.
+	appID := os.Getenv("GAE_LONG_APP_ID")
+	if appID == "" {
+		appID = string(mustGetMetadata("instance/attributes/gae_project"))
+	}
+	part := os.Getenv("GAE_PARTITION")
+	if part == "" {
+		part = string(mustGetMetadata("instance/attributes/gae_partition"))
+	}
+
+	if part != "" {
+		appID = part + "~" + appID
+	}
+	return appID
+}

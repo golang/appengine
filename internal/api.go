@@ -452,17 +452,7 @@ func (c *context) Criticalf(format string, args ...interface{}) { c.logf(4, form
 // FullyQualifiedAppID returns the fully-qualified application ID.
 // This may contain a partition prefix (e.g. "s~" for High Replication apps),
 // or a domain prefix (e.g. "example.com:").
-func (c *context) FullyQualifiedAppID() string {
-	// TODO(dsymonds): Memoize this.
-
-	// gae_project has everything except the partition prefix.
-	appID := string(mustGetMetadata("instance/attributes/gae_project"))
-	if part := string(mustGetMetadata("instance/attributes/gae_partition")); part != "" {
-		appID = part + "~" + appID
-	}
-
-	return appID
-}
+func (c *context) FullyQualifiedAppID() string { return fullyQualifiedAppID() }
 
 // flushLog attempts to flush any pending logs to the appserver.
 // It should not be called concurrently.
