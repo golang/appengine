@@ -58,12 +58,18 @@ func InstanceID() string {
 	return string(mustGetMetadata("instance/attributes/gae_backend_instance"))
 }
 
-func fullyQualifiedAppID() string {
+func partitionlessAppID() string {
 	// gae_project has everything except the partition prefix.
 	appID := os.Getenv("GAE_LONG_APP_ID")
 	if appID == "" {
 		appID = string(mustGetMetadata("instance/attributes/gae_project"))
 	}
+	return appID
+}
+
+func fullyQualifiedAppID() string {
+	appID := partitionlessAppID()
+
 	part := os.Getenv("GAE_PARTITION")
 	if part == "" {
 		part = string(mustGetMetadata("instance/attributes/gae_partition"))

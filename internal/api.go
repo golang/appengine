@@ -202,7 +202,7 @@ func BackgroundContext() *context {
 	}
 
 	// Compute background security ticket.
-	appID := string(mustGetMetadata("instance/attributes/gae_project"))
+	appID := partitionlessAppID()
 	escAppID := strings.Replace(strings.Replace(appID, ":", "_", -1), ".", "_", -1)
 	majVersion := VersionID()
 	if i := strings.Index(majVersion, "_"); i >= 0 {
