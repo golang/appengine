@@ -38,6 +38,8 @@ var (
 	dapperHeader       = http.CanonicalHeaderKey("X-Google-DapperTraceInfo")
 	defNamespaceHeader = http.CanonicalHeaderKey("X-AppEngine-Default-Namespace")
 	curNamespaceHeader = http.CanonicalHeaderKey("X-AppEngine-Current-Namespace")
+	userIPHeader       = http.CanonicalHeaderKey("X-AppEngine-User-IP")
+	remoteAddrHeader   = http.CanonicalHeaderKey("X-AppEngine-Internal-Remote-Addr")
 
 	// Outgoing headers.
 	apiEndpointHeader      = http.CanonicalHeaderKey("X-Google-RPC-Service-Endpoint")
@@ -76,6 +78,16 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 		delete(ctxs.m, r)
 		ctxs.Unlock()
 	}()
+
+	// Patch up RemoteAddr so it looks reasonable.
+	if addr := r.Header.Get(userIPHeader); addr != "" {
+		r.RemoteAddr = addr
+	} else if addr = r.Header.Get(remoteAddrHeader); addr != "" {
+		r.RemoteAddr = addr
+	} else {
+		// Should not normally reach here, but pick a sensible default anyway.
+		r.RemoteAddr = "127.0.0.1"
+	}
 
 	// Start goroutine responsible for flushing app logs.
 	// This is done after adding c to ctx.m (and stopped before removing it)

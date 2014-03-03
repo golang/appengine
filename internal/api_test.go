@@ -257,3 +257,32 @@ func TestDelayedLogFlushing(t *testing.T) {
 		t.Errorf("After 100ms: f.LogFlushes = %d, want 1", f)
 	}
 }
+
+func TestRemoteAddr(t *testing.T) {
+	var addr string
+	http.HandleFunc("/remote_addr", func(w http.ResponseWriter, r *http.Request) {
+		addr = r.RemoteAddr
+	})
+
+	testCases := []struct {
+		headers http.Header
+		addr    string
+	}{
+		{http.Header{"X-Appengine-User-Ip": []string{"10.5.2.1"}}, "10.5.2.1"},
+		{http.Header{"X-Appengine-Internal-Remote-Addr": []string{"1.2.3.4"}}, "1.2.3.4"},
+		{http.Header{}, "127.0.0.1"},
+	}
+
+	for _, tc := range testCases {
+		r := &http.Request{
+			Method: "GET",
+			URL:    &url.URL{Scheme: "http", Path: "/remote_addr"},
+			Header: tc.headers,
+			Body:   ioutil.NopCloser(bytes.NewReader(nil)),
+		}
+		handleHTTP(httptest.NewRecorder(), r)
+		if addr != tc.addr {
+			t.Errorf("Header %v, got %q, want %q", tc.headers, addr, tc.addr)
+		}
+	}
+}
