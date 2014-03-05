@@ -124,6 +124,9 @@ type Record struct {
 	PendingTime       time.Duration
 	Finished          bool
 	AppLogs           []AppLog
+
+	// Mostly-unique identifier for the instance that handled the request if available.
+	InstanceID string
 }
 
 // Result represents the result of a query.
@@ -216,6 +219,7 @@ func protoToRecord(rl *pb.RequestLog) *Record {
 		PendingTime:       time.Duration(rl.GetPendingTime()) * time.Microsecond,
 		Finished:          rl.GetFinished(),
 		AppLogs:           protoToAppLogs(rl.Line),
+		InstanceID:        string(rl.GetCloneKey()),
 	}
 }
 
