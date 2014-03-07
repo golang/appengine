@@ -29,7 +29,7 @@ vm: true
 manual_scaling:
   instances: 1
 ```
-See [https://developers.google.com/appengine/docs/go/modules/#Go_Instance_scaling_and_class] for details.
+See https://developers.google.com/appengine/docs/go/modules/#Go_Instance_scaling_and_class for details.
 
 ### 2. Update import paths
 
