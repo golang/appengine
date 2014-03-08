@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -136,12 +137,13 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func setup() (f *fakeAPIHandler, c *context, cleanup func()) {
-	origAPIHost := apiHost
 	f = &fakeAPIHandler{
 		die: make(chan int),
 	}
 	srv := httptest.NewServer(f)
-	apiHost = strings.TrimPrefix(srv.URL, "http://")
+	parts := strings.SplitN(strings.TrimPrefix(srv.URL, "http://"), ":", 2)
+	os.Setenv("API_HOST", parts[0])
+	os.Setenv("API_PORT", parts[1])
 	return f, &context{
 			req: &http.Request{
 				Header: http.Header{
@@ -152,7 +154,8 @@ func setup() (f *fakeAPIHandler, c *context, cleanup func()) {
 		}, func() {
 			close(f.die)
 			srv.Close()
-			apiHost = origAPIHost
+			os.Setenv("API_HOST", "")
+			os.Setenv("API_PORT", "")
 		}
 }
 
@@ -207,7 +210,8 @@ func TestAPICallDialFailure(t *testing.T) {
 	// This should time out quickly, not hang forever.
 	_, c, cleanup := setup()
 	defer cleanup()
-	apiHost = "appengine.googleapis.com:10001"
+	os.Setenv("API_HOST", "")
+	os.Setenv("API_PORT", "")
 
 	start := time.Now()
 	err := c.Call("foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{}, nil)

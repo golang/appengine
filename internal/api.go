@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -31,8 +32,6 @@ const (
 )
 
 var (
-	apiHost = "appengine.googleapis.com:10001" // var for testing
-
 	// Incoming headers.
 	ticketHeader       = http.CanonicalHeaderKey("X-AppEngine-API-Ticket")
 	dapperHeader       = http.CanonicalHeaderKey("X-Google-DapperTraceInfo")
@@ -54,7 +53,7 @@ var (
 	apiHTTPClient = &http.Client{
 		Transport: &http.Transport{
 			Proxy: http.ProxyFromEnvironment,
-			// Dial with a timeout in case apiHost is MIA.
+			// Dial with a timeout in case the API host is MIA.
 			// The connection should normally be very fast.
 			Dial: func(network, addr string) (net.Conn, error) {
 				return net.DialTimeout(network, addr, 500*time.Millisecond)
@@ -62,6 +61,17 @@ var (
 		},
 	}
 )
+
+func apiHost() string {
+	host, port := "appengine.googleapis.com", "10001"
+	if h := os.Getenv("API_HOST"); h != "" {
+		host = h
+	}
+	if p := os.Getenv("API_PORT"); p != "" {
+		port = p
+	}
+	return host + ":" + port
+}
 
 func handleHTTP(w http.ResponseWriter, r *http.Request) {
 	c := &context{
@@ -279,11 +289,12 @@ func (c *context) WriteHeader(code int) {
 }
 
 func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error) {
+	dst := apiHost()
 	hreq := &http.Request{
 		Method: "POST",
 		URL: &url.URL{
 			Scheme: "http",
-			Host:   apiHost,
+			Host:   dst,
 			Path:   apiPath,
 		},
 		Header: http.Header{
@@ -294,7 +305,7 @@ func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error)
 		},
 		Body:          ioutil.NopCloser(bytes.NewReader(body)),
 		ContentLength: int64(len(body)),
-		Host:          apiHost,
+		Host:          dst,
 	}
 	if info := c.req.Header.Get(dapperHeader); info != "" {
 		hreq.Header.Set(dapperHeader, info)
