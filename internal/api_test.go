@@ -277,9 +277,18 @@ func TestRemoteAddr(t *testing.T) {
 		headers http.Header
 		addr    string
 	}{
-		{http.Header{"X-Appengine-User-Ip": []string{"10.5.2.1"}}, "10.5.2.1"},
-		{http.Header{"X-Appengine-Internal-Remote-Addr": []string{"1.2.3.4"}}, "1.2.3.4"},
-		{http.Header{}, "127.0.0.1"},
+		{http.Header{"X-Appengine-User-Ip": []string{"10.5.2.1"}}, "10.5.2.1:80"},
+		{http.Header{"X-Appengine-Remote-Addr": []string{"1.2.3.4"}}, "1.2.3.4:80"},
+		{http.Header{"X-Appengine-Remote-Addr": []string{"1.2.3.4:8080"}}, "1.2.3.4:8080"},
+		{
+			http.Header{"X-Appengine-Remote-Addr": []string{"2401:fa00:9:1:7646:a0ff:fe90:ca66"}},
+			"[2401:fa00:9:1:7646:a0ff:fe90:ca66]:80",
+		},
+		{
+			http.Header{"X-Appengine-Remote-Addr": []string{"[::1]:http"}},
+			"[::1]:http",
+		},
+		{http.Header{}, "127.0.0.1:80"},
 	}
 
 	for _, tc := range testCases {

@@ -38,7 +38,7 @@ var (
 	defNamespaceHeader = http.CanonicalHeaderKey("X-AppEngine-Default-Namespace")
 	curNamespaceHeader = http.CanonicalHeaderKey("X-AppEngine-Current-Namespace")
 	userIPHeader       = http.CanonicalHeaderKey("X-AppEngine-User-IP")
-	remoteAddrHeader   = http.CanonicalHeaderKey("X-AppEngine-Internal-Remote-Addr")
+	remoteAddrHeader   = http.CanonicalHeaderKey("X-AppEngine-Remote-Addr")
 
 	// Outgoing headers.
 	apiEndpointHeader      = http.CanonicalHeaderKey("X-Google-RPC-Service-Endpoint")
@@ -97,6 +97,14 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Should not normally reach here, but pick a sensible default anyway.
 		r.RemoteAddr = "127.0.0.1"
+	}
+	// The address in the headers will most likely be of these forms:
+	//	123.123.123.123
+	//	2001:db8::1
+	// net/http.Request.RemoteAddr is specified to be in "IP:port" form.
+	if _, _, err := net.SplitHostPort(r.RemoteAddr); err != nil {
+		// Assume the remote address is only a host; add a default port.
+		r.RemoteAddr = net.JoinHostPort(r.RemoteAddr, "80")
 	}
 
 	// Start goroutine responsible for flushing app logs.
