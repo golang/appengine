@@ -5,13 +5,16 @@
 package internal
 
 import (
+	"bufio"
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"os/exec"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -303,4 +306,110 @@ func TestRemoteAddr(t *testing.T) {
 			t.Errorf("Header %v, got %q, want %q", tc.headers, addr, tc.addr)
 		}
 	}
+}
+
+var raceDetector = false
+
+func TestAPICallAllocations(t *testing.T) {
+	if raceDetector {
+		t.Skip("not running under race detector")
+	}
+
+	// Run the test API server in a subprocess so we aren't counting its allocations.
+	cleanup := launchHelperProcess(t)
+	defer cleanup()
+	c := &context{
+		req: &http.Request{
+			Header: http.Header{
+				ticketHeader: []string{"s3cr3t"},
+				dapperHeader: []string{"trace-001"},
+			},
+		},
+	}
+
+	req := &basepb.StringProto{
+		Value: proto.String("Doctor Who"),
+	}
+	res := &basepb.StringProto{}
+	opts := &CallOptions{
+		Timeout: 100 * time.Millisecond,
+	}
+	var apiErr error
+	avg := testing.AllocsPerRun(100, func() {
+		if err := c.Call("actordb", "LookupActor", req, res, opts); err != nil && apiErr == nil {
+			apiErr = err // get the first error only
+		}
+	})
+	if apiErr != nil {
+		t.Errorf("API call failed: %v", apiErr)
+	}
+
+	// Lots of room for improvement...
+	const min, max float64 = 70, 80
+	if avg < min || max < avg {
+		t.Errorf("Allocations per API call = %g, want in [%g,%g]", avg, min, max)
+	}
+}
+
+func launchHelperProcess(t *testing.T) (cleanup func()) {
+	cmd := exec.Command(os.Args[0], "-test.run=TestHelperProcess")
+	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatalf("StdinPipe: %v", err)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatalf("StdoutPipe: %v", err)
+	}
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("Starting helper process: %v", err)
+	}
+
+	scan := bufio.NewScanner(stdout)
+	ok := false
+	for scan.Scan() {
+		line := scan.Text()
+		if hp := strings.TrimPrefix(line, helperProcessMagic); hp != line {
+			parts := strings.SplitN(hp, ":", 2)
+			os.Setenv("API_HOST", parts[0])
+			os.Setenv("API_PORT", parts[1])
+			ok = true
+			break
+		}
+	}
+	if err := scan.Err(); err != nil {
+		t.Fatalf("Scanning helper process stdout: %v", err)
+	}
+	if !ok {
+		t.Fatal("Helper process never reported")
+	}
+
+	return func() {
+		stdin.Close()
+		if err := cmd.Wait(); err != nil {
+			t.Errorf("Helper process did not exit cleanly: %v", err)
+		}
+	}
+}
+
+const helperProcessMagic = "A lovely helper process is listening at "
+
+// This isn't a real test. It's used as a helper process.
+func TestHelperProcess(*testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+	defer os.Exit(0)
+
+	f := &fakeAPIHandler{
+		die: make(chan int),
+	}
+	defer close(f.die)
+	srv := httptest.NewServer(f)
+	defer srv.Close()
+	fmt.Println(helperProcessMagic + strings.TrimPrefix(srv.URL, "http://"))
+
+	// Wait for stdin to be closed.
+	io.Copy(ioutil.Discard, os.Stdin)
 }
