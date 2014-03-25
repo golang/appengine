@@ -33,7 +33,7 @@ func init() {
 }
 
 type fakeAPIHandler struct {
-	die chan int // closed when the test server is going down
+	hang chan int // used for RunSlowly RPC
 
 	LogFlushes int32 // atomic
 }
@@ -113,12 +113,11 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			return
 		case "RunSlowly":
-			// Avoid blocking test shutdown by aborting early when the test is over.
-			select {
-			case <-time.After(5 * time.Second):
-			case <-f.die:
-				return
-			}
+			// TestAPICallRPCFailure creates f.hang, but does not strobe it
+			// until c.Call returns with remotepb.RpcError_CANCELLED.
+			// This is here to force a happens-before relationship between
+			// the httptest server handler and shutdown.
+			<-f.hang
 			resOut = &basepb.VoidProto{}
 		}
 	}
@@ -141,7 +140,6 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func setup() (f *fakeAPIHandler, c *context, cleanup func()) {
 	f = &fakeAPIHandler{
-		die: make(chan int),
 	}
 	srv := httptest.NewServer(f)
 	parts := strings.SplitN(strings.TrimPrefix(srv.URL, "http://"), ":", 2)
@@ -155,7 +153,6 @@ func setup() (f *fakeAPIHandler, c *context, cleanup func()) {
 				},
 			},
 		}, func() {
-			close(f.die)
 			srv.Close()
 			os.Setenv("API_HOST", "")
 			os.Setenv("API_PORT", "")
@@ -180,7 +177,7 @@ func TestAPICall(t *testing.T) {
 }
 
 func TestAPICallRPCFailure(t *testing.T) {
-	_, c, cleanup := setup()
+	f, c, cleanup := setup()
 	defer cleanup()
 
 	testCases := []struct {
@@ -192,6 +189,7 @@ func TestAPICallRPCFailure(t *testing.T) {
 		{"OverQuota", remotepb.RpcError_OVER_QUOTA},
 		{"RunSlowly", remotepb.RpcError_CANCELLED},
 	}
+	f.hang = make(chan int) // only for RunSlowly
 	for _, tc := range testCases {
 		opts := &CallOptions{
 			Timeout: 100 * time.Millisecond,
@@ -204,6 +202,9 @@ func TestAPICallRPCFailure(t *testing.T) {
 		}
 		if ce.Code != int32(tc.code) {
 			t.Errorf("%s: ce.Code = %d, want %d", tc.method, ce.Code, tc.code)
+		}
+		if tc.method == "RunSlowly" {
+			f.hang <- 1 // release the HTTP handler
 		}
 	}
 }
@@ -403,9 +404,7 @@ func TestHelperProcess(*testing.T) {
 	defer os.Exit(0)
 
 	f := &fakeAPIHandler{
-		die: make(chan int),
 	}
-	defer close(f.die)
 	srv := httptest.NewServer(f)
 	defer srv.Close()
 	fmt.Println(helperProcessMagic + strings.TrimPrefix(srv.URL, "http://"))
