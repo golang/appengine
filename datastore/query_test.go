@@ -113,18 +113,22 @@ func (c *stubContext) Call(service, method string, in, out proto.Message, _ *int
 
 type StructThatImplementsPLS struct{}
 
-func (StructThatImplementsPLS) Load(c <-chan Property) error { return nil }
-func (StructThatImplementsPLS) Save(c chan<- Property) error { return nil }
+func (StructThatImplementsPLS) Load(p []Property) error   { return nil }
+func (StructThatImplementsPLS) Save() ([]Property, error) { return nil, nil }
+
+var _ PropertyLoadSaver = StructThatImplementsPLS{}
 
 type StructPtrThatImplementsPLS struct{}
 
-func (*StructPtrThatImplementsPLS) Load(c <-chan Property) error { return nil }
-func (*StructPtrThatImplementsPLS) Save(c chan<- Property) error { return nil }
+func (*StructPtrThatImplementsPLS) Load(p []Property) error   { return nil }
+func (*StructPtrThatImplementsPLS) Save() ([]Property, error) { return nil, nil }
+
+var _ PropertyLoadSaver = &StructPtrThatImplementsPLS{}
 
 type PropertyMap map[string]Property
 
-func (m PropertyMap) Load(c <-chan Property) error {
-	for p := range c {
+func (m PropertyMap) Load(props []Property) error {
+	for _, p := range props {
 		if p.Multiple {
 			return errors.New("PropertyMap does not support multiple properties")
 		}
@@ -133,16 +137,18 @@ func (m PropertyMap) Load(c <-chan Property) error {
 	return nil
 }
 
-func (m PropertyMap) Save(c chan<- Property) error {
-	defer close(c)
+func (m PropertyMap) Save() ([]Property, error) {
+	props := make([]Property, 0, len(m))
 	for _, p := range m {
 		if p.Multiple {
-			return errors.New("PropertyMap does not support multiple properties")
+			return nil, errors.New("PropertyMap does not support multiple properties")
 		}
-		c <- p
+		props = append(props, p)
 	}
-	return nil
+	return props, nil
 }
+
+var _ PropertyLoadSaver = PropertyMap{}
 
 type Gopher struct {
 	Name   string

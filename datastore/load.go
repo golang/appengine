@@ -190,24 +190,20 @@ func (l *propertyLoader) load(codec *structCodec, structValue reflect.Value, p P
 
 // loadEntity loads an EntityProto into PropertyLoadSaver or struct pointer.
 func loadEntity(dst interface{}, src *pb.EntityProto) (err error) {
-	c := make(chan Property, 32)
-	errc := make(chan error, 1)
-	defer func() {
-		if err == nil {
-			err = <-errc
-		}
-	}()
-	go protoToProperties(c, errc, src)
-	if e, ok := dst.(PropertyLoadSaver); ok {
-		return e.Load(c)
+	props, err := protoToProperties(src)
+	if err != nil {
+		return err
 	}
-	return LoadStruct(dst, c)
+	if e, ok := dst.(PropertyLoadSaver); ok {
+		return e.Load(props)
+	}
+	return LoadStruct(dst, props)
 }
 
-func (s structPLS) Load(c <-chan Property) error {
+func (s structPLS) Load(props []Property) error {
 	var fieldName, reason string
 	var l propertyLoader
-	for p := range c {
+	for _, p := range props {
 		if errStr := l.load(s.codec, s.v, p, p.Multiple); errStr != "" {
 			// We don't return early, as we try to load as many properties as possible.
 			// It is valid to load an entity into a struct that cannot fully represent it.
@@ -225,9 +221,9 @@ func (s structPLS) Load(c <-chan Property) error {
 	return nil
 }
 
-func protoToProperties(dst chan<- Property, errc chan<- error, src *pb.EntityProto) {
-	defer close(dst)
+func protoToProperties(src *pb.EntityProto) ([]Property, error) {
 	props, rawProps := src.Property, src.RawProperty
+	out := make([]Property, 0, len(props)+len(rawProps))
 	for {
 		var (
 			x       *pb.Property
@@ -249,18 +245,17 @@ func protoToProperties(dst chan<- Property, errc chan<- error, src *pb.EntityPro
 			var err error
 			value, err = propValue(x.Value, x.GetMeaning())
 			if err != nil {
-				errc <- err
-				return
+				return nil, err
 			}
 		}
-		dst <- Property{
+		out = append(out, Property{
 			Name:     x.GetName(),
 			Value:    value,
 			NoIndex:  noIndex,
 			Multiple: x.GetMultiple(),
-		}
+		})
 	}
-	errc <- nil
+	return out, nil
 }
 
 // propValue returns a Go value that combines the raw PropertyValue with a

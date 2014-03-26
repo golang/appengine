@@ -285,25 +285,19 @@ type Doubler struct {
 	B bool
 }
 
-func (d *Doubler) Load(c <-chan Property) error {
-	return LoadStruct(d, c)
+func (d *Doubler) Load(props []Property) error {
+	return LoadStruct(d, props)
 }
 
-func (d *Doubler) Save(c chan<- Property) error {
-	// Save the default Property sequence to an in-memory buffer (a PropertyList).
-	c1 := make(chan Property)
-	errc := make(chan error, 1)
-	go func() {
-		errc <- SaveStruct(d, c1)
-	}()
-	var list PropertyList
-	if err := list.Load(c1); err != nil {
-		close(c)
-		return err
+func (d *Doubler) Save() ([]Property, error) {
+	// Save the default Property slice to an in-memory buffer (a PropertyList).
+	props, err := SaveStruct(d)
+	if err != nil {
+		return nil, err
 	}
-	if err := <-errc; err != nil {
-		close(c)
-		return err
+	var list PropertyList
+	if err := list.Load(props); err != nil {
+		return nil, err
 	}
 
 	// Edit that PropertyList, and send it on.
@@ -317,7 +311,7 @@ func (d *Doubler) Save(c chan<- Property) error {
 			list[i].Value = v + v
 		}
 	}
-	return list.Save(c)
+	return list.Save()
 }
 
 var _ PropertyLoadSaver = (*Doubler)(nil)
@@ -326,8 +320,8 @@ type Deriver struct {
 	S, Derived, Ignored string
 }
 
-func (e *Deriver) Load(c <-chan Property) error {
-	for p := range c {
+func (e *Deriver) Load(props []Property) error {
+	for _, p := range props {
 		if p.Name != "S" {
 			continue
 		}
@@ -337,36 +331,33 @@ func (e *Deriver) Load(c <-chan Property) error {
 	return nil
 }
 
-func (e *Deriver) Save(c chan<- Property) error {
-	c <- Property{
-		Name:  "S",
-		Value: e.S,
-	}
-	close(c)
-	return nil
+func (e *Deriver) Save() ([]Property, error) {
+	return []Property{
+		{
+			Name:  "S",
+			Value: e.S,
+		},
+	}, nil
 }
 
 var _ PropertyLoadSaver = (*Deriver)(nil)
 
 type BadMultiPropEntity struct{}
 
-func (e *BadMultiPropEntity) Load(c <-chan Property) error {
-	for _ = range c {
-		// No-op.
-	}
+func (e *BadMultiPropEntity) Load(props []Property) error {
 	return errors.New("unimplemented")
 }
 
-func (e *BadMultiPropEntity) Save(c chan<- Property) error {
+func (e *BadMultiPropEntity) Save() ([]Property, error) {
 	// Write multiple properties with the same name "I", but Multiple is false.
+	var props []Property
 	for i := 0; i < 3; i++ {
-		c <- Property{
+		props = append(props, Property{
 			Name:  "I",
 			Value: int64(i),
-		}
+		})
 	}
-	close(c)
-	return nil
+	return props, nil
 }
 
 var _ PropertyLoadSaver = (*BadMultiPropEntity)(nil)
@@ -1378,13 +1369,12 @@ func TestStringMeaning(t *testing.T) {
 	}
 
 	for i, x := range xx {
-		c := make(chan Property, 1)
-		err := SaveStruct(x, c)
+		props, err := SaveStruct(x)
 		if err != nil {
 			t.Errorf("i=%d: SaveStruct: %v", i, err)
 			continue
 		}
-		e, err := propertiesToProto("appID", testKey0, c)
+		e, err := propertiesToProto("appID", testKey0, props)
 		if err != nil {
 			t.Errorf("i=%d: propertiesToProto: %v", i, err)
 			continue

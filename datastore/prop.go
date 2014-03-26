@@ -61,12 +61,10 @@ type Property struct {
 	Multiple bool
 }
 
-// PropertyLoadSaver can be converted from and to a sequence of Properties.
-// Load should drain the channel until closed, even if an error occurred.
-// Save should close the channel when done, even if an error occurred.
+// PropertyLoadSaver can be converted from and to a slice of Properties.
 type PropertyLoadSaver interface {
-	Load(<-chan Property) error
-	Save(chan<- Property) error
+	Load([]Property) error
+	Save() ([]Property, error)
 }
 
 // PropertyList converts a []Property to implement PropertyLoadSaver.
@@ -77,22 +75,16 @@ var (
 	typeOfPropertyList      = reflect.TypeOf(PropertyList(nil))
 )
 
-// Load loads all of c's properties into l.
+// Load loads all of the provided properties into l.
 // It does not first reset *l to an empty slice.
-func (l *PropertyList) Load(c <-chan Property) error {
-	for p := range c {
-		*l = append(*l, p)
-	}
+func (l *PropertyList) Load(p []Property) error {
+	*l = append(*l, p...)
 	return nil
 }
 
-// Save saves all of l's properties to c.
-func (l *PropertyList) Save(c chan<- Property) error {
-	for _, p := range *l {
-		c <- p
-	}
-	close(c)
-	return nil
+// Save saves all of l's properties as a slice or Properties.
+func (l *PropertyList) Save() ([]Property, error) {
+	return *l, nil
 }
 
 // validPropertyName returns whether name consists of one or more valid Go
@@ -276,26 +268,22 @@ func newStructPLS(p interface{}) (PropertyLoadSaver, error) {
 	return structPLS{v, codec}, nil
 }
 
-// LoadStruct loads the properties from c to dst, reading from c until closed.
+// LoadStruct loads the properties from p to dst.
 // dst must be a struct pointer.
-func LoadStruct(dst interface{}, c <-chan Property) error {
+func LoadStruct(dst interface{}, p []Property) error {
 	x, err := newStructPLS(dst)
 	if err != nil {
-		for _ = range c {
-			// Drain the channel.
-		}
 		return err
 	}
-	return x.Load(c)
+	return x.Load(p)
 }
 
-// SaveStruct saves the properties from src to c, closing c when done.
+// SaveStruct returns the properties from src as a slice of Properties.
 // src must be a struct pointer.
-func SaveStruct(src interface{}, c chan<- Property) error {
+func SaveStruct(src interface{}) ([]Property, error) {
 	x, err := newStructPLS(src)
 	if err != nil {
-		close(c)
-		return err
+		return nil, err
 	}
-	return x.Save(c)
+	return x.Save()
 }

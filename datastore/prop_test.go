@@ -541,16 +541,14 @@ func TestNilKeyIsStored(t *testing.T) {
 	}{}
 	p := PropertyList{}
 	// Save x as properties.
-	c0 := make(chan Property)
-	go SaveStruct(&x, c0)
-	p.Load(c0)
+	p1, _ := SaveStruct(&x)
+	p.Load(p1)
 	// Set x's fields to non-zero.
 	x.K = &Key{}
 	x.I = 2
 	// Load x from properties.
-	c1 := make(chan Property)
-	go p.Save(c1)
-	LoadStruct(&x, c1)
+	p2, _ := p.Save()
+	LoadStruct(&x, p2)
 	// Check that x's fields were set to zero.
 	if x.K != nil {
 		t.Errorf("K field was not zero")

@@ -101,27 +101,21 @@ func valueToProto(defaultAppID, name string, v reflect.Value, multiple bool) (p 
 }
 
 // saveEntity saves an EntityProto into a PropertyLoadSaver or struct pointer.
-func saveEntity(defaultAppID string, key *Key, src interface{}) (x *pb.EntityProto, err error) {
-	c := make(chan Property, 32)
-	donec := make(chan struct{})
-	go func() {
-		x, err = propertiesToProto(defaultAppID, key, c)
-		close(donec)
-	}()
-	var err1 error
+func saveEntity(defaultAppID string, key *Key, src interface{}) (*pb.EntityProto, error) {
+	var err error
+	var props []Property
 	if e, ok := src.(PropertyLoadSaver); ok {
-		err1 = e.Save(c)
+		props, err = e.Save()
 	} else {
-		err1 = SaveStruct(src, c)
+		props, err = SaveStruct(src)
 	}
-	<-donec
-	if err1 != nil {
-		return nil, err1
+	if err != nil {
+		return nil, err
 	}
-	return x, err
+	return propertiesToProto(defaultAppID, key, props)
 }
 
-func saveStructProperty(c chan<- Property, name string, noIndex, multiple bool, v reflect.Value) error {
+func saveStructProperty(props *[]Property, name string, noIndex, multiple bool, v reflect.Value) error {
 	p := Property{
 		Name:     name,
 		NoIndex:  noIndex,
@@ -155,22 +149,25 @@ func saveStructProperty(c chan<- Property, name string, noIndex, multiple bool, 
 			if err != nil {
 				return fmt.Errorf("datastore: unsupported struct field: %v", err)
 			}
-			return sub.(structPLS).save(c, name, noIndex, multiple)
+			return sub.(structPLS).save(props, name, noIndex, multiple)
 		}
 	}
 	if p.Value == nil {
 		return fmt.Errorf("datastore: unsupported struct field type: %v", v.Type())
 	}
-	c <- p
+	*props = append(*props, p)
 	return nil
 }
 
-func (s structPLS) Save(c chan<- Property) error {
-	defer close(c)
-	return s.save(c, "", false, false)
+func (s structPLS) Save() ([]Property, error) {
+	var props []Property
+	if err := s.save(&props, "", false, false); err != nil {
+		return nil, err
+	}
+	return props, nil
 }
 
-func (s structPLS) save(c chan<- Property, prefix string, noIndex, multiple bool) error {
+func (s structPLS) save(props *[]Property, prefix string, noIndex, multiple bool) error {
 	for i, t := range s.codec.byIndex {
 		if t.name == "-" {
 			continue
@@ -187,26 +184,21 @@ func (s structPLS) save(c chan<- Property, prefix string, noIndex, multiple bool
 		// For slice fields that aren't []byte, save each element.
 		if v.Kind() == reflect.Slice && v.Type() != typeOfByteSlice {
 			for j := 0; j < v.Len(); j++ {
-				if err := saveStructProperty(c, name, noIndex1, true, v.Index(j)); err != nil {
+				if err := saveStructProperty(props, name, noIndex1, true, v.Index(j)); err != nil {
 					return err
 				}
 			}
 			continue
 		}
 		// Otherwise, save the field itself.
-		if err := saveStructProperty(c, name, noIndex1, multiple, v); err != nil {
+		if err := saveStructProperty(props, name, noIndex1, multiple, v); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func propertiesToProto(defaultAppID string, key *Key, src <-chan Property) (*pb.EntityProto, error) {
-	defer func() {
-		for _ = range src {
-			// Drain the src channel, if we exit early.
-		}
-	}()
+func propertiesToProto(defaultAppID string, key *Key, props []Property) (*pb.EntityProto, error) {
 	e := &pb.EntityProto{
 		Key: keyToProto(defaultAppID, key),
 	}
@@ -217,7 +209,7 @@ func propertiesToProto(defaultAppID string, key *Key, src <-chan Property) (*pb.
 	}
 	prevMultiple := make(map[string]bool)
 
-	for p := range src {
+	for _, p := range props {
 		if pm, ok := prevMultiple[p.Name]; ok {
 			if !pm || !p.Multiple {
 				return nil, fmt.Errorf("datastore: multiple Properties with Name %q, but Multiple is false", p.Name)
