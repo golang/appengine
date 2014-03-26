@@ -171,8 +171,8 @@ The PropertyLoadSaver Interface
 
 An entity's contents can also be represented by any type that implements the
 PropertyLoadSaver interface. This type may be a struct pointer, but it does
-not have to be. The datastore package will call LoadProperties when getting
-the entity's contents, and SaveProperties when putting the entity's contents.
+not have to be. The datastore package will call Load when getting the entity's
+contents, and Save when putting the entity's contents.
 Possible uses include deriving non-stored fields, verifying fields, or indexing
 a field only if its value is positive.
 
