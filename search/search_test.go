@@ -15,11 +15,12 @@ import (
 )
 
 type TestDoc struct {
-	String string
-	Atom   Atom
-	HTML   HTML
-	Float  float64
-	Time   time.Time
+	String   string
+	Atom     Atom
+	HTML     HTML
+	Float    float64
+	Location GeoPoint
+	Time     time.Time
 }
 
 var (
@@ -27,6 +28,7 @@ var (
 	floatOut    = "3.14159e+00"
 	latitude    = 37.3894
 	longitude   = 122.0819
+	testGeo     = GeoPoint{latitude, longitude}
 	testString  = "foo<b>bar"
 	testTime    = time.Unix(1337324400, 0)
 	testTimeOut = "1337324400000"
@@ -35,6 +37,7 @@ var (
 		Atom(testString),
 		HTML(testString),
 		float,
+		testGeo,
 		testTime,
 	}
 	protoFields = []*pb.Field{
@@ -42,6 +45,16 @@ var (
 		newStringValueField("Atom", testString, pb.FieldValue_ATOM),
 		newStringValueField("HTML", testString, pb.FieldValue_HTML),
 		newStringValueField("Float", floatOut, pb.FieldValue_NUMBER),
+		&pb.Field{
+			Name: proto.String("Location"),
+			Value: &pb.FieldValue{
+				Geo: &pb.FieldValue_Geo{
+					Lat: proto.Float64(latitude),
+					Lng: proto.Float64(longitude),
+				},
+				Type: pb.FieldValue_GEO.Enum(),
+			},
+		},
 		newStringValueField("Time", testTimeOut, pb.FieldValue_DATE),
 	}
 )
@@ -98,5 +111,45 @@ func TestSaveFields(t *testing.T) {
 	want := protoFields
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("\ngot  %v\nwant %v", got, want)
+	}
+}
+
+func TestValidGeoPoint(t *testing.T) {
+	testCases := []struct {
+		desc string
+		pt   GeoPoint
+		want bool
+	}{
+		{
+			"valid",
+			GeoPoint{67.21, 13.37},
+			true,
+		},
+		{
+			"high lat",
+			GeoPoint{-90.01, 13.37},
+			false,
+		},
+		{
+			"low lat",
+			GeoPoint{90.01, 13.37},
+			false,
+		},
+		{
+			"high lng",
+			GeoPoint{67.21, 182},
+			false,
+		},
+		{
+			"low lng",
+			GeoPoint{67.21, -181},
+			false,
+		},
+	}
+
+	for _, tc := range testCases {
+		if got := tc.pt.Valid(); got != tc.want {
+			t.Errorf("%s: got %v, want %v", tc.desc, got, tc.want)
+		}
 	}
 }

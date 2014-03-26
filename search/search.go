@@ -12,7 +12,8 @@ pointers, and the valid types for a struct's fields are:
   - search.Atom,
   - search.HTML,
   - time.Time (stored with millisecond precision),
-  - float64.
+  - float64,
+  - GeoPoint.
 
 Example code:
 
@@ -89,8 +90,6 @@ package search
 // TODO: struct <-> protobuf tests.
 // TODO: enforce Python's MIN_NUMBER_VALUE and MIN_DATE (which would disallow a zero
 // time.Time)? _MAXIMUM_STRING_LENGTH?
-// TODO: GeoPoint type. Should this be the same type as used by the datastore? If so,
-// what package should it live in?
 
 import (
 	"errors"
@@ -125,12 +124,24 @@ type Atom string
 // are indexed: "foo<b>bar" will be treated as "foobar".
 type HTML string
 
+// GeoPoint represents a location as latitude/longitude in degrees.
+type GeoPoint struct {
+	Lat, Lng float64
+}
+
+// Valid returns whether a GeoPoint is within [-90, 90] latitude and
+// [-180, 180] longitude.
+func (g GeoPoint) Valid() bool {
+	return -90 <= g.Lat && g.Lat <= 90 && -180 <= g.Lng && g.Lng <= 180
+}
+
 var (
-	atomType    = reflect.TypeOf(Atom(""))
-	float64Type = reflect.TypeOf(float64(0))
-	htmlType    = reflect.TypeOf(HTML(""))
-	stringType  = reflect.TypeOf("")
-	timeType    = reflect.TypeOf(time.Time{})
+	atomType     = reflect.TypeOf(Atom(""))
+	float64Type  = reflect.TypeOf(float64(0))
+	geoPointType = reflect.TypeOf(GeoPoint{})
+	htmlType     = reflect.TypeOf(HTML(""))
+	stringType   = reflect.TypeOf("")
+	timeType     = reflect.TypeOf(time.Time{})
 )
 
 // validIndexNameOrDocID is the Go equivalent of Python's
@@ -456,6 +467,17 @@ func saveFields(src interface{}) (fields []*pb.Field, err error) {
 		case float64:
 			fieldValue.Type = pb.FieldValue_NUMBER.Enum()
 			fieldValue.StringValue = proto.String(strconv.FormatFloat(x, 'e', -1, 64))
+		case GeoPoint:
+			if !x.Valid() {
+				return nil, fmt.Errorf(
+					"search: GeoPoint field %q with invalid value %v",
+					vType.Field(i).Name, x)
+			}
+			fieldValue.Type = pb.FieldValue_GEO.Enum()
+			fieldValue.Geo = &pb.FieldValue_Geo{
+				Lat: proto.Float64(x.Lat),
+				Lng: proto.Float64(x.Lng),
+			}
 		default:
 			return nil, fmt.Errorf("search: unsupported field type: %v", f.Type())
 		}
@@ -510,6 +532,14 @@ func loadFields(dst interface{}, fields []*pb.Field) error {
 				return fmt.Errorf("search: internal error: bad float64 encoding %q: %v", sv, err)
 			}
 			f.SetFloat(x)
+		case ft == geoPointType && vt == pb.FieldValue_GEO:
+			geoValue := fieldValue.GetGeo()
+			geoPoint := GeoPoint{geoValue.GetLat(), geoValue.GetLng()}
+			if !geoPoint.Valid() {
+				return fmt.Errorf("search: internal error: invalid GeoPoint encoding: %v", geoPoint)
+			}
+			p := f.Addr().Interface().(*GeoPoint)
+			*p = geoPoint
 		default:
 			return fmt.Errorf("search: type mismatch: %v for %s data", ft, vt)
 		}
