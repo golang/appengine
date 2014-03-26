@@ -15,6 +15,9 @@ pointers, and the valid types for a struct's fields are:
   - float64,
   - GeoPoint.
 
+Documents can also be represented by any type implementing the FieldLoadSaver
+interface.
+
 Example code:
 
 	type Doc struct {
@@ -84,7 +87,6 @@ with an upper case letter.
 */
 package search
 
-// TODO: a PropertyLoadSaver interface, similar to package datastore?
 // TODO: let Put specify the document language: "en", "fr", etc. Also: order_id?? storage??
 // TODO: Index.GetAll (or Iterator.GetAll)?
 // TODO: struct <-> protobuf tests.
@@ -95,6 +97,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -135,15 +138,6 @@ func (g GeoPoint) Valid() bool {
 	return -90 <= g.Lat && g.Lat <= 90 && -180 <= g.Lng && g.Lng <= 180
 }
 
-var (
-	atomType     = reflect.TypeOf(Atom(""))
-	float64Type  = reflect.TypeOf(float64(0))
-	geoPointType = reflect.TypeOf(GeoPoint{})
-	htmlType     = reflect.TypeOf(HTML(""))
-	stringType   = reflect.TypeOf("")
-	timeType     = reflect.TypeOf(time.Time{})
-)
-
 // validIndexNameOrDocID is the Go equivalent of Python's
 // _ValidateVisiblePrintableAsciiNotReserved.
 func validIndexNameOrDocID(s string) bool {
@@ -156,6 +150,13 @@ func validIndexNameOrDocID(s string) bool {
 		}
 	}
 	return true
+}
+
+var fieldNameRE = regexp.MustCompile(`^[A-Z][A-Za-z0-9_]*$`)
+
+// validFieldName is the Go equivalent of Python's _CheckFieldName.
+func validFieldName(s string) bool {
+	return len(s) <= 500 && fieldNameRE.MatchString(s)
 }
 
 // Index is an index of documents.
@@ -186,7 +187,8 @@ func Open(name string) (*Index, error) {
 // The ID is a human-readable ASCII string. It must contain no whitespace
 // characters and not start with "!".
 //
-// src must be a non-nil struct pointer.
+// src must be a non-nil struct pointer or implement the FieldLoadSaver
+// interface.
 func (x *Index) Put(c appengine.Context, id string, src interface{}) (string, error) {
 	fields, err := saveFields(src)
 	if err != nil {
@@ -226,7 +228,8 @@ func (x *Index) Put(c appengine.Context, id string, src interface{}) (string, er
 // The ID is a human-readable ASCII string. It must be non-empty, contain no
 // whitespace characters and not start with "!".
 //
-// dst must be a non-nil struct pointer.
+// dst must be a non-nil struct pointer or implement the FieldLoadSaver
+// interface.
 func (x *Index) Get(c appengine.Context, id string, dst interface{}) error {
 	if id == "" || !validIndexNameOrDocID(id) {
 		return fmt.Errorf("search: invalid ID %q", id)
@@ -404,9 +407,9 @@ func (t *Iterator) Count() int { return t.count }
 // Next returns the ID of the next result. When there are no more results,
 // Done is returned as the error.
 //
-// dst must be a non-nil struct pointer or a nil interface value. If a
-// non-nil struct pointer is provided, that struct will be filled with the
-// indexed fields.
+// dst must be a non-nil struct pointer, implement the FieldLoadSaver
+// interface, or be a nil interface value. If a non-nil dst is provided, it
+// will be filled with the indexed fields.
 func (t *Iterator) Next(dst interface{}) (string, error) {
 	if t.err == nil && len(t.listRes)+len(t.searchRes) == 0 && t.more != nil {
 		t.err = t.more(t)
@@ -437,21 +440,31 @@ func (t *Iterator) Next(dst interface{}) (string, error) {
 	return doc.GetId(), nil
 }
 
-// saveFields converts from a struct pointer to protobufs.
-func saveFields(src interface{}) (fields []*pb.Field, err error) {
-	v := reflect.ValueOf(src)
-	if v.Kind() != reflect.Ptr || v.IsNil() || v.Elem().Kind() != reflect.Struct {
-		return nil, ErrInvalidDocumentType
+// saveFields converts from a struct pointer or FieldLoadSaver to protobufs.
+func saveFields(src interface{}) ([]*pb.Field, error) {
+	var err error
+	var fields []Field
+	if x, ok := src.(FieldLoadSaver); ok {
+		fields, err = x.Save()
+	} else {
+		fields, err = SaveStruct(src)
 	}
-	v = v.Elem()
-	vType := v.Type()
-	for i := 0; i < v.NumField(); i++ {
-		f := v.Field(i)
-		if !f.CanSet() {
-			continue
+	if err != nil {
+		return nil, err
+	}
+	return fieldsToProto(fields)
+}
+
+func fieldsToProto(src []Field) ([]*pb.Field, error) {
+	// Maps to catch duplicate time or numeric fields.
+	timeFields, numericFields := make(map[string]bool), make(map[string]bool)
+	dst := make([]*pb.Field, 0, len(src))
+	for _, f := range src {
+		if !validFieldName(f.Name) {
+			return nil, fmt.Errorf("search: invalid field name %q", f.Name)
 		}
 		fieldValue := &pb.FieldValue{}
-		switch x := f.Interface().(type) {
+		switch x := f.Value.(type) {
 		case string:
 			fieldValue.Type = pb.FieldValue_TEXT.Enum()
 			fieldValue.StringValue = proto.String(x)
@@ -462,16 +475,24 @@ func saveFields(src interface{}) (fields []*pb.Field, err error) {
 			fieldValue.Type = pb.FieldValue_HTML.Enum()
 			fieldValue.StringValue = proto.String(string(x))
 		case time.Time:
+			if timeFields[f.Name] {
+				return nil, fmt.Errorf("search: duplicate time field %q", f.Name)
+			}
+			timeFields[f.Name] = true
 			fieldValue.Type = pb.FieldValue_DATE.Enum()
 			fieldValue.StringValue = proto.String(strconv.FormatInt(x.UnixNano()/1e6, 10))
 		case float64:
+			if numericFields[f.Name] {
+				return nil, fmt.Errorf("search: duplicate numeric field %q", f.Name)
+			}
+			numericFields[f.Name] = true
 			fieldValue.Type = pb.FieldValue_NUMBER.Enum()
 			fieldValue.StringValue = proto.String(strconv.FormatFloat(x, 'e', -1, 64))
 		case GeoPoint:
 			if !x.Valid() {
 				return nil, fmt.Errorf(
 					"search: GeoPoint field %q with invalid value %v",
-					vType.Field(i).Name, x)
+					f.Name, x)
 			}
 			fieldValue.Type = pb.FieldValue_GEO.Enum()
 			fieldValue.Geo = &pb.FieldValue_Geo{
@@ -479,72 +500,72 @@ func saveFields(src interface{}) (fields []*pb.Field, err error) {
 				Lng: proto.Float64(x.Lng),
 			}
 		default:
-			return nil, fmt.Errorf("search: unsupported field type: %v", f.Type())
+			return nil, fmt.Errorf("search: unsupported field type: %v", reflect.TypeOf(f.Value))
 		}
-		name := vType.Field(i).Name
 		if p := fieldValue.StringValue; p != nil && !utf8.ValidString(*p) {
-			return nil, fmt.Errorf("search: %q field is invalid UTF-8: %q", name, *p)
+			return nil, fmt.Errorf("search: %q field is invalid UTF-8: %q", f.Name, *p)
 		}
-		fields = append(fields, &pb.Field{
-			Name:  proto.String(name),
+		dst = append(dst, &pb.Field{
+			Name:  proto.String(f.Name),
 			Value: fieldValue,
 		})
 	}
-	return fields, nil
+	return dst, nil
 }
 
-// loadFields converts from protobufs to a struct pointer.
-func loadFields(dst interface{}, fields []*pb.Field) error {
-	v := reflect.ValueOf(dst)
-	if v.Kind() != reflect.Ptr || v.IsNil() || v.Elem().Kind() != reflect.Struct {
-		return ErrInvalidDocumentType
+// loadFields converts from protobufs to a struct pointer or FieldLoadSaver.
+func loadFields(dst interface{}, src []*pb.Field) (err error) {
+	fields, err := protoToFields(src)
+	if err != nil {
+		return err
 	}
-	v = v.Elem()
+	if x, ok := dst.(FieldLoadSaver); ok {
+		return x.Load(fields)
+	}
+	return LoadStruct(dst, fields)
+}
+
+func protoToFields(fields []*pb.Field) ([]Field, error) {
+	dst := make([]Field, 0, len(fields))
 	for _, field := range fields {
 		fieldValue := field.GetValue()
-		f := v.FieldByName(field.GetName())
-		if !f.IsValid() {
-			// TODO: continue but eventually return ErrFieldMismatch, similar to package datastore.
-			continue
+		f := Field{
+			Name: field.GetName(),
 		}
-		if !f.CanSet() {
-			continue
-		}
-		switch ft, vt := f.Type(), fieldValue.GetType(); {
-		case ft == stringType && vt == pb.FieldValue_TEXT:
-			f.SetString(fieldValue.GetStringValue())
-		case ft == atomType && vt == pb.FieldValue_ATOM:
-			f.SetString(fieldValue.GetStringValue())
-		case ft == htmlType && vt == pb.FieldValue_HTML:
-			f.SetString(fieldValue.GetStringValue())
-		case ft == timeType && vt == pb.FieldValue_DATE:
+		switch fieldValue.GetType() {
+		case pb.FieldValue_TEXT:
+			f.Value = fieldValue.GetStringValue()
+		case pb.FieldValue_ATOM:
+			f.Value = Atom(fieldValue.GetStringValue())
+		case pb.FieldValue_HTML:
+			f.Value = HTML(fieldValue.GetStringValue())
+		case pb.FieldValue_DATE:
 			sv := fieldValue.GetStringValue()
 			millis, err := strconv.ParseInt(sv, 10, 64)
 			if err != nil {
-				return fmt.Errorf("search: internal error: bad time.Time encoding %q: %v", sv, err)
+				return nil, fmt.Errorf("search: internal error: bad time.Time encoding %q: %v", sv, err)
 			}
-			p := f.Addr().Interface().(*time.Time)
-			*p = time.Unix(0, millis*1e6)
-		case ft == float64Type && vt == pb.FieldValue_NUMBER:
+			f.Value = time.Unix(0, millis*1e6)
+		case pb.FieldValue_NUMBER:
 			sv := fieldValue.GetStringValue()
 			x, err := strconv.ParseFloat(sv, 64)
 			if err != nil {
-				return fmt.Errorf("search: internal error: bad float64 encoding %q: %v", sv, err)
+				return nil, err
 			}
-			f.SetFloat(x)
-		case ft == geoPointType && vt == pb.FieldValue_GEO:
+			f.Value = x
+		case pb.FieldValue_GEO:
 			geoValue := fieldValue.GetGeo()
 			geoPoint := GeoPoint{geoValue.GetLat(), geoValue.GetLng()}
 			if !geoPoint.Valid() {
-				return fmt.Errorf("search: internal error: invalid GeoPoint encoding: %v", geoPoint)
+				return nil, fmt.Errorf("search: internal error: invalid GeoPoint encoding: %v", geoPoint)
 			}
-			p := f.Addr().Interface().(*GeoPoint)
-			*p = geoPoint
+			f.Value = geoPoint
 		default:
-			return fmt.Errorf("search: type mismatch: %v for %s data", ft, vt)
+			return nil, fmt.Errorf("search: internal error: unknown data type %s", fieldValue.GetType())
 		}
+		dst = append(dst, f)
 	}
-	return nil
+	return dst, nil
 }
 
 func namespaceMod(m proto.Message, namespace string) {

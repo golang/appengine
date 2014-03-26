@@ -6,6 +6,7 @@ package search
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -39,6 +40,14 @@ var (
 		float,
 		testGeo,
 		testTime,
+	}
+	searchFields = FieldList{
+		Field{"String", testString},
+		Field{"Atom", Atom(testString)},
+		Field{"HTML", HTML(testString)},
+		Field{"Float", float},
+		Field{"Location", testGeo},
+		Field{"Time", testTime},
 	}
 	protoFields = []*pb.Field{
 		newStringValueField("String", testString, pb.FieldValue_TEXT),
@@ -114,6 +123,28 @@ func TestSaveFields(t *testing.T) {
 	}
 }
 
+func TestLoadFieldList(t *testing.T) {
+	got, want := FieldList{}, searchFields
+	err := loadFields(&got, protoFields)
+	if err != nil {
+		t.Fatalf("loadFields: %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("\ngot  %v\nwant %v", got, want)
+	}
+}
+
+func TestSaveFieldList(t *testing.T) {
+	got, err := saveFields(&searchFields)
+	if err != nil {
+		t.Fatalf("saveFields: %v", err)
+	}
+	want := protoFields
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("\ngot  %v\nwant %v", got, want)
+	}
+}
+
 func TestValidGeoPoint(t *testing.T) {
 	testCases := []struct {
 		desc string
@@ -150,6 +181,73 @@ func TestValidGeoPoint(t *testing.T) {
 	for _, tc := range testCases {
 		if got := tc.pt.Valid(); got != tc.want {
 			t.Errorf("%s: got %v, want %v", tc.desc, got, tc.want)
+		}
+	}
+}
+
+func TestValidFieldNames(t *testing.T) {
+	testCases := []struct {
+		name  string
+		valid bool
+	}{
+		{"Normal", true},
+		{"Also_OK_123", true},
+		{"Not so great", false},
+		{"lower_case", false},
+		{"Exclaim!", false},
+		{"Hello세상아 안녕", false},
+		{"", false},
+		{"Hεllo", false},
+		{strings.Repeat("A", 500), true},
+		{strings.Repeat("A", 501), false},
+	}
+
+	for _, tc := range testCases {
+		_, err := saveFields(&FieldList{
+			Field{Name: tc.name, Value: "val"},
+		})
+		if err != nil && !strings.Contains(err.Error(), "invalid field name") {
+			t.Errorf("unexpected err %q for field name %q", err, tc.name)
+		}
+		if (err == nil) != tc.valid {
+			t.Errorf("field %q: expected valid %t, received err %v", tc.name, tc.valid, err)
+		}
+	}
+}
+
+func TestDuplicateFields(t *testing.T) {
+	testCases := []struct {
+		desc   string
+		fields FieldList
+		errMsg string // Non-empty if we expect an error
+	}{
+		{
+			desc:   "multi string",
+			fields: FieldList{{"FieldA", "val1"}, {"FieldA", "val2"}, {"FieldA", "val3"}},
+		},
+		{
+			desc:   "multi atom",
+			fields: FieldList{{"FieldA", Atom("val1")}, {"FieldA", Atom("val2")}, {"FieldA", Atom("val3")}},
+		},
+		{
+			desc:   "mixed",
+			fields: FieldList{{"FieldA", testString}, {"FieldA", testTime}, {"FieldA", float}},
+		},
+		{
+			desc:   "multi time",
+			fields: FieldList{{"FieldA", testTime}, {"FieldA", testTime}},
+			errMsg: `duplicate time field "FieldA"`,
+		},
+		{
+			desc:   "multi num",
+			fields: FieldList{{"FieldA", float}, {"FieldA", float}},
+			errMsg: `duplicate numeric field "FieldA"`,
+		},
+	}
+	for _, tc := range testCases {
+		_, err := saveFields(&tc.fields)
+		if (err == nil) != (tc.errMsg == "") || (err != nil && !strings.Contains(err.Error(), tc.errMsg)) {
+			t.Errorf("%s: got err %v, wanted %q", tc.desc, err, tc.errMsg)
 		}
 	}
 }
