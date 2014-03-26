@@ -40,3 +40,18 @@ You can do that manually, or by running this command to recursively update all G
 sed -i '/"appengine/{s,"appengine,"google.golang.org/appengine,;s,appengine_,appengine/,}' \
   $(find . -name '*.go')
 ```
+
+### 3. Update code using deprecated, removed or modified APIs
+
+Most App Engine services are available with exactly the same API.
+A few APIs were cleaned up, and some are not available yet.
+This list summarises the differences:
+
+* `appengine.Datacenter` now takes an `appengine.Context` argument.
+* `appengine/aetest`, `appengine/blobstore`, `appengine/cloudsql`, `appengine/image`
+  and `appengine/runtime` have not been ported yet.
+* `appengine.BackendHostname` and `appengine.BackendInstance` were for the deprecated backends feature.
+  Use `appengine.ModuleHostname`and `appengine.ModuleName` instead.
+* `appengine.IsCapabilityDisabled` and `appengine/capability` are obsolete.
+* `appengine/file` is deprecated. Use [Google Cloud Storage](https://code.google.com/p/google-api-go-client/wiki/GettingStarted) instead.
+* `appengine/socket` is deprecated. Use the standard `net` package instead.
