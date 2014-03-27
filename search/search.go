@@ -13,7 +13,7 @@ pointers, and the valid types for a struct's fields are:
   - search.HTML,
   - time.Time (stored with millisecond precision),
   - float64,
-  - GeoPoint.
+  - appengine.GeoPoint.
 
 Documents can also be represented by any type implementing the FieldLoadSaver
 interface.
@@ -126,17 +126,6 @@ type Atom string
 // HTML is a document field whose contents are indexed as HTML. Only text nodes
 // are indexed: "foo<b>bar" will be treated as "foobar".
 type HTML string
-
-// GeoPoint represents a location as latitude/longitude in degrees.
-type GeoPoint struct {
-	Lat, Lng float64
-}
-
-// Valid returns whether a GeoPoint is within [-90, 90] latitude and
-// [-180, 180] longitude.
-func (g GeoPoint) Valid() bool {
-	return -90 <= g.Lat && g.Lat <= 90 && -180 <= g.Lng && g.Lng <= 180
-}
 
 // validIndexNameOrDocID is the Go equivalent of Python's
 // _ValidateVisiblePrintableAsciiNotReserved.
@@ -488,7 +477,7 @@ func fieldsToProto(src []Field) ([]*pb.Field, error) {
 			numericFields[f.Name] = true
 			fieldValue.Type = pb.FieldValue_NUMBER.Enum()
 			fieldValue.StringValue = proto.String(strconv.FormatFloat(x, 'e', -1, 64))
-		case GeoPoint:
+		case appengine.GeoPoint:
 			if !x.Valid() {
 				return nil, fmt.Errorf(
 					"search: GeoPoint field %q with invalid value %v",
@@ -555,7 +544,7 @@ func protoToFields(fields []*pb.Field) ([]Field, error) {
 			f.Value = x
 		case pb.FieldValue_GEO:
 			geoValue := fieldValue.GetGeo()
-			geoPoint := GeoPoint{geoValue.GetLat(), geoValue.GetLng()}
+			geoPoint := appengine.GeoPoint{geoValue.GetLat(), geoValue.GetLng()}
 			if !geoPoint.Valid() {
 				return nil, fmt.Errorf("search: internal error: invalid GeoPoint encoding: %v", geoPoint)
 			}
