@@ -60,12 +60,18 @@ func valueToProto(defaultAppID, name string, v reflect.Value, multiple bool) (p 
 			unsupported = true
 		}
 	case reflect.Struct:
-		if t, ok := v.Interface().(time.Time); ok {
+		switch t := v.Interface().(type) {
+		case time.Time:
 			if t.Before(minTime) || t.After(maxTime) {
 				return nil, "time value out of range"
 			}
 			pv.Int64Value = proto.Int64(toUnixMicro(t))
-		} else {
+		case appengine.GeoPoint:
+			if !t.Valid() {
+				return nil, "invalid GeoPoint value"
+			}
+			pv.Pointvalue = &pb.PropertyValue_PointValue{X: &t.Lng, Y: &t.Lat}
+		default:
 			unsupported = true
 		}
 	case reflect.Slice:
@@ -95,6 +101,8 @@ func valueToProto(defaultAppID, name string, v reflect.Value, multiple bool) (p 
 			p.Meaning = pb.Property_BLOBKEY.Enum()
 		case time.Time:
 			p.Meaning = pb.Property_GD_WHEN.Enum()
+		case appengine.GeoPoint:
+			p.Meaning = pb.Property_GEORSS_POINT.Enum()
 		}
 	}
 	return p, ""
@@ -127,6 +135,8 @@ func saveStructProperty(props *[]Property, name string, noIndex, multiple bool, 
 	case time.Time:
 		p.Value = x
 	case appengine.BlobKey:
+		p.Value = x
+	case appengine.GeoPoint:
 		p.Value = x
 	case []byte:
 		p.NoIndex = true
@@ -248,6 +258,12 @@ func propertiesToProto(defaultAppID string, key *Key, props []Property) (*pb.Ent
 		case appengine.BlobKey:
 			x.Value.StringValue = proto.String(string(v))
 			x.Meaning = pb.Property_BLOBKEY.Enum()
+		case appengine.GeoPoint:
+			if !v.Valid() {
+				return nil, fmt.Errorf("datastore: invalid GeoPoint value")
+			}
+			x.Value.Pointvalue = &pb.PropertyValue_PointValue{X: &v.Lng, Y: &v.Lat}
+			x.Meaning = pb.Property_GEORSS_POINT.Enum()
 		case []byte:
 			x.Value.StringValue = proto.String(string(v))
 			x.Meaning = pb.Property_BLOB.Enum()

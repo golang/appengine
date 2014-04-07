@@ -33,6 +33,7 @@ type Property struct {
 	//	- *Key
 	//	- time.Time
 	//	- appengine.BlobKey
+	//	- appengine.GeoPoint
 	//	- []byte (up to 1 megabyte in length)
 	// This set is smaller than the set of valid struct field types that the
 	// datastore can load and save. A Property Value cannot be a slice (apart
@@ -209,7 +210,7 @@ func getStructCodecLocked(t reflect.Type) (ret *structCodec, retErr error) {
 			c.hasSlice = c.hasSlice || fIsSlice
 		}
 
-		if substructType != nil && substructType != typeOfTime {
+		if substructType != nil && substructType != typeOfTime && substructType != typeOfGeoPoint {
 			if name != "" {
 				name = name + "."
 			}
