@@ -438,8 +438,7 @@ type QueueStatistics struct {
 }
 
 // QueueStats retrieves statistics about queues.
-// maxTasks is a deprecated and ignored argument.
-func QueueStats(c appengine.Context, queueNames []string, maxTasks int) ([]QueueStatistics, error) {
+func QueueStats(c appengine.Context, queueNames []string) ([]QueueStatistics, error) {
 	req := &pb.TaskQueueFetchQueueStatsRequest{
 		QueueName: make([][]byte, len(queueNames)),
 	}

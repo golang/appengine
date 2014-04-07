@@ -49,6 +49,8 @@ This list summarises the differences:
 
 * `appengine.Datacenter` now takes an `appengine.Context` argument.
 * `datastore.PropertyLoadSaver` has been simplified to use slices in place of channels.
+* `taskqueue.QueueStats` no longer takes a maxTasks argument. That argument has been
+  deprecated and unused for a long time.
 * `appengine/aetest`, `appengine/blobstore`, `appengine/cloudsql`
   and `appengine/runtime` have not been ported yet.
 * `appengine.BackendHostname` and `appengine.BackendInstance` were for the deprecated backends feature.
