@@ -119,6 +119,18 @@ var (
 	ErrNoSuchDocument = errors.New("search: no such document")
 )
 
+// ErrFieldMismatch is returned when a field is to be loaded into a different
+// than the one it was stored from, or when a field is missing or unexported in
+// the destination struct.
+type ErrFieldMismatch struct {
+	FieldName string
+	Reason    string
+}
+
+func (e *ErrFieldMismatch) Error() string {
+	return fmt.Sprintf("search: cannot load field %q: %s", e.FieldName, e.Reason)
+}
+
 // Atom is a document field whose contents are indexed as a single indivisible
 // string.
 type Atom string
@@ -219,6 +231,12 @@ func (x *Index) Put(c appengine.Context, id string, src interface{}) (string, er
 //
 // dst must be a non-nil struct pointer or implement the FieldLoadSaver
 // interface.
+//
+// ErrFieldMismatch is returned when a field is to be loaded into a different
+// type than the one it was stored from, or when a field is missing or
+// unexported in the destination struct. ErrFieldMismatch is only returned if
+// dst is a struct pointer. It is up to the callee to decide whether this error
+// is fatal, recoverable, or ignorable.
 func (x *Index) Get(c appengine.Context, id string, dst interface{}) error {
 	if id == "" || !validIndexNameOrDocID(id) {
 		return fmt.Errorf("search: invalid ID %q", id)

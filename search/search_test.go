@@ -212,3 +212,46 @@ func TestDuplicateFields(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadErrFieldMismatch(t *testing.T) {
+	testCases := []struct {
+		desc string
+		dst  interface{}
+		src  []*pb.Field
+		err  error
+	}{
+		{
+			desc: "missing",
+			dst:  &struct{ One string }{},
+			src:  []*pb.Field{newStringValueField("Two", "woop!", pb.FieldValue_TEXT)},
+			err: &ErrFieldMismatch{
+				FieldName: "Two",
+				Reason:    "no such struct field",
+			},
+		},
+		{
+			desc: "wrong type",
+			dst:  &struct{ Num float64 }{},
+			src:  []*pb.Field{newStringValueField("Num", "woop!", pb.FieldValue_TEXT)},
+			err: &ErrFieldMismatch{
+				FieldName: "Num",
+				Reason:    "type mismatch: float64 for string data",
+			},
+		},
+		{
+			desc: "unsettable",
+			dst:  &struct{ lower string }{},
+			src:  []*pb.Field{newStringValueField("lower", "woop!", pb.FieldValue_TEXT)},
+			err: &ErrFieldMismatch{
+				FieldName: "lower",
+				Reason:    "cannot set struct field",
+			},
+		},
+	}
+	for _, tc := range testCases {
+		err := loadFields(tc.dst, tc.src)
+		if !reflect.DeepEqual(err, tc.err) {
+			t.Errorf("%s, got err %v, wanted %v", tc.desc, err, tc.err)
+		}
+	}
+}

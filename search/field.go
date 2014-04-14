@@ -50,23 +50,34 @@ type structFLS struct {
 	reflect.Value
 }
 
-func (s structFLS) Load(fields []Field) error {
+func (s structFLS) Load(fields []Field) (err error) {
 	for _, field := range fields {
 		f := s.FieldByName(field.Name)
 		if !f.IsValid() {
-			// TODO: continue but eventually return ErrFieldMismatch, similar to package datastore.
+			err = &ErrFieldMismatch{
+				FieldName: field.Name,
+				Reason:    "no such struct field",
+			}
 			continue
 		}
 		if !f.CanSet() {
+			err = &ErrFieldMismatch{
+				FieldName: field.Name,
+				Reason:    "cannot set struct field",
+			}
 			continue
 		}
 		v := reflect.ValueOf(field.Value)
 		if ft, vt := f.Type(), v.Type(); ft != vt {
-			return fmt.Errorf("search: type mismatch: %v for %v data", ft, vt)
+			err = &ErrFieldMismatch{
+				FieldName: field.Name,
+				Reason:    fmt.Sprintf("type mismatch: %v for %v data", ft, vt),
+			}
+			continue
 		}
 		f.Set(v)
 	}
-	return nil
+	return err
 }
 
 func (s structFLS) Save() ([]Field, error) {
