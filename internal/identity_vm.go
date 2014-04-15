@@ -31,7 +31,10 @@ func Datacenter(req interface{}) string {
 }
 
 func ServerSoftware() string {
-	// TODO
+	// TODO(dsymonds): Remove fallback when we've verified this.
+	if s := os.Getenv("SERVER_SOFTWARE"); s != "" {
+		return s
+	}
 	return "Google App Engine/1.x.x"
 }
 
