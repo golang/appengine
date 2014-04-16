@@ -56,6 +56,11 @@ func (k *Key) AppID() string {
 	return k.appID
 }
 
+// Namespace returns the key's namespace.
+func (k *Key) Namespace() string {
+	return k.namespace
+}
+
 // Incomplete returns whether the key does not refer to a stored entity.
 // In particular, whether the key has a zero StringID and a zero IntID.
 func (k *Key) Incomplete() bool {

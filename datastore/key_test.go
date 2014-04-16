@@ -200,3 +200,15 @@ func TestIncompleteKeyWithParent(t *testing.T) {
 		t.Errorf("robert is invalid: %v", robert)
 	}
 }
+
+func TestNamespace(t *testing.T) {
+	key := &Key{
+		kind:      "Person",
+		intID:     1,
+		appID:     "s~some-app",
+		namespace: "mynamespace",
+	}
+	if g, w := key.Namespace(), "mynamespace"; g != w {
+		t.Errorf("key.Namespace() = %q, want %q", g, w)
+	}
+}
