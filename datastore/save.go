@@ -70,7 +70,8 @@ func valueToProto(defaultAppID, name string, v reflect.Value, multiple bool) (p 
 			if !t.Valid() {
 				return nil, "invalid GeoPoint value"
 			}
-			pv.Pointvalue = &pb.PropertyValue_PointValue{X: &t.Lng, Y: &t.Lat}
+			// NOTE: Strangely, latitude maps to X, longitude to Y.
+			pv.Pointvalue = &pb.PropertyValue_PointValue{X: &t.Lat, Y: &t.Lng}
 		default:
 			unsupported = true
 		}
@@ -262,7 +263,8 @@ func propertiesToProto(defaultAppID string, key *Key, props []Property) (*pb.Ent
 			if !v.Valid() {
 				return nil, fmt.Errorf("datastore: invalid GeoPoint value")
 			}
-			x.Value.Pointvalue = &pb.PropertyValue_PointValue{X: &v.Lng, Y: &v.Lat}
+			// NOTE: Strangely, latitude maps to X, longitude to Y.
+			x.Value.Pointvalue = &pb.PropertyValue_PointValue{X: &v.Lat, Y: &v.Lng}
 			x.Meaning = pb.Property_GEORSS_POINT.Enum()
 		case []byte:
 			x.Value.StringValue = proto.String(string(v))

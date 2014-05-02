@@ -300,7 +300,8 @@ func propValue(v *pb.PropertyValue, m pb.Property_Meaning) (interface{}, error) 
 		}
 		return key, nil
 	case v.Pointvalue != nil:
-		return appengine.GeoPoint{Lng: v.Pointvalue.GetX(), Lat: v.Pointvalue.GetY()}, nil
+		// NOTE: Strangely, latitude maps to X, longitude to Y.
+		return appengine.GeoPoint{Lat: v.Pointvalue.GetX(), Lng: v.Pointvalue.GetY()}, nil
 	}
 	return nil, nil
 }
