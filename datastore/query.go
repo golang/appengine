@@ -83,6 +83,7 @@ type Query struct {
 
 	distinct bool
 	keysOnly bool
+	eventual bool
 	limit    int32
 	offset   int32
 	start    *pb.CompiledCursor
@@ -114,6 +115,15 @@ func (q *Query) Ancestor(ancestor *Key) *Query {
 		return q
 	}
 	q.ancestor = ancestor
+	return q
+}
+
+// EventualConsistency returns a derivative query that returns eventually
+// consistent results.
+// It only has an effect on ancestor queries.
+func (q *Query) EventualConsistency() *Query {
+	q = q.clone()
+	q.eventual = true
 	return q
 }
 
@@ -272,6 +282,9 @@ func (q *Query) toProto(dst *pb.Query, appID string) error {
 	}
 	if q.ancestor != nil {
 		dst.Ancestor = keyToProto(appID, q.ancestor)
+		if q.eventual {
+			dst.Strong = proto.Bool(false)
+		}
 	}
 	if q.projection != nil {
 		dst.PropertyName = q.projection
