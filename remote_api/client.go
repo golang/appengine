@@ -42,7 +42,7 @@ func NewRemoteContext(host string, client *http.Client) (appengine.Context, erro
 		Host:   host,
 		Path:   "/_ah/remote_api",
 	}
-	if host == "localhost" {
+	if regexp.MustCompile(`^localhost(:\d{1,5})?$`).MatchString(host) {
 		url.Scheme = "http"
 	}
 	u := url.String()
