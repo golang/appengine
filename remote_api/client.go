@@ -17,6 +17,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 
 	"code.google.com/p/goprotobuf/proto"
@@ -42,7 +43,7 @@ func NewRemoteContext(host string, client *http.Client) (appengine.Context, erro
 		Host:   host,
 		Path:   "/_ah/remote_api",
 	}
-	if host == "localhost" {
+	if host == "localhost" || strings.HasPrefix(host, "localhost:") {
 		url.Scheme = "http"
 	}
 	u := url.String()
@@ -129,7 +130,7 @@ func (c *context) Call(service, method string, in, out proto.Message, opts *inte
 }
 
 // This is a forgiving regexp designed to parse the app ID from YAML.
-var appIDRE = regexp.MustCompile(`app_id["']?\s*:\s*['"?]([-a-z0-9.:~]+)`)
+var appIDRE = regexp.MustCompile(`app_id["']?\s*:\s*['"]?([-a-z0-9.:~]+)`)
 
 func getAppID(client *http.Client, url string) (string, error) {
 	// Generate a pseudo-random token for handshaking.
