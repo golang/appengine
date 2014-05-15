@@ -5,6 +5,7 @@
 package search
 
 import (
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
@@ -253,5 +254,43 @@ func TestLoadErrFieldMismatch(t *testing.T) {
 		if !reflect.DeepEqual(err, tc.err) {
 			t.Errorf("%s, got err %v, wanted %v", tc.desc, err, tc.err)
 		}
+	}
+}
+
+func TestLimit(t *testing.T) {
+	more := func(it *Iterator) error {
+		if it.limit == 0 {
+			return errors.New("Iterator.limit should not be zero in next")
+		}
+		// Page up to 20 items at once.
+		ret := 20
+		if it.limit > 0 && it.limit < ret {
+			ret = it.limit
+		}
+		it.listRes = make([]*pb.Document, ret)
+		for i := range it.listRes {
+			it.listRes[i] = &pb.Document{}
+		}
+		return nil
+	}
+
+	it := &Iterator{
+		more:  more,
+		limit: 42,
+	}
+
+	count := 0
+	for {
+		_, err := it.Next(nil)
+		if err == Done {
+			break
+		}
+		if err != nil {
+			t.Fatalf("err after %d: %v", count, err)
+		}
+		count++
+	}
+	if count != 42 {
+		t.Errorf("got %d results, expected 42", count)
 	}
 }

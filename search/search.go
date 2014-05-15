@@ -291,11 +291,14 @@ func (x *Index) List(c appengine.Context, opts *ListOptions) *Iterator {
 		count:         -1,
 		listInclusive: true,
 		more:          moreList,
+		limit:         -1,
 	}
 	if opts != nil {
-		if opts.StartID != "" {
-			t.listStartID = opts.StartID
+		t.listStartID = opts.StartID
+		if opts.Limit > 0 {
+			t.limit = opts.Limit
 		}
+		t.idsOnly = opts.IDsOnly
 	}
 	return t
 }
@@ -309,6 +312,12 @@ func moreList(t *Iterator) error {
 	if t.listStartID != "" {
 		req.Params.StartDocId = &t.listStartID
 		req.Params.IncludeStartDoc = &t.listInclusive
+	}
+	if t.limit > 0 {
+		req.Params.Limit = proto.Int32(int32(t.limit))
+	}
+	if t.idsOnly {
+		req.Params.KeysOnly = &t.idsOnly
 	}
 
 	res := &pb.ListDocumentsResponse{}
@@ -335,17 +344,31 @@ type ListOptions struct {
 	// documents. The zero value means all documents will be returned.
 	StartID string
 
-	// TODO: limit, idsOnly, maybe others.
+	// Limit is the maximum number of documents to return. The zero value
+	// indicates no limit.
+	Limit int
+
+	// IDsOnly indicates that only document IDs should be returned for the list
+	// operation; no document fields are populated.
+	IDsOnly bool
 }
 
 // Search searches the index for the given query.
 func (x *Index) Search(c appengine.Context, query string, opts *SearchOptions) *Iterator {
-	return &Iterator{
+	t := &Iterator{
 		c:           c,
 		index:       x,
 		searchQuery: query,
 		more:        moreSearch,
+		limit:       -1,
 	}
+	if opts != nil {
+		if opts.Limit > 0 {
+			t.limit = opts.Limit
+		}
+		t.idsOnly = opts.IDsOnly
+	}
+	return t
 }
 
 func moreSearch(t *Iterator) error {
@@ -356,6 +379,13 @@ func moreSearch(t *Iterator) error {
 			CursorType: pb.SearchParams_SINGLE.Enum(),
 		},
 	}
+	if t.limit > 0 {
+		req.Params.Limit = proto.Int32(int32(t.limit))
+	}
+	if t.idsOnly {
+		req.Params.KeysOnly = &t.idsOnly
+	}
+
 	if t.searchCursor != nil {
 		req.Params.Cursor = t.searchCursor
 	}
@@ -378,10 +408,16 @@ func moreSearch(t *Iterator) error {
 
 // SearchOptions are the options for searching an index. Passing a nil
 // *SearchOptions is equivalent to using the default values.
-//
-// There are currently no options. Future versions may introduce some.
 type SearchOptions struct {
-	// TODO: limit, cursor, offset, idsOnly, maybe others.
+	// Limit is the maximum number of documents to return. The zero value
+	// indicates no limit.
+	Limit int
+
+	// IDsOnly indicates that only document IDs should be returned for the search
+	// operation; no document fields are populated.
+	IDsOnly bool
+
+	// TODO: cursor, offset, maybe others.
 }
 
 // Iterator is the result of searching an index for a query or listing an
@@ -401,7 +437,9 @@ type Iterator struct {
 
 	more func(*Iterator) error
 
-	count int
+	count   int
+	limit   int // items left to return; -1 for unlimited.
+	idsOnly bool
 }
 
 // Done is returned when a query iteration has completed.
@@ -416,7 +454,8 @@ func (t *Iterator) Count() int { return t.count }
 //
 // dst must be a non-nil struct pointer, implement the FieldLoadSaver
 // interface, or be a nil interface value. If a non-nil dst is provided, it
-// will be filled with the indexed fields.
+// will be filled with the indexed fields. dst is ignored if this iterator was
+// created with an IDsOnly option.
 func (t *Iterator) Next(dst interface{}) (string, error) {
 	if t.err == nil && len(t.listRes)+len(t.searchRes) == 0 && t.more != nil {
 		t.err = t.more(t)
@@ -439,9 +478,15 @@ func (t *Iterator) Next(dst interface{}) (string, error) {
 	if doc == nil {
 		return "", errors.New("search: internal error: no document returned")
 	}
-	if dst != nil {
+	if !t.idsOnly && dst != nil {
 		if err := loadFields(dst, doc.Field); err != nil {
 			return "", err
+		}
+	}
+	if t.limit > 0 {
+		t.limit--
+		if t.limit == 0 {
+			t.more = nil // prevent further fetches
 		}
 	}
 	return doc.GetId(), nil
