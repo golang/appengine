@@ -5,6 +5,7 @@
 package datastore
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -636,31 +637,31 @@ var testCases = []testCase{
 		"",
 	},
 	{
-		"long myBlob fails (unsigned integer)",
+		"long myBlob",
 		&B2{B: makeUint8Slice(maxIndexedProperties + 1)},
-		&B2{},
-		"unsupported struct field type",
+		&B2{B: makeUint8Slice(maxIndexedProperties + 1)},
+		"",
 		"",
 	},
 	{
-		"short myBlob fails (unsigned integer)",
+		"short myBlob",
 		&B2{B: makeUint8Slice(3)},
-		&B2{},
-		"unsupported struct field type",
+		&B2{B: makeUint8Slice(3)},
+		"",
 		"",
 	},
 	{
-		"long []myByte fails (unsigned integer)",
+		"long []myByte",
 		&B3{B: makeMyByteSlice(maxIndexedProperties + 1)},
-		&B3{},
-		"unsupported struct field type",
+		&B3{B: makeMyByteSlice(maxIndexedProperties + 1)},
+		"",
 		"",
 	},
 	{
-		"short []myByte fails (unsigned integer)",
+		"short []myByte",
 		&B3{B: makeMyByteSlice(3)},
-		&B3{},
-		"unsupported struct field type",
+		&B3{B: makeMyByteSlice(3)},
+		"",
 		"",
 	},
 	{
@@ -1201,6 +1202,30 @@ var testCases = []testCase{
 		&PropertyList{
 			Property{Name: "J", Value: int64(2), NoIndex: false, Multiple: false},
 		},
+		"",
+		"",
+	},
+	{
+		"json.RawMessage",
+		&struct {
+			J json.RawMessage
+		}{
+			J: json.RawMessage("rawr"),
+		},
+		&PropertyList{
+			Property{Name: "J", Value: []byte("rawr"), NoIndex: true, Multiple: false},
+		},
+		"",
+		"",
+	},
+	{
+		"json.RawMessage to myBlob",
+		&struct {
+			B json.RawMessage
+		}{
+			B: json.RawMessage("rawr"),
+		},
+		&B2{B: myBlob("rawr")},
 		"",
 		"",
 	},

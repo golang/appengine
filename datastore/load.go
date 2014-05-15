@@ -93,7 +93,7 @@ func (l *propertyLoader) load(codec *structCodec, structValue reflect.Value, p P
 	}
 
 	var slice reflect.Value
-	if v.Kind() == reflect.Slice && v.Type() != typeOfByteSlice {
+	if v.Kind() == reflect.Slice && v.Type().Elem().Kind() != reflect.Uint8 {
 		slice = v
 		v = reflect.New(v.Type().Elem()).Elem()
 	} else if requireSlice {
@@ -188,10 +188,10 @@ func (l *propertyLoader) load(codec *structCodec, structValue reflect.Value, p P
 		if !ok && pValue != nil {
 			return typeMismatchReason(p, v)
 		}
-		if _, ok := v.Interface().([]byte); !ok {
+		if v.Type().Elem().Kind() != reflect.Uint8 {
 			return typeMismatchReason(p, v)
 		}
-		v.Set(reflect.ValueOf(x))
+		v.SetBytes(x)
 	default:
 		return typeMismatchReason(p, v)
 	}

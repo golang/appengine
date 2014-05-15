@@ -139,9 +139,6 @@ func saveStructProperty(props *[]Property, name string, noIndex, multiple bool, 
 		p.Value = x
 	case appengine.GeoPoint:
 		p.Value = x
-	case []byte:
-		p.NoIndex = true
-		p.Value = x
 	default:
 		switch v.Kind() {
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -152,6 +149,11 @@ func saveStructProperty(props *[]Property, name string, noIndex, multiple bool, 
 			p.Value = v.String()
 		case reflect.Float32, reflect.Float64:
 			p.Value = v.Float()
+		case reflect.Slice:
+			if v.Type().Elem().Kind() == reflect.Uint8 {
+				p.NoIndex = true
+				p.Value = v.Bytes()
+			}
 		case reflect.Struct:
 			if !v.CanAddr() {
 				return fmt.Errorf("datastore: unsupported struct field: value is unaddressable")
@@ -193,7 +195,7 @@ func (s structPLS) save(props *[]Property, prefix string, noIndex, multiple bool
 		}
 		noIndex1 := noIndex || t.noIndex
 		// For slice fields that aren't []byte, save each element.
-		if v.Kind() == reflect.Slice && v.Type() != typeOfByteSlice {
+		if v.Kind() == reflect.Slice && v.Type().Elem().Kind() != reflect.Uint8 {
 			for j := 0; j < v.Len(); j++ {
 				if err := saveStructProperty(props, name, noIndex1, true, v.Index(j)); err != nil {
 					return err

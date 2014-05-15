@@ -24,11 +24,11 @@ Valid value types are:
   - bool,
   - string,
   - float32 and float64,
+  - []byte (up to 1 megabyte in length),
   - any type whose underlying type is one of the above predeclared types,
   - *Key,
   - time.Time (stored with microsecond precision),
   - appengine.BlobKey,
-  - []byte (up to 1 megabyte in length),
   - structs whose fields are all valid value types,
   - slices of any of the above.
 
