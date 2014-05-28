@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"testing"
 
+	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal/aetesting"
 	pb "google.golang.org/appengine/internal/memcache"
 )
@@ -204,5 +205,36 @@ func TestSetResponseError(t *testing.T) {
 
 	if err := Set(c, &Item{}); err != ErrServerError {
 		t.Errorf("got %v want ErrServerError", err)
+	}
+}
+
+func TestNamespaceResetting(t *testing.T) {
+	var nsField *string
+	c := aetesting.FakeSingleContext(t, "memcache", "Get", func(req *pb.MemcacheGetRequest, res *pb.MemcacheGetResponse) error {
+		nsField = req.NameSpace
+		return errRPC
+	})
+
+	// Check that wrapping c in a namespace twice works correctly.
+	nc, err := appengine.Namespace(c, "A")
+	if err != nil {
+		t.Fatalf("appengine.Namespace: %v", err)
+	}
+	c0, err := appengine.Namespace(nc, "") // should act as the original context
+	if err != nil {
+		t.Fatalf("appengine.Namespace: %v", err)
+	}
+
+	Get(c, "key")
+	if nsField != nil {
+		t.Fatalf("Get with c yielded %q", *nsField)
+	}
+	Get(nc, "key")
+	if nsField == nil || *nsField != "A" {
+		t.Fatalf("Get with nc yielded %v", nsField)
+	}
+	Get(c0, "key")
+	if nsField != nil && *nsField != "" {
+		t.Fatalf("Get with c0 yielded %q", *nsField)
 	}
 }
