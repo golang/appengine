@@ -165,6 +165,9 @@ type Index struct {
 	spec pb.IndexSpec
 }
 
+// orderIDEpoch forms the basis for populating OrderId on documents.
+var orderIDEpoch = time.Date(2011, 1, 1, 0, 0, 0, 0, time.UTC)
+
 // Open opens the index with the given name. The index is created if it does
 // not already exist.
 //
@@ -197,6 +200,9 @@ func (x *Index) Put(c appengine.Context, id string, src interface{}) (string, er
 	}
 	d := &pb.Document{
 		Field: fields,
+		// TODO(davidday): support developers providing an explicit Rank for
+		// documents.
+		OrderId: proto.Int32(int32(time.Since(orderIDEpoch).Seconds())),
 	}
 	if id != "" {
 		if !validIndexNameOrDocID(id) {

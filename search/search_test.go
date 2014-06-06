@@ -6,6 +6,7 @@ package search
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"code.google.com/p/goprotobuf/proto"
 
 	"google.golang.org/appengine"
+	"google.golang.org/appengine/internal/aetesting"
 	pb "google.golang.org/appengine/internal/search"
 )
 
@@ -56,7 +58,7 @@ var (
 		newStringValueField("Atom", testString, pb.FieldValue_ATOM),
 		newStringValueField("HTML", testString, pb.FieldValue_HTML),
 		newStringValueField("Float", floatOut, pb.FieldValue_NUMBER),
-		&pb.Field{
+		{
 			Name: proto.String("Location"),
 			Value: &pb.FieldValue{
 				Geo: &pb.FieldValue_Geo{
@@ -292,5 +294,54 @@ func TestLimit(t *testing.T) {
 	}
 	if count != 42 {
 		t.Errorf("got %d results, expected 42", count)
+	}
+}
+
+func TestPut(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(in *pb.IndexDocumentRequest, out *pb.IndexDocumentResponse) error {
+		expectedIn := &pb.IndexDocumentRequest{
+			Params: &pb.IndexDocumentParams{
+				Document: []*pb.Document{
+					{Field: protoFields},
+					// Omit OrderId since we'll check it explicitly.
+				},
+				IndexSpec: &pb.IndexSpec{
+					Name: proto.String("Doc"),
+				},
+			},
+		}
+		if len(in.Params.GetDocument()) < 1 {
+			return fmt.Errorf("expected at least one Document, got %v", in)
+		}
+		got, want := in.Params.Document[0].GetOrderId(), int32(time.Since(orderIDEpoch).Seconds())
+		if d := got - want; -5 > d || d > 5 {
+			return fmt.Errorf("got OrderId %d, want near %d", got, want)
+		}
+		in.Params.Document[0].OrderId = nil
+		if !proto.Equal(in, expectedIn) {
+			return fmt.Errorf("unsupported argument:\ngot  %v\nwant %v", in, expectedIn)
+		}
+		*out = pb.IndexDocumentResponse{
+			Status: []*pb.RequestStatus{
+				{Code: pb.SearchServiceError_OK.Enum()},
+			},
+			DocId: []string{
+				"doc_id",
+			},
+		}
+		return nil
+	})
+
+	id, err := index.Put(c, "", &searchDoc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "doc_id"; id != want {
+		t.Errorf("Got doc ID %q, want %q", id, want)
 	}
 }
