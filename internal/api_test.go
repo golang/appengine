@@ -139,8 +139,7 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func setup() (f *fakeAPIHandler, c *context, cleanup func()) {
-	f = &fakeAPIHandler{
-	}
+	f = &fakeAPIHandler{}
 	srv := httptest.NewServer(f)
 	parts := strings.SplitN(strings.TrimPrefix(srv.URL, "http://"), ":", 2)
 	os.Setenv("API_HOST", parts[0])
@@ -403,8 +402,7 @@ func TestHelperProcess(*testing.T) {
 	}
 	defer os.Exit(0)
 
-	f := &fakeAPIHandler{
-	}
+	f := &fakeAPIHandler{}
 	srv := httptest.NewServer(f)
 	defer srv.Close()
 	fmt.Println(helperProcessMagic + strings.TrimPrefix(srv.URL, "http://"))

@@ -46,7 +46,7 @@ func TestGetResponseHit(t *testing.T) {
 
 	c := aetesting.FakeSingleContext(t, "memcache", "Get", func(_ *pb.MemcacheGetRequest, res *pb.MemcacheGetResponse) error {
 		res.Item = []*pb.MemcacheGetResponse_Item{
-			&pb.MemcacheGetResponse_Item{Key: []byte(key), Value: []byte(value)},
+			{Key: []byte(key), Value: []byte(value)},
 		}
 		return nil
 	})

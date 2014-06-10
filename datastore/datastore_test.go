@@ -965,10 +965,10 @@ var testCases = []testCase{
 		&N1{
 			X0: X0{S: "one", I: 2, i: 3},
 			Nonymous: []X0{
-				X0{S: "four", I: 5, i: 6},
-				X0{S: "seven", I: 8, i: 9},
-				X0{S: "ten", I: 11, i: 12},
-				X0{S: "thirteen", I: 14, i: 15},
+				{S: "four", I: 5, i: 6},
+				{S: "seven", I: 8, i: 9},
+				{S: "ten", I: 11, i: 12},
+				{S: "thirteen", I: 14, i: 15},
 			},
 			Ignore: "ignore",
 			Other:  "other",
@@ -976,10 +976,10 @@ var testCases = []testCase{
 		&N1{
 			X0: X0{S: "one", I: 2},
 			Nonymous: []X0{
-				X0{S: "four", I: 5},
-				X0{S: "seven", I: 8},
-				X0{S: "ten", I: 11},
-				X0{S: "thirteen", I: 14},
+				{S: "four", I: 5},
+				{S: "seven", I: 8},
+				{S: "ten", I: 11},
+				{S: "thirteen", I: 14},
 			},
 			Other: "other",
 		},
@@ -992,25 +992,25 @@ var testCases = []testCase{
 			N1: N1{
 				X0: X0{S: "rouge"},
 				Nonymous: []X0{
-					X0{S: "rosso0"},
-					X0{S: "rosso1"},
+					{S: "rosso0"},
+					{S: "rosso1"},
 				},
 			},
 			Green: N1{
 				X0: X0{S: "vert"},
 				Nonymous: []X0{
-					X0{S: "verde0"},
-					X0{S: "verde1"},
-					X0{S: "verde2"},
+					{S: "verde0"},
+					{S: "verde1"},
+					{S: "verde2"},
 				},
 			},
 			Blue: N1{
 				X0: X0{S: "bleu"},
 				Nonymous: []X0{
-					X0{S: "blu0"},
-					X0{S: "blu1"},
-					X0{S: "blu2"},
-					X0{S: "blu3"},
+					{S: "blu0"},
+					{S: "blu1"},
+					{S: "blu2"},
+					{S: "blu3"},
 				},
 			},
 		},
@@ -1018,25 +1018,25 @@ var testCases = []testCase{
 			N1: N1{
 				X0: X0{S: "rouge"},
 				Nonymous: []X0{
-					X0{S: "rosso0"},
-					X0{S: "rosso1"},
+					{S: "rosso0"},
+					{S: "rosso1"},
 				},
 			},
 			Green: N1{
 				X0: X0{S: "vert"},
 				Nonymous: []X0{
-					X0{S: "verde0"},
-					X0{S: "verde1"},
-					X0{S: "verde2"},
+					{S: "verde0"},
+					{S: "verde1"},
+					{S: "verde2"},
 				},
 			},
 			Blue: N1{
 				X0: X0{S: "bleu"},
 				Nonymous: []X0{
-					X0{S: "blu0"},
-					X0{S: "blu1"},
-					X0{S: "blu2"},
-					X0{S: "blu3"},
+					{S: "blu0"},
+					{S: "blu1"},
+					{S: "blu2"},
+					{S: "blu3"},
 				},
 			},
 		},
@@ -1049,25 +1049,25 @@ var testCases = []testCase{
 			N1: N1{
 				X0: X0{S: "rouge"},
 				Nonymous: []X0{
-					X0{S: "rosso0"},
-					X0{S: "rosso1"},
+					{S: "rosso0"},
+					{S: "rosso1"},
 				},
 			},
 			Green: N1{
 				X0: X0{S: "vert"},
 				Nonymous: []X0{
-					X0{S: "verde0"},
-					X0{S: "verde1"},
-					X0{S: "verde2"},
+					{S: "verde0"},
+					{S: "verde1"},
+					{S: "verde2"},
 				},
 			},
 			Blue: N1{
 				X0: X0{S: "bleu"},
 				Nonymous: []X0{
-					X0{S: "blu0"},
-					X0{S: "blu1"},
-					X0{S: "blu2"},
-					X0{S: "blu3"},
+					{S: "blu0"},
+					{S: "blu1"},
+					{S: "blu2"},
+					{S: "blu3"},
 				},
 			},
 		},
@@ -1123,17 +1123,17 @@ var testCases = []testCase{
 			},
 			Green: N1{
 				Nonymous: []X0{
-					X0{I: 10},
-					X0{I: 11},
-					X0{I: 12},
-					X0{I: 13},
+					{I: 10},
+					{I: 11},
+					{I: 12},
+					{I: 13},
 				},
 			},
 			Blue: N1{
 				Nonymous: []X0{
-					X0{S: "blau0", I: 20},
-					X0{S: "blau1", I: 21},
-					X0{S: "blau2"},
+					{S: "blau0", I: 20},
+					{S: "blau1", I: 21},
+					{S: "blau2"},
 				},
 			},
 		},

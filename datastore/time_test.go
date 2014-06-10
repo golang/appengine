@@ -12,7 +12,7 @@ import (
 func TestUnixMicro(t *testing.T) {
 	// Test that all these time.Time values survive a round trip to unix micros.
 	testCases := []time.Time{
-		time.Time{},
+		{},
 		time.Date(2, 1, 1, 0, 0, 0, 0, time.UTC),
 		time.Date(23, 1, 1, 0, 0, 0, 0, time.UTC),
 		time.Date(234, 1, 1, 0, 0, 0, 0, time.UTC),
