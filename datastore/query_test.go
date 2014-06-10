@@ -12,15 +12,14 @@ import (
 
 	"code.google.com/p/goprotobuf/proto"
 
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/internal"
+	"google.golang.org/appengine/internal/aetesting"
 	pb "google.golang.org/appengine/internal/datastore"
 )
 
 var (
 	path1 = &pb.Path{
 		Element: []*pb.Path_Element{
-			&pb.Path_Element{
+			{
 				Type: proto.String("Gopher"),
 				Id:   proto.Int64(6),
 			},
@@ -28,11 +27,11 @@ var (
 	}
 	path2 = &pb.Path{
 		Element: []*pb.Path_Element{
-			&pb.Path_Element{
+			{
 				Type: proto.String("Gopher"),
 				Id:   proto.Int64(6),
 			},
-			&pb.Path_Element{
+			{
 				Type: proto.String("Gopher"),
 				Id:   proto.Int64(8),
 			},
@@ -40,47 +39,32 @@ var (
 	}
 )
 
-type stubContext struct {
-	nCall int
-	appengine.Context
-}
-
-func (*stubContext) FullyQualifiedAppID() string { return "s~test-app" }
-
-func (c *stubContext) Call(service, method string, in, out proto.Message, _ *internal.CallOptions) error {
-	c.nCall++
-	if service != "datastore_v3" || method != "RunQuery" {
-		return fmt.Errorf("stubContext: unsupported service %q or method %q", service, method)
-	}
+func fakeRunQuery(in *pb.Query, out *pb.QueryResult) error {
 	expectedIn := &pb.Query{
-		App:     proto.String("s~test-app"),
+		App:     proto.String("dev~fake-app"),
 		Kind:    proto.String("Gopher"),
 		Compile: proto.Bool(true),
 	}
 	if !proto.Equal(in, expectedIn) {
-		return fmt.Errorf("stubContext: unsupported in argument: got %v want %v", in, expectedIn)
+		return fmt.Errorf("unsupported argument: got %v want %v", in, expectedIn)
 	}
-	x, ok := out.(*pb.QueryResult)
-	if !ok {
-		return fmt.Errorf("stubContext: unsupported out argument type: got %T want %T", out, x)
-	}
-	*x = pb.QueryResult{
+	*out = pb.QueryResult{
 		Result: []*pb.EntityProto{
-			&pb.EntityProto{
+			{
 				Key: &pb.Reference{
 					App:  proto.String("s~test-app"),
 					Path: path1,
 				},
 				EntityGroup: path1,
 				Property: []*pb.Property{
-					&pb.Property{
+					{
 						Meaning: pb.Property_TEXT.Enum(),
 						Name:    proto.String("Name"),
 						Value: &pb.PropertyValue{
 							StringValue: proto.String("George"),
 						},
 					},
-					&pb.Property{
+					{
 						Name: proto.String("Height"),
 						Value: &pb.PropertyValue{
 							Int64Value: proto.Int64(32),
@@ -88,14 +72,14 @@ func (c *stubContext) Call(service, method string, in, out proto.Message, _ *int
 					},
 				},
 			},
-			&pb.EntityProto{
+			{
 				Key: &pb.Reference{
 					App:  proto.String("s~test-app"),
 					Path: path2,
 				},
 				EntityGroup: path1, // ancestor is George
 				Property: []*pb.Property{
-					&pb.Property{
+					{
 						Meaning: pb.Property_TEXT.Enum(),
 						Name:    proto.String("Name"),
 						Value: &pb.PropertyValue{
@@ -294,7 +278,12 @@ func TestSimpleQuery(t *testing.T) {
 		{new([]*PropertyMap), nil},
 	}
 	for _, tc := range testCases {
-		c := &stubContext{}
+		nCall := 0
+		c := aetesting.FakeSingleContext(t, "datastore_v3", "RunQuery", func(in *pb.Query, out *pb.QueryResult) error {
+			nCall++
+			return fakeRunQuery(in, out)
+		})
+
 		var (
 			expectedErr   error
 			expectedNCall int
@@ -309,8 +298,8 @@ func TestSimpleQuery(t *testing.T) {
 			t.Errorf("dst type %T: got error %v, want %v", tc.dst, err, expectedErr)
 			continue
 		}
-		if c.nCall != expectedNCall {
-			t.Errorf("dst type %T: Context.Call was called an incorrect number of times: got %d want %d", tc.dst, c.nCall, expectedNCall)
+		if nCall != expectedNCall {
+			t.Errorf("dst type %T: Context.Call was called an incorrect number of times: got %d want %d", tc.dst, nCall, expectedNCall)
 			continue
 		}
 		if err != nil {

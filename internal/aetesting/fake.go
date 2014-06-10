@@ -7,6 +7,7 @@
 package aetesting
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -69,6 +70,9 @@ func (*single) FullyQualifiedAppID() string                    { return "dev~fak
 func (*single) Request() interface{}                           { return nil }
 
 func (s *single) Call(service, method string, in, out proto.Message, opts *internal.CallOptions) error {
+	if service == "__go__" {
+		return fmt.Errorf("Unknown API call /%s.%s", service, method)
+	}
 	if service != s.service || method != s.method {
 		s.t.Fatalf("Unexpected call to /%s.%s", service, method)
 	}
