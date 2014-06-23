@@ -7,9 +7,6 @@ vm: true
 manual_scaling:
   instances: 1
 
-vm_settings:
-  preserve_vm_on_failure: true
-
 handlers:
 - url: /favicon.ico
   static_files: favicon.ico
