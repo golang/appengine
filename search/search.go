@@ -153,11 +153,19 @@ func validIndexNameOrDocID(s string) bool {
 	return true
 }
 
-var fieldNameRE = regexp.MustCompile(`^[A-Z][A-Za-z0-9_]*$`)
+var (
+	fieldNameRE = regexp.MustCompile(`^[A-Z][A-Za-z0-9_]*$`)
+	languageRE  = regexp.MustCompile(`^[a-z]{2}$`)
+)
 
 // validFieldName is the Go equivalent of Python's _CheckFieldName.
 func validFieldName(s string) bool {
 	return len(s) <= 500 && fieldNameRE.MatchString(s)
+}
+
+// validLanguage checks that a language looks like ISO 639-1.
+func validLanguage(s string) bool {
+	return languageRE.MatchString(s)
 }
 
 // Index is an index of documents.
@@ -560,6 +568,17 @@ func fieldsToProto(src []Field) ([]*pb.Field, error) {
 		default:
 			return nil, fmt.Errorf("search: unsupported field type: %v", reflect.TypeOf(f.Value))
 		}
+		if f.Language != "" {
+			switch f.Value.(type) {
+			case string, HTML:
+				if !validLanguage(f.Language) {
+					return nil, fmt.Errorf("search: invalid language for field %q: %q", f.Name, f.Language)
+				}
+				fieldValue.Language = &f.Language
+			default:
+				return nil, fmt.Errorf("search: setting language not supported for field %q of type %T", f.Name, f.Value)
+			}
+		}
 		if p := fieldValue.StringValue; p != nil && !utf8.ValidString(*p) {
 			return nil, fmt.Errorf("search: %q field is invalid UTF-8: %q", f.Name, *p)
 		}
@@ -593,10 +612,12 @@ func protoToFields(fields []*pb.Field) ([]Field, error) {
 		switch fieldValue.GetType() {
 		case pb.FieldValue_TEXT:
 			f.Value = fieldValue.GetStringValue()
+			f.Language = fieldValue.GetLanguage()
 		case pb.FieldValue_ATOM:
 			f.Value = Atom(fieldValue.GetStringValue())
 		case pb.FieldValue_HTML:
 			f.Value = HTML(fieldValue.GetStringValue())
+			f.Language = fieldValue.GetLanguage()
 		case pb.FieldValue_DATE:
 			sv := fieldValue.GetStringValue()
 			millis, err := strconv.ParseInt(sv, 10, 64)

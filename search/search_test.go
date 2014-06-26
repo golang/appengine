@@ -38,20 +38,20 @@ var (
 	testTime    = time.Unix(1337324400, 0)
 	testTimeOut = "1337324400000"
 	searchDoc   = TestDoc{
-		testString,
-		Atom(testString),
-		HTML(testString),
-		float,
-		testGeo,
-		testTime,
+		String:   testString,
+		Atom:     Atom(testString),
+		HTML:     HTML(testString),
+		Float:    float,
+		Location: testGeo,
+		Time:     testTime,
 	}
 	searchFields = FieldList{
-		Field{"String", testString},
-		Field{"Atom", Atom(testString)},
-		Field{"HTML", HTML(testString)},
-		Field{"Float", float},
-		Field{"Location", testGeo},
-		Field{"Time", testTime},
+		Field{Name: "String", Value: testString},
+		Field{Name: "Atom", Value: Atom(testString)},
+		Field{Name: "HTML", Value: HTML(testString)},
+		Field{Name: "Float", Value: float},
+		Field{Name: "Location", Value: testGeo},
+		Field{Name: "Time", Value: testTime},
 	}
 	protoFields = []*pb.Field{
 		newStringValueField("String", testString, pb.FieldValue_TEXT),
@@ -72,7 +72,7 @@ var (
 	}
 )
 
-func newStringValueField(name string, value string, valueType pb.FieldValue_ContentType) *pb.Field {
+func newStringValueField(name, value string, valueType pb.FieldValue_ContentType) *pb.Field {
 	return &pb.Field{
 		Name: proto.String(name),
 		Value: &pb.FieldValue{
@@ -107,8 +107,7 @@ func TestValidIndexNameOrDocID(t *testing.T) {
 
 func TestLoadFields(t *testing.T) {
 	got, want := TestDoc{}, searchDoc
-	err := loadFields(&got, protoFields)
-	if err != nil {
+	if err := loadFields(&got, protoFields); err != nil {
 		t.Fatalf("loadFields: %v", err)
 	}
 	if got != want {
@@ -128,7 +127,15 @@ func TestSaveFields(t *testing.T) {
 }
 
 func TestLoadFieldList(t *testing.T) {
-	got, want := FieldList{}, searchFields
+	var got, want FieldList
+	// Make a shallow copy of searchFields, since we need to set the default
+	// language "en" on the text and HTML fields.
+	want = append(want, searchFields...)
+	for i, f := range want {
+		if f.Name == "String" || f.Name == "HTML" {
+			want[i].Language = "en"
+		}
+	}
 	err := loadFields(&got, protoFields)
 	if err != nil {
 		t.Fatalf("loadFields: %v", err)
@@ -179,6 +186,28 @@ func TestValidFieldNames(t *testing.T) {
 	}
 }
 
+func TestValidLangs(t *testing.T) {
+	testCases := []struct {
+		field Field
+		valid bool
+	}{
+		{Field{Name: "Foo", Value: "String", Language: ""}, true},
+		{Field{Name: "Foo", Value: "String", Language: "en"}, true},
+		{Field{Name: "Foo", Value: "String", Language: "aussie"}, false},
+		{Field{Name: "Foo", Value: "String", Language: "12"}, false},
+		{Field{Name: "Foo", Value: HTML("String"), Language: "en"}, true},
+		{Field{Name: "Foo", Value: Atom("String"), Language: "en"}, false},
+		{Field{Name: "Foo", Value: 42, Language: "en"}, false},
+	}
+
+	for _, tt := range testCases {
+		_, err := saveFields(&FieldList{tt.field})
+		if err == nil != tt.valid {
+			t.Errorf("Field %v, got error %v, wanted err %t", tt.field, err, tt.valid)
+		}
+	}
+}
+
 func TestDuplicateFields(t *testing.T) {
 	testCases := []struct {
 		desc   string
@@ -187,24 +216,24 @@ func TestDuplicateFields(t *testing.T) {
 	}{
 		{
 			desc:   "multi string",
-			fields: FieldList{{"FieldA", "val1"}, {"FieldA", "val2"}, {"FieldA", "val3"}},
+			fields: FieldList{{Name: "FieldA", Value: "val1"}, {Name: "FieldA", Value: "val2"}, {Name: "FieldA", Value: "val3"}},
 		},
 		{
 			desc:   "multi atom",
-			fields: FieldList{{"FieldA", Atom("val1")}, {"FieldA", Atom("val2")}, {"FieldA", Atom("val3")}},
+			fields: FieldList{{Name: "FieldA", Value: Atom("val1")}, {Name: "FieldA", Value: Atom("val2")}, {Name: "FieldA", Value: Atom("val3")}},
 		},
 		{
 			desc:   "mixed",
-			fields: FieldList{{"FieldA", testString}, {"FieldA", testTime}, {"FieldA", float}},
+			fields: FieldList{{Name: "FieldA", Value: testString}, {Name: "FieldA", Value: testTime}, {Name: "FieldA", Value: float}},
 		},
 		{
 			desc:   "multi time",
-			fields: FieldList{{"FieldA", testTime}, {"FieldA", testTime}},
+			fields: FieldList{{Name: "FieldA", Value: testTime}, {Name: "FieldA", Value: testTime}},
 			errMsg: `duplicate time field "FieldA"`,
 		},
 		{
 			desc:   "multi num",
-			fields: FieldList{{"FieldA", float}, {"FieldA", float}},
+			fields: FieldList{{Name: "FieldA", Value: float}, {Name: "FieldA", Value: float}},
 			errMsg: `duplicate numeric field "FieldA"`,
 		},
 	}
