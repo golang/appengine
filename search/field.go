@@ -28,10 +28,19 @@ type Field struct {
 	Language string
 }
 
-// FieldLoadSaver can be converted from and to a slice of Fields.
+// DocumentMetadata is a struct containing information describing a given document.
+type DocumentMetadata struct {
+	// Rank is an integer specifying the order the document will be returned in
+	// search results. If zero, the rank will be set to the number of seconds since
+	// 2011-01-01 00:00:00 UTC when being Put into an index.
+	Rank int
+}
+
+// FieldLoadSaver can be converted from and to a slice of Fields
+// with additional document metadata.
 type FieldLoadSaver interface {
-	Load([]Field) error
-	Save() ([]Field, error)
+	Load([]Field, *DocumentMetadata) error
+	Save() ([]Field, *DocumentMetadata, error)
 }
 
 // FieldList converts a []Field to implement FieldLoadSaver.
@@ -39,22 +48,24 @@ type FieldList []Field
 
 // Load loads all of the provided fields into l.
 // It does not first reset *l to an empty slice.
-func (l *FieldList) Load(f []Field) error {
+func (l *FieldList) Load(f []Field, _ *DocumentMetadata) error {
 	*l = append(*l, f...)
 	return nil
 }
 
 // Save returns all of l's fields as a slice of Fields.
-func (l *FieldList) Save() ([]Field, error) {
-	return *l, nil
+func (l *FieldList) Save() ([]Field, *DocumentMetadata, error) {
+	return *l, nil, nil
 }
+
+var _ FieldLoadSaver = (*FieldList)(nil)
 
 // structFLS adapts a struct to be a FieldLoadSaver.
 type structFLS struct {
 	reflect.Value
 }
 
-func (s structFLS) Load(fields []Field) (err error) {
+func (s structFLS) Load(fields []Field, _ *DocumentMetadata) (err error) {
 	for _, field := range fields {
 		f := s.FieldByName(field.Name)
 		if !f.IsValid() {
@@ -84,7 +95,7 @@ func (s structFLS) Load(fields []Field) (err error) {
 	return err
 }
 
-func (s structFLS) Save() ([]Field, error) {
+func (s structFLS) Save() ([]Field, *DocumentMetadata, error) {
 	fields := make([]Field, 0, s.NumField())
 	for i := 0; i < s.NumField(); i++ {
 		f := s.Field(i)
@@ -96,7 +107,7 @@ func (s structFLS) Save() ([]Field, error) {
 			Value: f.Interface(),
 		})
 	}
-	return fields, nil
+	return fields, nil, nil
 }
 
 // newStructFLS returns a FieldLoadSaver for the struct pointer p.
@@ -114,7 +125,7 @@ func LoadStruct(dst interface{}, f []Field) error {
 	if err != nil {
 		return err
 	}
-	return x.Load(f)
+	return x.Load(f, nil)
 }
 
 // SaveStruct returns the fields from src as a slice of Field.
@@ -124,5 +135,6 @@ func SaveStruct(src interface{}) ([]Field, error) {
 	if err != nil {
 		return nil, err
 	}
-	return x.Save()
+	fs, _, err := x.Save()
+	return fs, err
 }

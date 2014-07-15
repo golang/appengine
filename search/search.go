@@ -163,6 +163,11 @@ func validFieldName(s string) bool {
 	return len(s) <= 500 && fieldNameRE.MatchString(s)
 }
 
+// validDocRank checks that the ranks is in the range [0, 2^31).
+func validDocRank(r int) bool {
+	return 0 <= r && r <= (1<<31-1)
+}
+
 // validLanguage checks that a language looks like ISO 639-1.
 func validLanguage(s string) bool {
 	return languageRE.MatchString(s)
@@ -202,15 +207,21 @@ func Open(name string) (*Index, error) {
 // src must be a non-nil struct pointer or implement the FieldLoadSaver
 // interface.
 func (x *Index) Put(c appengine.Context, id string, src interface{}) (string, error) {
-	fields, err := saveFields(src)
+	fields, meta, err := saveDoc(src)
 	if err != nil {
 		return "", err
 	}
 	d := &pb.Document{
-		Field: fields,
-		// TODO(davidday): support developers providing an explicit Rank for
-		// documents.
+		Field:   fields,
 		OrderId: proto.Int32(int32(time.Since(orderIDEpoch).Seconds())),
+	}
+	if meta != nil {
+		if meta.Rank != 0 {
+			if !validDocRank(meta.Rank) {
+				return "", fmt.Errorf("search: invalid rank %d, must be [0, 2^31)", meta.Rank)
+			}
+			*d.OrderId = int32(meta.Rank)
+		}
 	}
 	if id != "" {
 		if !validIndexNameOrDocID(id) {
@@ -272,7 +283,10 @@ func (x *Index) Get(c appengine.Context, id string, dst interface{}) error {
 	if len(res.Document) != 1 || res.Document[0].GetId() != id {
 		return ErrNoSuchDocument
 	}
-	return loadFields(dst, res.Document[0].Field)
+	metadata := &DocumentMetadata{
+		Rank: int(res.Document[0].GetOrderId()),
+	}
+	return loadDoc(dst, res.Document[0].Field, metadata)
 }
 
 // Delete deletes a document from the index.
@@ -493,7 +507,10 @@ func (t *Iterator) Next(dst interface{}) (string, error) {
 		return "", errors.New("search: internal error: no document returned")
 	}
 	if !t.idsOnly && dst != nil {
-		if err := loadFields(dst, doc.Field); err != nil {
+		metadata := &DocumentMetadata{
+			Rank: int(doc.GetOrderId()),
+		}
+		if err := loadDoc(dst, doc.Field, metadata); err != nil {
 			return "", err
 		}
 	}
@@ -506,19 +523,22 @@ func (t *Iterator) Next(dst interface{}) (string, error) {
 	return doc.GetId(), nil
 }
 
-// saveFields converts from a struct pointer or FieldLoadSaver to protobufs.
-func saveFields(src interface{}) ([]*pb.Field, error) {
+// saveDoc converts from a struct pointer or FieldLoadSaver to protobufs.
+func saveDoc(src interface{}) ([]*pb.Field, *DocumentMetadata, error) {
 	var err error
 	var fields []Field
-	if x, ok := src.(FieldLoadSaver); ok {
-		fields, err = x.Save()
-	} else {
+	var meta *DocumentMetadata
+	switch x := src.(type) {
+	case FieldLoadSaver:
+		fields, meta, err = x.Save()
+	default:
 		fields, err = SaveStruct(src)
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return fieldsToProto(fields)
+	f, err := fieldsToProto(fields)
+	return f, meta, err
 }
 
 func fieldsToProto(src []Field) ([]*pb.Field, error) {
@@ -590,16 +610,18 @@ func fieldsToProto(src []Field) ([]*pb.Field, error) {
 	return dst, nil
 }
 
-// loadFields converts from protobufs to a struct pointer or FieldLoadSaver.
-func loadFields(dst interface{}, src []*pb.Field) (err error) {
+// loadDoc converts from protobufs and document metadata to a struct pointer or FieldLoadSaver.
+func loadDoc(dst interface{}, src []*pb.Field, meta *DocumentMetadata) (err error) {
 	fields, err := protoToFields(src)
 	if err != nil {
 		return err
 	}
-	if x, ok := dst.(FieldLoadSaver); ok {
-		return x.Load(fields)
+	switch x := dst.(type) {
+	case FieldLoadSaver:
+		return x.Load(fields, meta)
+	default:
+		return LoadStruct(dst, fields)
 	}
-	return LoadStruct(dst, fields)
 }
 
 func protoToFields(fields []*pb.Field) ([]Field, error) {

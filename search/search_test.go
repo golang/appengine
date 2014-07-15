@@ -28,6 +28,24 @@ type TestDoc struct {
 	Time     time.Time
 }
 
+type FieldListWithMeta struct {
+	Fields FieldList
+	Meta   *DocumentMetadata
+}
+
+func (f *FieldListWithMeta) Load(fields []Field, meta *DocumentMetadata) error {
+	f.Meta = meta
+	return f.Fields.Load(fields, nil)
+}
+
+func (f *FieldListWithMeta) Save() ([]Field, *DocumentMetadata, error) {
+	fields, _, err := f.Fields.Save()
+	return fields, f.Meta, err
+}
+
+// Assert that FieldListWithMeta satisfies FieldLoadSaver
+var _ FieldLoadSaver = &FieldListWithMeta{}
+
 var (
 	float       = 3.14159
 	floatOut    = "3.14159e+00"
@@ -37,7 +55,10 @@ var (
 	testString  = "foo<b>bar"
 	testTime    = time.Unix(1337324400, 0)
 	testTimeOut = "1337324400000"
-	searchDoc   = TestDoc{
+	searchMeta  = &DocumentMetadata{
+		Rank: 42,
+	}
+	searchDoc = TestDoc{
 		String:   testString,
 		Atom:     Atom(testString),
 		HTML:     HTML(testString),
@@ -53,7 +74,10 @@ var (
 		Field{Name: "Location", Value: testGeo},
 		Field{Name: "Time", Value: testTime},
 	}
-	protoFields = []*pb.Field{
+	// searchFieldsWithLang is a copy of the searchFields with the Language field
+	// set on text/HTML Fields.
+	searchFieldsWithLang = FieldList{}
+	protoFields          = []*pb.Field{
 		newStringValueField("String", testString, pb.FieldValue_TEXT),
 		newStringValueField("Atom", testString, pb.FieldValue_ATOM),
 		newStringValueField("HTML", testString, pb.FieldValue_HTML),
@@ -71,6 +95,15 @@ var (
 		newStringValueField("Time", testTimeOut, pb.FieldValue_DATE),
 	}
 )
+
+func init() {
+	for _, f := range searchFields {
+		if f.Name == "String" || f.Name == "HTML" {
+			f.Language = "en"
+		}
+		searchFieldsWithLang = append(searchFieldsWithLang, f)
+	}
+}
 
 func newStringValueField(name, value string, valueType pb.FieldValue_ContentType) *pb.Field {
 	return &pb.Field{
@@ -105,20 +138,20 @@ func TestValidIndexNameOrDocID(t *testing.T) {
 	}
 }
 
-func TestLoadFields(t *testing.T) {
+func TestLoadDoc(t *testing.T) {
 	got, want := TestDoc{}, searchDoc
-	if err := loadFields(&got, protoFields); err != nil {
-		t.Fatalf("loadFields: %v", err)
+	if err := loadDoc(&got, protoFields, nil); err != nil {
+		t.Fatalf("loadDoc: %v", err)
 	}
 	if got != want {
-		t.Errorf("\ngot  %v\nwant %v", got, want)
+		t.Errorf("loadDoc: got %v, wanted %v", got, want)
 	}
 }
 
-func TestSaveFields(t *testing.T) {
-	got, err := saveFields(&searchDoc)
+func TestSaveDoc(t *testing.T) {
+	got, _, err := saveDoc(&searchDoc)
 	if err != nil {
-		t.Fatalf("saveFields: %v", err)
+		t.Fatalf("saveDoc: %v", err)
 	}
 	want := protoFields
 	if !reflect.DeepEqual(got, want) {
@@ -127,18 +160,10 @@ func TestSaveFields(t *testing.T) {
 }
 
 func TestLoadFieldList(t *testing.T) {
-	var got, want FieldList
-	// Make a shallow copy of searchFields, since we need to set the default
-	// language "en" on the text and HTML fields.
-	want = append(want, searchFields...)
-	for i, f := range want {
-		if f.Name == "String" || f.Name == "HTML" {
-			want[i].Language = "en"
-		}
-	}
-	err := loadFields(&got, protoFields)
-	if err != nil {
-		t.Fatalf("loadFields: %v", err)
+	var got FieldList
+	want := searchFieldsWithLang
+	if err := loadDoc(&got, protoFields, nil); err != nil {
+		t.Fatalf("loadDoc: %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("\ngot  %v\nwant %v", got, want)
@@ -146,13 +171,43 @@ func TestLoadFieldList(t *testing.T) {
 }
 
 func TestSaveFieldList(t *testing.T) {
-	got, err := saveFields(&searchFields)
+	got, _, err := saveDoc(&searchFields)
 	if err != nil {
-		t.Fatalf("saveFields: %v", err)
+		t.Fatalf("saveDoc: %v", err)
 	}
 	want := protoFields
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("\ngot  %v\nwant %v", got, want)
+	}
+}
+
+func TestLoadMeta(t *testing.T) {
+	var got FieldListWithMeta
+	want := FieldListWithMeta{
+		Meta:   searchMeta,
+		Fields: searchFieldsWithLang,
+	}
+	if err := loadDoc(&got, protoFields, searchMeta); err != nil {
+		t.Fatalf("loadDoc: %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got  %v\nwant %v", got, want)
+	}
+}
+
+func TestSaveMeta(t *testing.T) {
+	got, gotMeta, err := saveDoc(&FieldListWithMeta{
+		Meta:   searchMeta,
+		Fields: searchFields,
+	})
+	if err != nil {
+		t.Fatalf("saveDoc: %v", err)
+	}
+	if want := protoFields; !reflect.DeepEqual(got, want) {
+		t.Errorf("\ngot  %v\nwant %v", got, want)
+	}
+	if want := searchMeta; !reflect.DeepEqual(gotMeta, want) {
+		t.Errorf("\ngot  %v\nwant %v", gotMeta, want)
 	}
 }
 
@@ -174,7 +229,7 @@ func TestValidFieldNames(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		_, err := saveFields(&FieldList{
+		_, _, err := saveDoc(&FieldList{
 			Field{Name: tc.name, Value: "val"},
 		})
 		if err != nil && !strings.Contains(err.Error(), "invalid field name") {
@@ -201,9 +256,9 @@ func TestValidLangs(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		_, err := saveFields(&FieldList{tt.field})
+		_, _, err := saveDoc(&FieldList{tt.field})
 		if err == nil != tt.valid {
-			t.Errorf("Field %v, got error %v, wanted err %t", tt.field, err, tt.valid)
+			t.Errorf("Field %v, got error %v, wanted valid %t", tt.field, err, tt.valid)
 		}
 	}
 }
@@ -238,7 +293,7 @@ func TestDuplicateFields(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		_, err := saveFields(&tc.fields)
+		_, _, err := saveDoc(&tc.fields)
 		if (err == nil) != (tc.errMsg == "") || (err != nil && !strings.Contains(err.Error(), tc.errMsg)) {
 			t.Errorf("%s: got err %v, wanted %q", tc.desc, err, tc.errMsg)
 		}
@@ -281,7 +336,7 @@ func TestLoadErrFieldMismatch(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		err := loadFields(tc.dst, tc.src)
+		err := loadDoc(tc.dst, tc.src, nil)
 		if !reflect.DeepEqual(err, tc.err) {
 			t.Errorf("%s, got err %v, wanted %v", tc.desc, err, tc.err)
 		}
@@ -336,22 +391,13 @@ func TestPut(t *testing.T) {
 		expectedIn := &pb.IndexDocumentRequest{
 			Params: &pb.IndexDocumentParams{
 				Document: []*pb.Document{
-					{Field: protoFields},
-					// Omit OrderId since we'll check it explicitly.
+					{Field: protoFields, OrderId: proto.Int32(42)},
 				},
 				IndexSpec: &pb.IndexSpec{
 					Name: proto.String("Doc"),
 				},
 			},
 		}
-		if len(in.Params.GetDocument()) < 1 {
-			return fmt.Errorf("expected at least one Document, got %v", in)
-		}
-		got, want := in.Params.Document[0].GetOrderId(), int32(time.Since(orderIDEpoch).Seconds())
-		if d := got - want; -5 > d || d > 5 {
-			return fmt.Errorf("got OrderId %d, want near %d", got, want)
-		}
-		in.Params.Document[0].OrderId = nil
 		if !proto.Equal(in, expectedIn) {
 			return fmt.Errorf("unsupported argument:\ngot  %v\nwant %v", in, expectedIn)
 		}
@@ -366,11 +412,44 @@ func TestPut(t *testing.T) {
 		return nil
 	})
 
-	id, err := index.Put(c, "", &searchDoc)
+	id, err := index.Put(c, "", &FieldListWithMeta{
+		Meta:   searchMeta,
+		Fields: searchFields,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if want := "doc_id"; id != want {
 		t.Errorf("Got doc ID %q, want %q", id, want)
+	}
+}
+
+func TestPutAutoOrderID(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(in *pb.IndexDocumentRequest, out *pb.IndexDocumentResponse) error {
+		if len(in.Params.GetDocument()) < 1 {
+			return fmt.Errorf("expected at least one Document, got %v", in)
+		}
+		got, want := in.Params.Document[0].GetOrderId(), int32(time.Since(orderIDEpoch).Seconds())
+		if d := got - want; -5 > d || d > 5 {
+			return fmt.Errorf("got OrderId %d, want near %d", got, want)
+		}
+		*out = pb.IndexDocumentResponse{
+			Status: []*pb.RequestStatus{
+				{Code: pb.SearchServiceError_OK.Enum()},
+			},
+			DocId: []string{
+				"doc_id",
+			},
+		}
+		return nil
+	})
+
+	if _, err := index.Put(c, "", &searchFields); err != nil {
+		t.Fatal(err)
 	}
 }

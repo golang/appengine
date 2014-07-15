@@ -49,6 +49,7 @@ This list summarises the differences:
 
 * `appengine.Datacenter` now takes an `appengine.Context` argument.
 * `datastore.PropertyLoadSaver` has been simplified to use slices in place of channels.
+* `search.FieldLoadSaver` now handles document metadata.
 * `taskqueue.QueueStats` no longer takes a maxTasks argument. That argument has been
   deprecated and unused for a long time.
 * `appengine/aetest`, `appengine/blobstore`, `appengine/cloudsql`
