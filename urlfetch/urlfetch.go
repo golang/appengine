@@ -152,9 +152,17 @@ func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 		}
 	}
 	if methodAcceptsRequestBody[req.Method] && req.Body != nil {
-		freq.Payload, err = ioutil.ReadAll(req.Body)
-		if err != nil {
-			return nil, err
+		// Avoid a []byte copy if req.Body has a Bytes method.
+		switch b := req.Body.(type) {
+		case interface {
+			Bytes() []byte
+		}:
+			freq.Payload = b.Bytes()
+		default:
+			freq.Payload, err = ioutil.ReadAll(req.Body)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
