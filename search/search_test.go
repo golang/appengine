@@ -453,3 +453,27 @@ func TestPutAutoOrderID(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestPutBadStatus(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(_ *pb.IndexDocumentRequest, out *pb.IndexDocumentResponse) error {
+		*out = pb.IndexDocumentResponse{
+			Status: []*pb.RequestStatus{
+				{
+					Code:        pb.SearchServiceError_INVALID_REQUEST.Enum(),
+					ErrorDetail: proto.String("insufficient gophers"),
+				},
+			},
+		}
+		return nil
+	})
+
+	wantErr := "search: INVALID_REQUEST: insufficient gophers"
+	if _, err := index.Put(c, "", &searchFields); err == nil || err.Error() != wantErr {
+		t.Fatalf("Put: got %v error, want %q", err, wantErr)
+	}
+}

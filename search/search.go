@@ -239,12 +239,14 @@ func (x *Index) Put(c appengine.Context, id string, src interface{}) (string, er
 	if err := c.Call("search", "IndexDocument", req, res, nil); err != nil {
 		return "", err
 	}
+	if len(res.Status) > 0 {
+		if s := res.Status[0]; s.GetCode() != pb.SearchServiceError_OK {
+			return "", fmt.Errorf("search: %s: %s", s.GetCode(), s.GetErrorDetail())
+		}
+	}
 	if len(res.Status) != 1 || len(res.DocId) != 1 {
 		return "", fmt.Errorf("search: internal error: wrong number of results (%d Statuses, %d DocIDs)",
 			len(res.Status), len(res.DocId))
-	}
-	if s := res.Status[0]; s.GetCode() != pb.SearchServiceError_OK {
-		return "", fmt.Errorf("search: %s: %s", s.GetCode(), s.GetErrorDetail())
 	}
 	return res.DocId[0], nil
 }
