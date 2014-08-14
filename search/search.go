@@ -12,7 +12,7 @@ pointers, and the valid types for a struct's fields are:
   - search.Atom,
   - search.HTML,
   - time.Time (stored with millisecond precision),
-  - float64,
+  - float64 (value between -2,147,483,647 and 2,147,483,647 inclusive),
   - appengine.GeoPoint.
 
 Documents can also be represented by any type implementing the FieldLoadSaver
@@ -171,6 +171,11 @@ func validDocRank(r int) bool {
 // validLanguage checks that a language looks like ISO 639-1.
 func validLanguage(s string) bool {
 	return languageRE.MatchString(s)
+}
+
+// validFloat checks that f is in the range [-2147483647, 2147483647].
+func validFloat(f float64) bool {
+	return -(1<<31-1) <= f && f <= (1<<31-1)
 }
 
 // Index is an index of documents.
@@ -572,6 +577,9 @@ func fieldsToProto(src []Field) ([]*pb.Field, error) {
 		case float64:
 			if numericFields[f.Name] {
 				return nil, fmt.Errorf("search: duplicate numeric field %q", f.Name)
+			}
+			if !validFloat(x) {
+				return nil, fmt.Errorf("search: numeric field %q with invalid value %f", f.Name, x)
 			}
 			numericFields[f.Name] = true
 			fieldValue.Type = pb.FieldValue_NUMBER.Enum()
