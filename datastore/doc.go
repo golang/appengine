@@ -26,9 +26,11 @@ Valid value types are:
   - float32 and float64,
   - []byte (up to 1 megabyte in length),
   - any type whose underlying type is one of the above predeclared types,
+  - ByteString,
   - *Key,
   - time.Time (stored with microsecond precision),
   - appengine.BlobKey,
+  - appengine.GeoPoint,
   - structs whose fields are all valid value types,
   - slices of any of the above.
 
@@ -105,7 +107,8 @@ recognized options.
 
 Fields (except for []byte) are indexed by default. Strings longer than 500
 characters cannot be indexed; fields used to store long strings should be
-tagged with "noindex".
+tagged with "noindex". Similarly, ByteStrings longer than 500 bytes cannot be
+indexed.
 
 Example code:
 

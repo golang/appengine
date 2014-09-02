@@ -98,6 +98,8 @@ func valueToProto(defaultAppID, name string, v reflect.Value, multiple bool) (p 
 		switch v.Interface().(type) {
 		case []byte:
 			p.Meaning = pb.Property_BLOB.Enum()
+		case ByteString:
+			p.Meaning = pb.Property_BYTESTRING.Enum()
 		case appengine.BlobKey:
 			p.Meaning = pb.Property_BLOBKEY.Enum()
 		case time.Time:
@@ -138,6 +140,8 @@ func saveStructProperty(props *[]Property, name string, noIndex, multiple bool, 
 	case appengine.BlobKey:
 		p.Value = x
 	case appengine.GeoPoint:
+		p.Value = x
+	case ByteString:
 		p.Value = x
 	default:
 		switch v.Kind() {
@@ -274,6 +278,9 @@ func propertiesToProto(defaultAppID string, key *Key, props []Property) (*pb.Ent
 			if !p.NoIndex {
 				return nil, fmt.Errorf("datastore: cannot index a []byte valued Property with Name %q", p.Name)
 			}
+		case ByteString:
+			x.Value.StringValue = proto.String(string(v))
+			x.Meaning = pb.Property_BYTESTRING.Enum()
 		default:
 			if p.Value != nil {
 				return nil, fmt.Errorf("datastore: invalid Value type for a Property with Name %q", p.Name)

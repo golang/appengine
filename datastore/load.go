@@ -14,10 +14,11 @@ import (
 )
 
 var (
-	typeOfBlobKey   = reflect.TypeOf(appengine.BlobKey(""))
-	typeOfByteSlice = reflect.TypeOf([]byte(nil))
-	typeOfGeoPoint  = reflect.TypeOf(appengine.GeoPoint{})
-	typeOfTime      = reflect.TypeOf(time.Time{})
+	typeOfBlobKey    = reflect.TypeOf(appengine.BlobKey(""))
+	typeOfByteSlice  = reflect.TypeOf([]byte(nil))
+	typeOfByteString = reflect.TypeOf(ByteString(nil))
+	typeOfGeoPoint   = reflect.TypeOf(appengine.GeoPoint{})
+	typeOfTime       = reflect.TypeOf(time.Time{})
 )
 
 // typeMismatchReason returns a string explaining why the property p could not
@@ -41,6 +42,8 @@ func typeMismatchReason(p Property, v reflect.Value) string {
 		entityType = "appengine.BlobKey"
 	case appengine.GeoPoint:
 		entityType = "appengine.GeoPoint"
+	case ByteString:
+		entityType = "datastore.ByteString"
 	case []byte:
 		entityType = "[]byte"
 	}
@@ -110,6 +113,8 @@ func (l *propertyLoader) load(codec *structCodec, structValue reflect.Value, p P
 			meaning = pb.Property_BLOBKEY
 		case typeOfByteSlice:
 			meaning = pb.Property_BLOB
+		case typeOfByteString:
+			meaning = pb.Property_BYTESTRING
 		case typeOfGeoPoint:
 			meaning = pb.Property_GEORSS_POINT
 		case typeOfTime:
@@ -139,15 +144,18 @@ func (l *propertyLoader) load(codec *structCodec, structValue reflect.Value, p P
 		}
 		v.SetBool(x)
 	case reflect.String:
-		if x, ok := pValue.(appengine.BlobKey); ok {
+		switch x := pValue.(type) {
+		case appengine.BlobKey:
 			v.SetString(string(x))
-			break
+		case ByteString:
+			v.SetString(string(x))
+		case string:
+			v.SetString(x)
+		default:
+			if pValue != nil {
+				return typeMismatchReason(p, v)
+			}
 		}
-		x, ok := pValue.(string)
-		if !ok && pValue != nil {
-			return typeMismatchReason(p, v)
-		}
-		v.SetString(x)
 	case reflect.Float32, reflect.Float64:
 		x, ok := pValue.(float64)
 		if !ok && pValue != nil {
@@ -185,6 +193,11 @@ func (l *propertyLoader) load(codec *structCodec, structValue reflect.Value, p P
 		}
 	case reflect.Slice:
 		x, ok := pValue.([]byte)
+		if !ok {
+			if y, yok := pValue.(ByteString); yok {
+				x, ok = []byte(y), true
+			}
+		}
 		if !ok && pValue != nil {
 			return typeMismatchReason(p, v)
 		}
@@ -288,6 +301,8 @@ func propValue(v *pb.PropertyValue, m pb.Property_Meaning) (interface{}, error) 
 			return []byte(*v.StringValue), nil
 		} else if m == pb.Property_BLOBKEY {
 			return appengine.BlobKey(*v.StringValue), nil
+		} else if m == pb.Property_BYTESTRING {
+			return ByteString(*v.StringValue), nil
 		} else {
 			return *v.StringValue, nil
 		}

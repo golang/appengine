@@ -90,6 +90,10 @@ type B4 struct {
 	B [][]byte
 }
 
+type B5 struct {
+	B ByteString
+}
+
 type C0 struct {
 	I int
 	C chan int
@@ -677,6 +681,38 @@ var testCases = []testCase{
 			makeUint8Slice(5),
 		}},
 		"",
+		"",
+	},
+	{
+		"short ByteString",
+		&B5{B: ByteString(makeUint8Slice(3))},
+		&B5{B: ByteString(makeUint8Slice(3))},
+		"",
+		"",
+	},
+	{
+		"short ByteString as props",
+		&B5{B: ByteString(makeUint8Slice(3))},
+		&PropertyList{
+			Property{Name: "B", Value: ByteString(makeUint8Slice(3)), NoIndex: false, Multiple: false},
+		},
+		"",
+		"",
+	},
+	{
+		"short ByteString into string",
+		&B5{B: ByteString("legacy")},
+		&struct{ B string }{"legacy"},
+		"",
+		"",
+	},
+	{
+		"[]byte must be noindex",
+		&PropertyList{
+			Property{Name: "B", Value: makeUint8Slice(3), NoIndex: false},
+		},
+		nil,
+		"cannot index a []byte valued Property",
 		"",
 	},
 	{

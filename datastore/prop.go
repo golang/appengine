@@ -30,6 +30,7 @@ type Property struct {
 	//	- bool
 	//	- string
 	//	- float64
+	//	- ByteString
 	//	- *Key
 	//	- time.Time
 	//	- appengine.BlobKey
@@ -61,6 +62,9 @@ type Property struct {
 	// it as a field of type []T instead of type T.
 	Multiple bool
 }
+
+// ByteString is a short byte slice (up to 500 bytes) that can be indexed.
+type ByteString []byte
 
 // PropertyLoadSaver can be converted from and to a slice of Properties.
 type PropertyLoadSaver interface {
