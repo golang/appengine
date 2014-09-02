@@ -49,8 +49,7 @@ func handleMainPage(w http.ResponseWriter, r *http.Request) {
 	tic := time.Now()
 	q := datastore.NewQuery("Greeting").Ancestor(guestbookKey(c)).Order("-Date").Limit(10)
 	var gg []*Greeting
-	_, err := q.GetAll(c, &gg)
-	if err != nil {
+	if _, err := q.GetAll(c, &gg); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		c.Errorf("GetAll: %v", err)
 		return
@@ -86,10 +85,6 @@ func handleSign(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c := appengine.NewContext(r)
-	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 	g := &Greeting{
 		Content: r.FormValue("content"),
 		Date:    time.Now(),
