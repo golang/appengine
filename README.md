@@ -57,5 +57,5 @@ This list summarises the differences:
 * `appengine.BackendHostname` and `appengine.BackendInstance` were for the deprecated backends feature.
   Use `appengine.ModuleHostname`and `appengine.ModuleName` instead.
 * `appengine.IsCapabilityDisabled` and `appengine/capability` are obsolete.
-* `appengine/file` is deprecated. Use [Google Cloud Storage](https://code.google.com/p/google-api-go-client/wiki/GettingStarted) instead.
+* Most `appengine/file` functions are deprecated. Use [Google Cloud Storage](https://code.google.com/p/google-api-go-client/wiki/GettingStarted) instead.
 * `appengine/socket` is deprecated. Use the standard `net` package instead.
