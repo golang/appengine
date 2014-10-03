@@ -66,7 +66,10 @@ type Query struct {
 	// application log of MinLevel or higher will be returned.
 	MinLevel int
 
-	// The major version IDs whose logs should be retrieved.
+	// Versions is the major version IDs whose logs should be retrieved.
+	// Logs for specific modules can be retrieved by the specifying versions
+	// in the form "module:version"; the default module is used if no module
+	// is specified.
 	Versions []string
 
 	// A list of requests to search for instead of a time-based scan. Cannot be
@@ -85,6 +88,7 @@ type AppLog struct {
 // Record contains all the information for a single web request.
 type Record struct {
 	AppID            string
+	ModuleID         string
 	VersionID        string
 	RequestID        []byte
 	IP               string
@@ -192,6 +196,7 @@ func protoToRecord(rl *pb.RequestLog) *Record {
 	}
 	return &Record{
 		AppID:             *rl.AppId,
+		ModuleID:          rl.GetModuleId(),
 		VersionID:         *rl.VersionId,
 		RequestID:         rl.RequestId,
 		Offset:            offset,
@@ -226,9 +231,17 @@ func protoToRecord(rl *pb.RequestLog) *Record {
 // Run starts a query for log records, which contain request and application
 // level log information.
 func (params *Query) Run(c appengine.Context) *Result {
+	req, err := makeRequest(params, c.FullyQualifiedAppID(), appengine.VersionID(c))
+	return &Result{
+		context: c,
+		request: req,
+		err:     err,
+	}
+}
+
+func makeRequest(params *Query, appID, versionID string) (*pb.LogReadRequest, error) {
 	req := &pb.LogReadRequest{}
-	appId := c.FullyQualifiedAppID()
-	req.AppId = &appId
+	req.AppId = &appID
 	if !params.StartTime.IsZero() {
 		req.StartTime = proto.Int64(params.StartTime.UnixNano() / 1e3)
 	}
@@ -238,7 +251,7 @@ func (params *Query) Run(c appengine.Context) *Result {
 	if len(params.Offset) > 0 {
 		var offset pb.LogOffset
 		if err := proto.Unmarshal(params.Offset, &offset); err != nil {
-			return &Result{context: c, err: fmt.Errorf("bad Offset: %v", err)}
+			return nil, fmt.Errorf("bad Offset: %v", err)
 		}
 		req.Offset = &offset
 	}
@@ -252,15 +265,24 @@ func (params *Query) Run(c appengine.Context) *Result {
 		req.MinimumLogLevel = proto.Int32(int32(params.MinLevel))
 	}
 	if params.Versions == nil {
-		// If no versions were specified, default to the major version
-		// used by this app.
-		versionID := appengine.VersionID(c)
+		// If no versions were specified, default to the default module at
+		// the major version being used by this module.
 		if i := strings.Index(versionID, "."); i >= 0 {
 			versionID = versionID[:i]
 		}
 		req.VersionId = []string{versionID}
 	} else {
-		req.VersionId = params.Versions
+		req.ModuleVersion = make([]*pb.LogModuleVersion, 0, len(params.Versions))
+		for _, v := range params.Versions {
+			var m *string
+			if i := strings.Index(v, ":"); i >= 0 {
+				m, v = proto.String(v[:i]), v[i+1:]
+			}
+			req.ModuleVersion = append(req.ModuleVersion, &pb.LogModuleVersion{
+				ModuleId:  m,
+				VersionId: proto.String(v),
+			})
+		}
 	}
 	if params.RequestIDs != nil {
 		ids := make([][]byte, len(params.RequestIDs))
@@ -270,7 +292,7 @@ func (params *Query) Run(c appengine.Context) *Result {
 		req.RequestId = ids
 	}
 
-	return &Result{context: c, request: req}
+	return req, nil
 }
 
 // run takes the query Result produced by a call to Run and updates it with
