@@ -402,6 +402,7 @@ func (x *Index) Search(c appengine.Context, query string, opts *SearchOptions) *
 			t.limit = opts.Limit
 		}
 		t.idsOnly = opts.IDsOnly
+		t.sort = opts.Sort
 	}
 	return t
 }
@@ -419,6 +420,11 @@ func moreSearch(t *Iterator) error {
 	}
 	if t.idsOnly {
 		req.Params.KeysOnly = &t.idsOnly
+	}
+	if t.sort != nil {
+		if err := sortToProto(t.sort, req.Params); err != nil {
+			return err
+		}
 	}
 
 	if t.searchCursor != nil {
@@ -452,7 +458,101 @@ type SearchOptions struct {
 	// operation; no document fields are populated.
 	IDsOnly bool
 
+	// Sort controls the ordering of search results.
+	Sort *SortOptions
+
 	// TODO: cursor, offset, maybe others.
+}
+
+// SortOptions control the ordering and scoring of search results.
+type SortOptions struct {
+	// Expressions is a slice of expressions representing a multi-dimensional
+	// sort.
+	Expressions []SortExpression
+
+	// Scorer, when specified, will cause the documents to be scored according to
+	// search term frequency.
+	Scorer Scorer
+
+	// Limit is the maximum number of objects to score and/or sort. Limit cannot
+	// be more than 10,000. The zero value indicates a default limit.
+	Limit int
+}
+
+// SortExpression defines a single dimension for sorting a document.
+type SortExpression struct {
+	// Expr is evaluated to providing a sorting value for each document.
+	// See https://developers.google.com/appengine/docs/go/search/options for
+	// the supported expression syntax.
+	Expr string
+
+	// Reverse causes the documents to be sorted in ascending order.
+	Reverse bool
+
+	// The default value to use when no field is present or the expresion
+	// cannot be calculated for a document. For text sorts, Default must
+	// be of type string; for numeric sorts, float64.
+	Default interface{}
+}
+
+// A Scorer defines how a document is scored.
+type Scorer interface {
+	toProto(*pb.ScorerSpec)
+}
+
+type enumScorer struct {
+	enum pb.ScorerSpec_Scorer
+}
+
+func (e enumScorer) toProto(spec *pb.ScorerSpec) {
+	spec.Scorer = e.enum.Enum()
+}
+
+var (
+	// MatchScorer assigns a score based on term frequency in a document.
+	MatchScorer Scorer = enumScorer{pb.ScorerSpec_MATCH_SCORER}
+
+	// RescoringMatchScorer assigns a score based on the quality of the query
+	// match. It is similar to a MatchScorer but uses a more complex scoring
+	// algorithm based on match term frequency and other factors like field type.
+	// Please be aware that this algorithm is continually refined and can change
+	// over time without notice. This means that the ordering of search results
+	// that use this scorer can also change without notice.
+	RescoringMatchScorer Scorer = enumScorer{pb.ScorerSpec_RESCORING_MATCH_SCORER}
+)
+
+func sortToProto(sort *SortOptions, params *pb.SearchParams) error {
+	for _, e := range sort.Expressions {
+		spec := &pb.SortSpec{
+			SortExpression: proto.String(e.Expr),
+		}
+		if e.Reverse {
+			spec.SortDescending = proto.Bool(false)
+		}
+		if e.Default != nil {
+			switch d := e.Default.(type) {
+			case float64:
+				spec.DefaultValueNumeric = &d
+			case string:
+				spec.DefaultValueText = &d
+			default:
+				return fmt.Errorf("search: invalid Default type %T for expression %q", d, e.Expr)
+			}
+		}
+		params.SortSpec = append(params.SortSpec, spec)
+	}
+
+	spec := &pb.ScorerSpec{}
+	if sort.Limit > 0 {
+		spec.Limit = proto.Int32(int32(sort.Limit))
+		params.ScorerSpec = spec
+	}
+	if sort.Scorer != nil {
+		sort.Scorer.toProto(spec)
+		params.ScorerSpec = spec
+	}
+
+	return nil
 }
 
 // Iterator is the result of searching an index for a query or listing an
@@ -469,6 +569,7 @@ type Iterator struct {
 	searchRes    []*pb.SearchResult
 	searchQuery  string
 	searchCursor *string
+	sort         *SortOptions
 
 	more func(*Iterator) error
 

@@ -477,3 +477,83 @@ func TestPutBadStatus(t *testing.T) {
 		t.Fatalf("Put: got %v error, want %q", err, wantErr)
 	}
 }
+
+func TestSortOptions(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	noErr := errors.New("") // sentinel error when there isn't one…
+
+	testCases := []struct {
+		desc       string
+		sort       *SortOptions
+		wantSort   []*pb.SortSpec
+		wantScorer *pb.ScorerSpec
+		wantErr    string
+	}{
+		{
+			desc: "No SortOptions",
+		},
+		{
+			desc: "Basic",
+			sort: &SortOptions{
+				Expressions: []SortExpression{
+					{Expr: "dog"},
+					{Expr: "cat", Reverse: true},
+					{Expr: "gopher", Default: "blue"},
+					{Expr: "fish", Default: 2.0},
+				},
+				Limit:  42,
+				Scorer: MatchScorer,
+			},
+			wantSort: []*pb.SortSpec{
+				{SortExpression: proto.String("dog")},
+				{SortExpression: proto.String("cat"), SortDescending: proto.Bool(false)},
+				{SortExpression: proto.String("gopher"), DefaultValueText: proto.String("blue")},
+				{SortExpression: proto.String("fish"), DefaultValueNumeric: proto.Float64(2)},
+			},
+			wantScorer: &pb.ScorerSpec{
+				Limit:  proto.Int32(42),
+				Scorer: pb.ScorerSpec_MATCH_SCORER.Enum(),
+			},
+		},
+		{
+			desc: "Bad expression default",
+			sort: &SortOptions{
+				Expressions: []SortExpression{
+					{Expr: "dog", Default: true},
+				},
+			},
+			wantErr: `search: invalid Default type bool for expression "dog"`,
+		},
+		{
+			desc:       "RescoringMatchScorer",
+			sort:       &SortOptions{Scorer: RescoringMatchScorer},
+			wantScorer: &pb.ScorerSpec{Scorer: pb.ScorerSpec_RESCORING_MATCH_SCORER.Enum()},
+		},
+	}
+
+	for _, tt := range testCases {
+		c := aetesting.FakeSingleContext(t, "search", "Search", func(req *pb.SearchRequest, _ *pb.SearchResponse) error {
+			params := req.Params
+			if !reflect.DeepEqual(params.SortSpec, tt.wantSort) {
+				t.Errorf("%s: params.SortSpec=%v; want %v", tt.desc, params.SortSpec, tt.wantSort)
+			}
+			if !reflect.DeepEqual(params.ScorerSpec, tt.wantScorer) {
+				t.Errorf("%s: params.ScorerSpec=%v; want %v", tt.desc, params.ScorerSpec, tt.wantScorer)
+			}
+			return noErr // Always return some error to prevent response parsing.
+		})
+
+		it := index.Search(c, "gopher", &SearchOptions{Sort: tt.sort})
+		_, err := it.Next(nil)
+		if err == nil {
+			t.Fatalf("%s: err==nil; should not happen", tt.desc)
+		}
+		if err.Error() != tt.wantErr {
+			t.Errorf("%s: got error %q, want %q", tt.desc, err, tt.wantErr)
+		}
+	}
+}
