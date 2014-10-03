@@ -235,7 +235,7 @@ func (params *Query) Run(c appengine.Context) *Result {
 	if !params.EndTime.IsZero() {
 		req.EndTime = proto.Int64(params.EndTime.UnixNano() / 1e3)
 	}
-	if params.Offset != nil {
+	if len(params.Offset) > 0 {
 		var offset pb.LogOffset
 		if err := proto.Unmarshal(params.Offset, &offset); err != nil {
 			return &Result{context: c, err: fmt.Errorf("bad Offset: %v", err)}
