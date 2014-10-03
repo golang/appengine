@@ -264,14 +264,6 @@ func (q *Query) End(c Cursor) *Query {
 
 // toProto converts the query to a protocol buffer.
 func (q *Query) toProto(dst *pb.Query, appID string) error {
-	if q.kind == "" {
-		if len(q.filter) != 0 {
-			return errors.New("datastore: kindless query cannot have filters")
-		}
-		if len(q.order) != 0 {
-			return errors.New("datastore: kindless query cannot have sort orders")
-		}
-	}
 	if len(q.projection) != 0 && q.keysOnly {
 		return errors.New("datastore: query cannot both project and be keys-only")
 	}

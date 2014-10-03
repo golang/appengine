@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"code.google.com/p/goprotobuf/proto"
@@ -434,6 +435,146 @@ func TestFilterParser(t *testing.T) {
 		if got != want {
 			t.Errorf("%q: got %v, want %v", tc.filterStr, got, want)
 			continue
+		}
+	}
+}
+
+func TestQueryToProto(t *testing.T) {
+	// The context is required to make Keys for the test cases.
+	var got *pb.Query
+	NoErr := errors.New("No error")
+	c := aetesting.FakeSingleContext(t, "datastore_v3", "RunQuery", func(in *pb.Query, out *pb.QueryResult) error {
+		got = in
+		return NoErr // return a non-nil error so Run doesn't keep going.
+	})
+
+	testCases := []struct {
+		desc  string
+		query *Query
+		want  *pb.Query
+		err   string
+	}{
+		{
+			desc:  "empty",
+			query: NewQuery(""),
+			want:  &pb.Query{},
+		},
+		{
+			desc:  "standard query",
+			query: NewQuery("kind").Order("-I").Filter("I >", 17).Filter("U =", "Dave").Limit(7).Offset(42),
+			want: &pb.Query{
+				Kind: proto.String("kind"),
+				Filter: []*pb.Query_Filter{
+					{
+						Op: pb.Query_Filter_GREATER_THAN.Enum(),
+						Property: []*pb.Property{
+							{
+								Name:     proto.String("I"),
+								Value:    &pb.PropertyValue{Int64Value: proto.Int64(17)},
+								Multiple: proto.Bool(false),
+							},
+						},
+					},
+					{
+						Op: pb.Query_Filter_EQUAL.Enum(),
+						Property: []*pb.Property{
+							{
+								Name:     proto.String("U"),
+								Value:    &pb.PropertyValue{StringValue: proto.String("Dave")},
+								Multiple: proto.Bool(false),
+							},
+						},
+					},
+				},
+				Order: []*pb.Query_Order{
+					{
+						Property:  proto.String("I"),
+						Direction: pb.Query_Order_DESCENDING.Enum(),
+					},
+				},
+				Limit:  proto.Int32(7),
+				Offset: proto.Int32(42),
+			},
+		},
+		{
+			desc:  "ancestor",
+			query: NewQuery("").Ancestor(NewKey(c, "kind", "Mummy", 0, nil)),
+			want: &pb.Query{
+				Ancestor: &pb.Reference{
+					App: proto.String("dev~fake-app"),
+					Path: &pb.Path{
+						Element: []*pb.Path_Element{{Type: proto.String("kind"), Name: proto.String("Mummy")}},
+					},
+				},
+			},
+		},
+		{
+			desc:  "projection",
+			query: NewQuery("").Project("A", "B"),
+			want: &pb.Query{
+				PropertyName: []string{"A", "B"},
+			},
+		},
+		{
+			desc:  "projection with distinct",
+			query: NewQuery("").Project("A", "B").Distinct(),
+			want: &pb.Query{
+				PropertyName:        []string{"A", "B"},
+				GroupByPropertyName: []string{"A", "B"},
+			},
+		},
+		{
+			desc:  "keys only",
+			query: NewQuery("").KeysOnly(),
+			want: &pb.Query{
+				KeysOnly:           proto.Bool(true),
+				RequirePerfectPlan: proto.Bool(true),
+			},
+		},
+		{
+			desc:  "empty filter",
+			query: NewQuery("kind").Filter("=", 17),
+			err:   "empty query filter field nam",
+		},
+		{
+			desc:  "bad filter type",
+			query: NewQuery("kind").Filter("M =", map[string]bool{}),
+			err:   "bad query filter value type",
+		},
+		{
+			desc:  "bad filter operator",
+			query: NewQuery("kind").Filter("I <<=", 17),
+			err:   `invalid operator "<<=" in filter "I <<="`,
+		},
+		{
+			desc:  "empty order",
+			query: NewQuery("kind").Order(""),
+			err:   "empty order",
+		},
+		{
+			desc:  "bad order direction",
+			query: NewQuery("kind").Order("+I"),
+			err:   `invalid order: "+I`,
+		},
+	}
+
+	for _, tt := range testCases {
+		got = nil
+		if _, err := tt.query.Run(c).Next(nil); err != NoErr {
+			if tt.err == "" || !strings.Contains(err.Error(), tt.err) {
+				t.Errorf("%s: error %v, want %q", tt.desc, err, tt.err)
+			}
+			continue
+		}
+		if tt.err != "" {
+			t.Errorf("%s: no error, want %q", tt.desc, tt.err)
+			continue
+		}
+		// Fields that are common to all protos.
+		tt.want.App = proto.String("dev~fake-app")
+		tt.want.Compile = proto.Bool(true)
+		if !proto.Equal(got, tt.want) {
+			t.Errorf("%s:\ngot  %v\nwant %v", tt.desc, got, tt.want)
 		}
 	}
 }
