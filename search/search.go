@@ -80,7 +80,7 @@ to Get to hold the resulting document.
 
 Queries are expressed as strings, plus some optional parameters. The query
 language is described at
-https://developers.google.com/appengine/docs/go/search/query_strings
+https://cloud.google.com/appengine/docs/go/search/query_strings
 
 Note that in Go, field names come from the struct field definition and begin
 with an upper case letter.
@@ -293,7 +293,7 @@ func (x *Index) Get(c appengine.Context, id string, dst interface{}) error {
 	metadata := &DocumentMetadata{
 		Rank: int(res.Document[0].GetOrderId()),
 	}
-	return loadDoc(dst, res.Document[0].Field, metadata)
+	return loadDoc(dst, res.Document[0].Field, nil, metadata)
 }
 
 // Delete deletes a document from the index.
@@ -401,8 +401,10 @@ func (x *Index) Search(c appengine.Context, query string, opts *SearchOptions) *
 		if opts.Limit > 0 {
 			t.limit = opts.Limit
 		}
+		t.fields = opts.Fields
 		t.idsOnly = opts.IDsOnly
 		t.sort = opts.Sort
+		t.exprs = opts.Expressions
 	}
 	return t
 }
@@ -413,6 +415,9 @@ func moreSearch(t *Iterator) error {
 			IndexSpec:  &t.index.spec,
 			Query:      &t.searchQuery,
 			CursorType: pb.SearchParams_SINGLE.Enum(),
+			FieldSpec: &pb.FieldSpec{
+				Name: t.fields,
+			},
 		},
 	}
 	if t.limit > 0 {
@@ -425,6 +430,12 @@ func moreSearch(t *Iterator) error {
 		if err := sortToProto(t.sort, req.Params); err != nil {
 			return err
 		}
+	}
+	for _, e := range t.exprs {
+		req.Params.FieldSpec.Expression = append(req.Params.FieldSpec.Expression, &pb.FieldSpec_Expression{
+			Name:       proto.String(e.Name),
+			Expression: proto.String(e.Expr),
+		})
 	}
 
 	if t.searchCursor != nil {
@@ -461,7 +472,26 @@ type SearchOptions struct {
 	// Sort controls the ordering of search results.
 	Sort *SortOptions
 
+	// Fields specifies which document fields to include in the results. If omitted,
+	// all document fields are returned. No more than 100 fields may be specified.
+	Fields []string
+
+	// Expressions specifies additional computed fields to add to each returned
+	// document.
+	Expressions []FieldExpression
+
 	// TODO: cursor, offset, maybe others.
+}
+
+// FieldExpression defines a custom expression to evaluate for each result.
+type FieldExpression struct {
+	// Name is the name to use for the computed field.
+	Name string
+
+	// Expr is evaluated to provide a custom content snippet for each document.
+	// See https://cloud.google.com/appengine/docs/go/search/options for
+	// the supported expression syntax.
+	Expr string
 }
 
 // SortOptions control the ordering and scoring of search results.
@@ -481,8 +511,8 @@ type SortOptions struct {
 
 // SortExpression defines a single dimension for sorting a document.
 type SortExpression struct {
-	// Expr is evaluated to providing a sorting value for each document.
-	// See https://developers.google.com/appengine/docs/go/search/options for
+	// Expr is evaluated to provide a sorting value for each document.
+	// See https://cloud.google.com/appengine/docs/go/search/options for
 	// the supported expression syntax.
 	Expr string
 
@@ -571,6 +601,9 @@ type Iterator struct {
 	searchCursor *string
 	sort         *SortOptions
 
+	fields []string
+	exprs  []FieldExpression
+
 	more func(*Iterator) error
 
 	count   int
@@ -601,12 +634,14 @@ func (t *Iterator) Next(dst interface{}) (string, error) {
 	}
 
 	var doc *pb.Document
+	var exprs []*pb.Field
 	switch {
 	case len(t.listRes) != 0:
 		doc = t.listRes[0]
 		t.listRes = t.listRes[1:]
 	case len(t.searchRes) != 0:
 		doc = t.searchRes[0].Document
+		exprs = t.searchRes[0].Expression
 		t.searchRes = t.searchRes[1:]
 	default:
 		return "", Done
@@ -618,7 +653,7 @@ func (t *Iterator) Next(dst interface{}) (string, error) {
 		metadata := &DocumentMetadata{
 			Rank: int(doc.GetOrderId()),
 		}
-		if err := loadDoc(dst, doc.Field, metadata); err != nil {
+		if err := loadDoc(dst, doc.Field, exprs, metadata); err != nil {
 			return "", err
 		}
 	}
@@ -721,11 +756,25 @@ func fieldsToProto(src []Field) ([]*pb.Field, error) {
 	return dst, nil
 }
 
-// loadDoc converts from protobufs and document metadata to a struct pointer or FieldLoadSaver.
-func loadDoc(dst interface{}, src []*pb.Field, meta *DocumentMetadata) (err error) {
+// loadDoc converts from protobufs and document metadata to a struct pointer or
+// FieldLoadSaver/FieldMetadataLoadSaver. Two slices of fields may be provided:
+// src represents the document's stored fields; exprs is the derived expressions
+// requested by the developer. The latter may be empty.
+func loadDoc(dst interface{}, src, exprs []*pb.Field, meta *DocumentMetadata) (err error) {
 	fields, err := protoToFields(src)
 	if err != nil {
 		return err
+	}
+	if len(exprs) > 0 {
+		exprFields, err := protoToFields(exprs)
+		if err != nil {
+			return err
+		}
+		// Mark each field as derived.
+		for i := range exprFields {
+			exprFields[i].Derived = true
+		}
+		fields = append(fields, exprFields...)
 	}
 	switch x := dst.(type) {
 	case FieldLoadSaver:

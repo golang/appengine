@@ -26,6 +26,10 @@ type Field struct {
 	// defaulting to "en" if nothing is specified. It may only be specified for
 	// fields of type string and search.HTML.
 	Language string
+	// Derived marks fields that were calculated as a result of a
+	// FieldExpression provided to Search. This field is ignored when saving a
+	// document.
+	Derived bool
 }
 
 // DocumentMetadata is a struct containing information describing a given document.

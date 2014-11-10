@@ -140,7 +140,7 @@ func TestValidIndexNameOrDocID(t *testing.T) {
 
 func TestLoadDoc(t *testing.T) {
 	got, want := TestDoc{}, searchDoc
-	if err := loadDoc(&got, protoFields, nil); err != nil {
+	if err := loadDoc(&got, protoFields, nil, nil); err != nil {
 		t.Fatalf("loadDoc: %v", err)
 	}
 	if got != want {
@@ -162,7 +162,7 @@ func TestSaveDoc(t *testing.T) {
 func TestLoadFieldList(t *testing.T) {
 	var got FieldList
 	want := searchFieldsWithLang
-	if err := loadDoc(&got, protoFields, nil); err != nil {
+	if err := loadDoc(&got, protoFields, nil, nil); err != nil {
 		t.Fatalf("loadDoc: %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -181,13 +181,27 @@ func TestSaveFieldList(t *testing.T) {
 	}
 }
 
+func TestLoadFieldAndExprList(t *testing.T) {
+	var got, want FieldList
+	for i, f := range searchFieldsWithLang {
+		f.Derived = (i >= 2) // First 2 elements are "fields", next are "expressions".
+		want = append(want, f)
+	}
+	if err := loadDoc(&got, protoFields[:2], protoFields[2:], nil); err != nil {
+		t.Fatalf("loadDoc: %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got  %v\nwant %v", got, want)
+	}
+}
+
 func TestLoadMeta(t *testing.T) {
 	var got FieldListWithMeta
 	want := FieldListWithMeta{
 		Meta:   searchMeta,
 		Fields: searchFieldsWithLang,
 	}
-	if err := loadDoc(&got, protoFields, searchMeta); err != nil {
+	if err := loadDoc(&got, protoFields, nil, searchMeta); err != nil {
 		t.Fatalf("loadDoc: %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -336,7 +350,7 @@ func TestLoadErrFieldMismatch(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		err := loadDoc(tc.dst, tc.src, nil)
+		err := loadDoc(tc.dst, tc.src, nil, nil)
 		if !reflect.DeepEqual(err, tc.err) {
 			t.Errorf("%s, got err %v, wanted %v", tc.desc, err, tc.err)
 		}
@@ -554,6 +568,65 @@ func TestSortOptions(t *testing.T) {
 		}
 		if err.Error() != tt.wantErr {
 			t.Errorf("%s: got error %q, want %q", tt.desc, err, tt.wantErr)
+		}
+	}
+}
+
+func TestFieldSpec(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	errFoo := errors.New("foo") // sentinel error when there isn't one.
+
+	testCases := []struct {
+		desc string
+		opts *SearchOptions
+		want *pb.FieldSpec
+	}{
+		{
+			desc: "No options",
+			want: &pb.FieldSpec{},
+		},
+		{
+			desc: "Fields",
+			opts: &SearchOptions{
+				Fields: []string{"one", "two"},
+			},
+			want: &pb.FieldSpec{
+				Name: []string{"one", "two"},
+			},
+		},
+		{
+			desc: "Expressions",
+			opts: &SearchOptions{
+				Expressions: []FieldExpression{
+					{Name: "one", Expr: "price * quantity"},
+					{Name: "two", Expr: "min(daily_use, 10) * rate"},
+				},
+			},
+			want: &pb.FieldSpec{
+				Expression: []*pb.FieldSpec_Expression{
+					{Name: proto.String("one"), Expression: proto.String("price * quantity")},
+					{Name: proto.String("two"), Expression: proto.String("min(daily_use, 10) * rate")},
+				},
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		c := aetesting.FakeSingleContext(t, "search", "Search", func(req *pb.SearchRequest, _ *pb.SearchResponse) error {
+			params := req.Params
+			if !reflect.DeepEqual(params.FieldSpec, tt.want) {
+				t.Errorf("%s: params.FieldSpec=%v; want %v", tt.desc, params.FieldSpec, tt.want)
+			}
+			return errFoo // Always return some error to prevent response parsing.
+		})
+
+		it := index.Search(c, "gopher", tt.opts)
+		if _, err := it.Next(nil); err != errFoo {
+			t.Fatalf("%s: got error %v; want %v", tt.desc, err, errFoo)
 		}
 	}
 }
