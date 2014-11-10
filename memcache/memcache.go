@@ -122,6 +122,9 @@ func Get(c appengine.Context, key string) (*Item, error) {
 // have fewer elements than the input slice, due to memcache cache misses.
 // Each key must be at most 250 bytes in length.
 func GetMulti(c appengine.Context, key []string) (map[string]*Item, error) {
+	if len(key) == 0 {
+		return nil, nil
+	}
 	keyAsBytes := make([][]byte, len(key))
 	for i, k := range key {
 		keyAsBytes[i] = []byte(k)
@@ -153,6 +156,9 @@ func Delete(c appengine.Context, key string) error {
 // If any keys cannot be found, an appengine.MultiError is returned.
 // Each key must be at most 250 bytes in length.
 func DeleteMulti(c appengine.Context, key []string) error {
+	if len(key) == 0 {
+		return nil
+	}
 	req := &pb.MemcacheDeleteRequest{
 		Item: make([]*pb.MemcacheDeleteRequest_Item, len(key)),
 	}
@@ -230,6 +236,9 @@ func incr(c appengine.Context, key string, delta int64, initialValue *uint64) (n
 // set sets the given items using the given conflict resolution policy.
 // appengine.MultiError may be returned.
 func set(c appengine.Context, item []*Item, value [][]byte, policy pb.MemcacheSetRequest_SetPolicy) error {
+	if len(item) == 0 {
+		return nil
+	}
 	req := &pb.MemcacheSetRequest{
 		Item: make([]*pb.MemcacheSetRequest_Item, len(item)),
 	}

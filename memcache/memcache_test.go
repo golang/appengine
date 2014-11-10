@@ -238,3 +238,18 @@ func TestNamespaceResetting(t *testing.T) {
 		t.Fatalf("Get with c0 yielded %q", *nsField)
 	}
 }
+
+func TestGetMultiEmpty(t *testing.T) {
+	serviceCalled := false
+	c := aetesting.FakeSingleContext(t, "memcache", "Get", func(req *pb.MemcacheGetRequest, _ *pb.MemcacheGetResponse) error {
+		serviceCalled = true
+		return nil
+	})
+
+	// Test that the Memcache service is not called when
+	// GetMulti is passed an empty slice of keys.
+	GetMulti(c, []string{})
+	if serviceCalled {
+		t.Error("Service was called but should not have been")
+	}
+}
