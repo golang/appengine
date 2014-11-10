@@ -4,7 +4,7 @@ This repository supports the Go runtime for Managed VMs on App Engine.
 It provides APIs for interacting with App Engine services.
 Its canonical import path is `google.golang.org/appengine`.
 
-See https://developers.google.com/cloud/managed-vms
+See https://cloud.google.com/appengine/docs/go/managed-vms/
 for more information.
 
 ## Directory structure
