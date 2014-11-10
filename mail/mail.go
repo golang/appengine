@@ -51,7 +51,7 @@ type Message struct {
 	Attachments []Attachment
 
 	// Extra mail headers.
-	// See https://developers.google.com/appengine/docs/go/mail/overview
+	// See https://cloud.google.com/appengine/docs/go/mail/
 	// for permissible headers.
 	Headers mail.Header
 }

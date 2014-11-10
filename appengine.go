@@ -5,7 +5,7 @@
 // Package appengine provides basic functionality for Google App Engine.
 //
 // For more information on how to write Go apps for Google App Engine, see:
-// https://developers.google.com/appengine/docs/go/
+// https://cloud.google.com/appengine/docs/go/
 package appengine
 
 import (
