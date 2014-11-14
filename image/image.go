@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"net/url"
 
+	"golang.org/x/net/context"
+
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/image"
@@ -26,7 +28,7 @@ type ServingURLOptions struct {
 }
 
 // ServingURL returns a URL that will serve an image from Blobstore.
-func ServingURL(c appengine.Context, key appengine.BlobKey, opts *ServingURLOptions) (*url.URL, error) {
+func ServingURL(c context.Context, key appengine.BlobKey, opts *ServingURLOptions) (*url.URL, error) {
 	req := &pb.ImagesGetUrlBaseRequest{
 		BlobKey: (*string)(&key),
 	}
@@ -34,7 +36,7 @@ func ServingURL(c appengine.Context, key appengine.BlobKey, opts *ServingURLOpti
 		req.CreateSecureUrl = &opts.Secure
 	}
 	res := &pb.ImagesGetUrlBaseResponse{}
-	if err := c.Call("images", "GetUrlBase", req, res, nil); err != nil {
+	if err := internal.Call(c, "images", "GetUrlBase", req, res, nil); err != nil {
 		return nil, err
 	}
 
@@ -52,12 +54,12 @@ func ServingURL(c appengine.Context, key appengine.BlobKey, opts *ServingURLOpti
 }
 
 // DeleteServingURL deletes the serving URL for an image.
-func DeleteServingURL(c appengine.Context, key appengine.BlobKey) error {
+func DeleteServingURL(c context.Context, key appengine.BlobKey) error {
 	req := &pb.ImagesDeleteUrlBaseRequest{
 		BlobKey: (*string)(&key),
 	}
 	res := &pb.ImagesDeleteUrlBaseResponse{}
-	return c.Call("images", "DeleteUrlBase", req, res, nil)
+	return internal.Call(c, "images", "DeleteUrlBase", req, res, nil)
 }
 
 func init() {

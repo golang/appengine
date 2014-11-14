@@ -13,6 +13,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
+	"google.golang.org/appengine/internal"
 	"google.golang.org/appengine/internal/aetesting"
 	pb "google.golang.org/appengine/internal/datastore"
 )
@@ -284,6 +285,7 @@ func TestSimpleQuery(t *testing.T) {
 			nCall++
 			return fakeRunQuery(in, out)
 		})
+		c = internal.WithAppIDOverride(c, "dev~fake-app")
 
 		var (
 			expectedErr   error
@@ -296,7 +298,7 @@ func TestSimpleQuery(t *testing.T) {
 		}
 		keys, err := NewQuery("Gopher").GetAll(c, tc.dst)
 		if err != expectedErr {
-			t.Errorf("dst type %T: got error %v, want %v", tc.dst, err, expectedErr)
+			t.Errorf("dst type %T: got error [%v], want [%v]", tc.dst, err, expectedErr)
 			continue
 		}
 		if nCall != expectedNCall {
@@ -447,6 +449,7 @@ func TestQueryToProto(t *testing.T) {
 		got = in
 		return NoErr // return a non-nil error so Run doesn't keep going.
 	})
+	c = internal.WithAppIDOverride(c, "dev~fake-app")
 
 	testCases := []struct {
 		desc  string

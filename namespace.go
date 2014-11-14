@@ -9,20 +9,22 @@ import (
 	"regexp"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
 	basepb "google.golang.org/appengine/internal/base"
 )
 
 // Namespace returns a replacement context that operates within the given namespace.
-func Namespace(c Context, namespace string) (Context, error) {
+func Namespace(c context.Context, namespace string) (context.Context, error) {
 	if !validNamespace.MatchString(namespace) {
 		return nil, fmt.Errorf("appengine: namespace %q does not match /%s/", namespace, validNamespace)
 	}
-	return &namespacedContext{
-		Context:   c,
+	n := &namespacedContext{
+		ctx:       c,
 		namespace: namespace,
-	}, nil
+	}
+	return internal.WithCallOverride(c, n.call), nil
 }
 
 // validNamespace matches valid namespace names.
@@ -30,11 +32,11 @@ var validNamespace = regexp.MustCompile(`^[0-9A-Za-z._-]{0,100}$`)
 
 // namespacedContext wraps a Context to support namespaces.
 type namespacedContext struct {
-	Context
+	ctx       context.Context
 	namespace string
 }
 
-func (n *namespacedContext) Call(service, method string, in, out proto.Message, opts *internal.CallOptions) error {
+func (n *namespacedContext) call(_ context.Context, service, method string, in, out proto.Message, opts *internal.CallOptions) error {
 	// Apply any namespace mods.
 	if mod, ok := internal.NamespaceMods[service]; ok {
 		mod(in, n.namespace)
@@ -44,5 +46,5 @@ func (n *namespacedContext) Call(service, method string, in, out proto.Message, 
 		return nil
 	}
 
-	return n.Context.Call(service, method, in, out, opts)
+	return internal.Call(n.ctx, service, method, in, out, opts)
 }

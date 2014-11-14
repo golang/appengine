@@ -12,15 +12,15 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
 )
 
 // FakeSingleContext returns a context whose Call invocations will be serviced
 // by f, which should be a function that has two arguments of the input and output
 // protocol buffer type, and one error return.
-func FakeSingleContext(t *testing.T, service, method string, f interface{}) appengine.Context {
+func FakeSingleContext(t *testing.T, service, method string, f interface{}) context.Context {
 	fv := reflect.ValueOf(f)
 	if fv.Kind() != reflect.Func {
 		t.Fatal("not a function")
@@ -38,12 +38,13 @@ func FakeSingleContext(t *testing.T, service, method string, f interface{}) appe
 	if ft.Out(0) != errorType {
 		t.Fatalf("f's return is %v, want error", ft.Out(0))
 	}
-	return &single{
+	s := &single{
 		t:       t,
 		service: service,
 		method:  method,
 		f:       fv,
 	}
+	return internal.WithCallOverride(context.Background(), s.call)
 }
 
 var (
@@ -57,20 +58,11 @@ type single struct {
 	f               reflect.Value
 }
 
-func (s *single) logf(level, format string, args ...interface{}) {
-	s.t.Logf(level+": "+format, args...)
-}
-
-func (s *single) Debugf(format string, args ...interface{})    { s.logf("DEBUG", format, args...) }
-func (s *single) Infof(format string, args ...interface{})     { s.logf("INFO", format, args...) }
-func (s *single) Warningf(format string, args ...interface{})  { s.logf("WARNING", format, args...) }
-func (s *single) Errorf(format string, args ...interface{})    { s.logf("ERROR", format, args...) }
-func (s *single) Criticalf(format string, args ...interface{}) { s.logf("CRITICAL", format, args...) }
-func (*single) FullyQualifiedAppID() string                    { return "dev~fake-app" }
-func (*single) Request() interface{}                           { return nil }
-
-func (s *single) Call(service, method string, in, out proto.Message, opts *internal.CallOptions) error {
+func (s *single) call(ctx context.Context, service, method string, in, out proto.Message, opts *internal.CallOptions) error {
 	if service == "__go__" {
+		if method == "GetNamespace" {
+			return nil // always yield an empty namespace
+		}
 		return fmt.Errorf("Unknown API call /%s.%s", service, method)
 	}
 	if service != s.service || method != s.method {

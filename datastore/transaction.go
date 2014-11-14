@@ -7,11 +7,9 @@ package datastore
 import (
 	"errors"
 
-	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
-	basepb "google.golang.org/appengine/internal/base"
 	pb "google.golang.org/appengine/internal/datastore"
 )
 
@@ -34,67 +32,6 @@ func init() {
 // to a conflict with a concurrent transaction.
 var ErrConcurrentTransaction = errors.New("datastore: concurrent transaction")
 
-type transaction struct {
-	appengine.Context
-	transaction pb.Transaction
-	finished    bool
-}
-
-func (t *transaction) Call(service, method string, in, out proto.Message, opts *internal.CallOptions) error {
-	if t.finished {
-		return errors.New("datastore: transaction context has expired")
-	}
-	internal.ApplyTransaction(in, &t.transaction)
-	return t.Context.Call(service, method, in, out, opts)
-}
-
-func runOnce(c appengine.Context, f func(appengine.Context) error, opts *TransactionOptions) error {
-	// Begin the transaction.
-	t := &transaction{Context: c}
-	req := &pb.BeginTransactionRequest{
-		App: proto.String(c.FullyQualifiedAppID()),
-	}
-	if opts != nil && opts.XG {
-		req.AllowMultipleEg = proto.Bool(true)
-	}
-	if err := t.Context.Call("datastore_v3", "BeginTransaction", req, &t.transaction, nil); err != nil {
-		return err
-	}
-
-	// Call f, rolling back the transaction if f returns a non-nil error, or panics.
-	// The panic is not recovered.
-	defer func() {
-		if t.finished {
-			return
-		}
-		t.finished = true
-		// Ignore the error return value, since we are already returning a non-nil
-		// error (or we're panicking).
-		c.Call("datastore_v3", "Rollback", &t.transaction, &basepb.VoidProto{}, nil)
-	}()
-	if err := f(t); err != nil {
-		return err
-	}
-	t.finished = true
-
-	// Commit the transaction.
-	res := &pb.CommitResponse{}
-	err := c.Call("datastore_v3", "Commit", &t.transaction, res, nil)
-	if ae, ok := err.(*internal.APIError); ok {
-		if appengine.IsDevAppServer() {
-			// The Python Dev AppServer raises an ApplicationError with error code 2 (which is
-			// Error.CONCURRENT_TRANSACTION) and message "Concurrency exception.".
-			if ae.Code == int32(pb.Error_BAD_REQUEST) && ae.Detail == "ApplicationError: 2 Concurrency exception." {
-				return ErrConcurrentTransaction
-			}
-		}
-		if ae.Code == int32(pb.Error_CONCURRENT_TRANSACTION) {
-			return ErrConcurrentTransaction
-		}
-	}
-	return err
-}
-
 // RunInTransaction runs f in a transaction. It calls f with a transaction
 // context tc that f should use for all App Engine operations.
 //
@@ -112,12 +49,13 @@ func runOnce(c appengine.Context, f func(appengine.Context) error, opts *Transac
 // until RunInTransaction returns nil.
 //
 // Nested transactions are not supported; c may not be a transaction context.
-func RunInTransaction(c appengine.Context, f func(tc appengine.Context) error, opts *TransactionOptions) error {
-	if _, ok := c.(*transaction); ok {
-		return errors.New("datastore: nested transactions are not supported")
+func RunInTransaction(c context.Context, f func(tc context.Context) error, opts *TransactionOptions) error {
+	xg := false
+	if opts != nil {
+		xg = opts.XG
 	}
 	for i := 0; i < 3; i++ {
-		if err := runOnce(c, f, opts); err != ErrConcurrentTransaction {
+		if err := internal.RunTransactionOnce(c, f, xg); err != internal.ErrConcurrentTransaction {
 			return err
 		}
 	}

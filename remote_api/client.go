@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/remote_api"
 )
@@ -30,7 +30,7 @@ import (
 // NewRemoteContext returns a context that gives access to the production
 // APIs for the application at the given host. All communication will be
 // performed over SSL unless the host is localhost.
-func NewRemoteContext(host string, client *http.Client) (appengine.Context, error) {
+func NewRemoteContext(host string, client *http.Client) (context.Context, error) {
 	// Add an appcfg header to outgoing requests.
 	t := client.Transport
 	if t == nil {
@@ -51,33 +51,34 @@ func NewRemoteContext(host string, client *http.Client) (appengine.Context, erro
 	if err != nil {
 		return nil, fmt.Errorf("unable to contact server: %v", err)
 	}
-	return &context{
+	rc := &remoteContext{
 		client: client,
 		url:    u,
-		appID:  appID,
-	}, nil
+	}
+	ctx := internal.WithCallOverride(context.Background(), rc.call)
+	ctx = internal.WithLogOverride(ctx, rc.logf)
+	ctx = internal.WithAppIDOverride(ctx, appID)
+	return ctx, nil
 }
 
-type context struct {
+type remoteContext struct {
 	client *http.Client
 	url    string
-	appID  string
 }
 
-func (c *context) Request() interface{}        { return nil }
-func (c *context) FullyQualifiedAppID() string { return c.appID }
-
-func (c *context) logf(level, format string, args ...interface{}) {
-	log.Printf(level+": "+format, args...)
+var logLevels = map[int64]string{
+	0: "DEBUG",
+	1: "INFO",
+	2: "WARNING",
+	3: "ERROR",
+	4: "CRITICAL",
 }
 
-func (c *context) Debugf(format string, args ...interface{})    { c.logf("DEBUG", format, args...) }
-func (c *context) Infof(format string, args ...interface{})     { c.logf("INFO", format, args...) }
-func (c *context) Warningf(format string, args ...interface{})  { c.logf("WARNING", format, args...) }
-func (c *context) Errorf(format string, args ...interface{})    { c.logf("ERROR", format, args...) }
-func (c *context) Criticalf(format string, args ...interface{}) { c.logf("CRITICAL", format, args...) }
+func (c *remoteContext) logf(level int64, format string, args ...interface{}) {
+	log.Printf(logLevels[level]+": "+format, args...)
+}
 
-func (c *context) Call(service, method string, in, out proto.Message, opts *internal.CallOptions) error {
+func (c *remoteContext) call(ctx context.Context, service, method string, in, out proto.Message, opts *internal.CallOptions) error {
 	req, err := proto.Marshal(in)
 	if err != nil {
 		return fmt.Errorf("error marshalling request: %v", err)

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"google.golang.org/appengine"
+	"google.golang.org/appengine/log"
 )
 
 var initTime = time.Now()
@@ -25,7 +26,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	c := appengine.NewContext(r)
-	c.Infof("Serving the front page.")
+	log.Infof(c, "Serving the front page.")
 
 	tmpl.Execute(w, time.Since(initTime))
 }

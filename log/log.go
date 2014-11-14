@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
@@ -136,7 +137,7 @@ type Record struct {
 // Result represents the result of a query.
 type Result struct {
 	logs        []*Record
-	context     appengine.Context
+	context     context.Context
 	request     *pb.LogReadRequest
 	resultsSeen bool
 	err         error
@@ -230,8 +231,8 @@ func protoToRecord(rl *pb.RequestLog) *Record {
 
 // Run starts a query for log records, which contain request and application
 // level log information.
-func (params *Query) Run(c appengine.Context) *Result {
-	req, err := makeRequest(params, c.FullyQualifiedAppID(), appengine.VersionID(c))
+func (params *Query) Run(c context.Context) *Result {
+	req, err := makeRequest(params, internal.FullyQualifiedAppID(c), appengine.VersionID(c))
 	return &Result{
 		context: c,
 		request: req,
@@ -302,7 +303,7 @@ func makeRequest(params *Query, appID, versionID string) (*pb.LogReadRequest, er
 // same structs.
 func (r *Result) run() error {
 	res := &pb.LogReadResponse{}
-	if err := r.context.Call("logservice", "Read", r.request, res, nil); err != nil {
+	if err := internal.Call(r.context, "logservice", "Read", r.request, res, nil); err != nil {
 		return err
 	}
 

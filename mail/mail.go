@@ -23,8 +23,8 @@ import (
 	"net/mail"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
 	bpb "google.golang.org/appengine/internal/base"
 	pb "google.golang.org/appengine/internal/mail"
@@ -65,16 +65,16 @@ type Attachment struct {
 }
 
 // Send sends an email message.
-func Send(c appengine.Context, msg *Message) error {
+func Send(c context.Context, msg *Message) error {
 	return send(c, "Send", msg)
 }
 
 // SendToAdmins sends an email message to the application's administrators.
-func SendToAdmins(c appengine.Context, msg *Message) error {
+func SendToAdmins(c context.Context, msg *Message) error {
 	return send(c, "SendToAdmins", msg)
 }
 
-func send(c appengine.Context, method string, msg *Message) error {
+func send(c context.Context, method string, msg *Message) error {
 	req := &pb.MailMessage{
 		Sender:  &msg.Sender,
 		To:      msg.To,
@@ -112,7 +112,7 @@ func send(c appengine.Context, method string, msg *Message) error {
 		}
 	}
 	res := &bpb.VoidProto{}
-	if err := c.Call("mail", method, req, res, nil); err != nil {
+	if err := internal.Call(c, "mail", method, req, res, nil); err != nil {
 		return err
 	}
 	return nil

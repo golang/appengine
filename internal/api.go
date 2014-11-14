@@ -6,6 +6,7 @@ package internal
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -21,6 +22,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	netcontext "golang.org/x/net/context"
 
 	basepb "google.golang.org/appengine/internal/base"
 	logpb "google.golang.org/appengine/internal/log"
@@ -205,7 +207,40 @@ type context struct {
 	}
 }
 
-func NewContext(req *http.Request) *context {
+var contextKey = "holds a *context"
+
+func fromContext(ctx netcontext.Context) *context {
+	c, _ := ctx.Value(&contextKey).(*context)
+	return c
+}
+
+func toContext(c *context) netcontext.Context {
+	return netcontext.WithValue(netcontext.Background(), &contextKey, c)
+}
+
+type callOverrideFunc func(ctx netcontext.Context, service, method string, in, out proto.Message, opts *CallOptions) error
+
+var callOverrideKey = "holds a callOverrideFunc"
+
+func WithCallOverride(ctx netcontext.Context, f callOverrideFunc) netcontext.Context {
+	return netcontext.WithValue(ctx, &callOverrideKey, f)
+}
+
+type logOverrideFunc func(level int64, format string, args ...interface{})
+
+var logOverrideKey = "holds a logOverrideFunc"
+
+func WithLogOverride(ctx netcontext.Context, f logOverrideFunc) netcontext.Context {
+	return netcontext.WithValue(ctx, &logOverrideKey, f)
+}
+
+var appIDOverrideKey = "holds a string, being the full app ID"
+
+func WithAppIDOverride(ctx netcontext.Context, appID string) netcontext.Context {
+	return netcontext.WithValue(ctx, &appIDOverrideKey, appID)
+}
+
+func NewContext(req *http.Request) netcontext.Context {
 	ctxs.Lock()
 	c := ctxs.m[req]
 	ctxs.Unlock()
@@ -216,15 +251,15 @@ func NewContext(req *http.Request) *context {
 		// so that stack traces will be more sensible.
 		log.Panic("appengine: NewContext passed an unknown http.Request")
 	}
-	return c
+	return toContext(c)
 }
 
-func BackgroundContext() *context {
+func BackgroundContext() netcontext.Context {
 	ctxs.Lock()
 	defer ctxs.Unlock()
 
 	if ctxs.bg != nil {
-		return ctxs.bg
+		return toContext(ctxs.bg)
 	}
 
 	// Compute background security ticket.
@@ -247,7 +282,7 @@ func BackgroundContext() *context {
 	// TODO(dsymonds): Wire up the shutdown handler to do a final flush.
 	go ctxs.bg.logFlusher(make(chan int))
 
-	return ctxs.bg
+	return toContext(ctxs.bg)
 }
 
 var errTimeout = &CallError{
@@ -286,7 +321,7 @@ func (c *context) Write(b []byte) (int, error) {
 
 func (c *context) WriteHeader(code int) {
 	if c.outCode != 0 {
-		c.Errorf("WriteHeader called multiple times on request.")
+		c.logf(3, "WriteHeader called multiple times on request.") // error level
 		return
 	}
 	c.outCode = code
@@ -366,12 +401,29 @@ var virtualMethodHeaders = map[string]string{
 	"user:FederatedProvider": http.CanonicalHeaderKey("X-AppEngine-Federated-Provider"),
 }
 
-func (c *context) Call(service, method string, in, out proto.Message, opts *CallOptions) error {
+func Call(ctx netcontext.Context, service, method string, in, out proto.Message, opts *CallOptions) error {
+	if f, ok := ctx.Value(&callOverrideKey).(callOverrideFunc); ok {
+		return f(ctx, service, method, in, out, opts)
+	}
+
+	c := fromContext(ctx)
+	if c == nil {
+		// Give a good error message rather than a panic lower down.
+		return errors.New("not an App Engine context")
+	}
 	if service == "__go__" {
 		if hdr, ok := virtualMethodHeaders[method]; ok {
 			out.(*basepb.StringProto).Value = proto.String(c.req.Header.Get(hdr))
 			return nil
 		}
+	}
+
+	// Apply transaction modifications if we're in a transaction.
+	if t := transactionFromContext(ctx); t != nil {
+		if t.finished {
+			return errors.New("transaction context has expired")
+		}
+		applyTransaction(in, &t.transaction)
 	}
 
 	// Default RPC timeout is 5s.
@@ -434,7 +486,7 @@ func (c *context) Call(service, method string, in, out proto.Message, opts *Call
 	return proto.Unmarshal(res.Response, out)
 }
 
-func (c *context) Request() interface{} {
+func (c *context) Request() *http.Request {
 	return c.req
 }
 
@@ -471,16 +523,24 @@ func (c *context) logf(level int64, format string, args ...interface{}) {
 	log.Print(logLevelName[level] + ": " + s)
 }
 
-func (c *context) Debugf(format string, args ...interface{})    { c.logf(0, format, args...) }
-func (c *context) Infof(format string, args ...interface{})     { c.logf(1, format, args...) }
-func (c *context) Warningf(format string, args ...interface{})  { c.logf(2, format, args...) }
-func (c *context) Errorf(format string, args ...interface{})    { c.logf(3, format, args...) }
-func (c *context) Criticalf(format string, args ...interface{}) { c.logf(4, format, args...) }
+func Logf(ctx netcontext.Context, level int64, format string, args ...interface{}) {
+	if f, ok := ctx.Value(&logOverrideKey).(logOverrideFunc); ok {
+		f(level, format, args...)
+		return
+	}
+	c := fromContext(ctx)
+	c.logf(level, format, args...)
+}
 
 // FullyQualifiedAppID returns the fully-qualified application ID.
 // This may contain a partition prefix (e.g. "s~" for High Replication apps),
 // or a domain prefix (e.g. "example.com:").
-func (c *context) FullyQualifiedAppID() string { return fullyQualifiedAppID() }
+func FullyQualifiedAppID(ctx netcontext.Context) string {
+	if id, ok := ctx.Value(&appIDOverrideKey).(string); ok {
+		return id
+	}
+	return fullyQualifiedAppID()
+}
 
 // flushLog attempts to flush any pending logs to the appserver.
 // It should not be called concurrently.
@@ -531,7 +591,7 @@ func (c *context) flushLog(force bool) (flushed bool) {
 	c.pendingLogs.Lock()
 	c.pendingLogs.flushes++
 	c.pendingLogs.Unlock()
-	if err := c.Call("logservice", "Flush", req, res, nil); err != nil {
+	if err := Call(toContext(c), "logservice", "Flush", req, res, nil); err != nil {
 		log.Printf("internal.flushLog: Flush RPC: %v", err)
 		rescueLogs = true
 		return false
@@ -563,13 +623,8 @@ func (c *context) logFlusher(stop <-chan int) {
 	}
 }
 
-func ContextForTesting(req *http.Request) *context {
-	return &context{req: req}
-}
-
-// caller is a subset of appengine.Context.
-type caller interface {
-	Call(service, method string, in, out proto.Message, opts *CallOptions) error
+func ContextForTesting(req *http.Request) netcontext.Context {
+	return toContext(&context{req: req})
 }
 
 var virtualOpts = &CallOptions{
@@ -577,12 +632,15 @@ var virtualOpts = &CallOptions{
 	Timeout: 1 * time.Millisecond,
 }
 
+// TODO(dsymonds): Remove all virtual APIs throughout,
+// and replace them with context values.
+
 // VirtAPI invokes a virtual API call for the __go__ service.
 // It is for methods that accept a VoidProto and return a StringProto.
 // It returns an empty string if the call fails.
-func VirtAPI(c caller, method string) string {
+func VirtAPI(c netcontext.Context, method string) string {
 	s := &basepb.StringProto{}
-	if err := c.Call("__go__", method, &basepb.VoidProto{}, s, virtualOpts); err != nil {
+	if err := Call(c, "__go__", method, &basepb.VoidProto{}, s, virtualOpts); err != nil {
 		log.Printf("/__go__.%s failed: %v", method, err)
 	}
 	return s.GetValue()

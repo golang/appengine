@@ -8,17 +8,19 @@ package file
 import (
 	"fmt"
 
-	"google.golang.org/appengine"
+	"golang.org/x/net/context"
+
+	"google.golang.org/appengine/internal"
 	aipb "google.golang.org/appengine/internal/app_identity"
 )
 
 // DefaultBucketName returns the name of this application's
 // default Google Cloud Storage bucket.
-func DefaultBucketName(c appengine.Context) (string, error) {
+func DefaultBucketName(c context.Context) (string, error) {
 	req := &aipb.GetDefaultGcsBucketNameRequest{}
 	res := &aipb.GetDefaultGcsBucketNameResponse{}
 
-	err := c.Call("app_identity_service", "GetDefaultGcsBucketName", req, res, nil)
+	err := internal.Call(c, "app_identity_service", "GetDefaultGcsBucketName", req, res, nil)
 	if err != nil {
 		return "", fmt.Errorf("file: no default bucket name returned in RPC response: %v", res)
 	}

@@ -14,7 +14,10 @@ import (
 	"reflect"
 	"testing"
 
-	"google.golang.org/appengine"
+	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
+
+	"google.golang.org/appengine/internal"
 	"google.golang.org/appengine/taskqueue"
 )
 
@@ -40,13 +43,13 @@ var (
 
 	regFuncRuns = 0
 	regFuncMsg  = ""
-	regFunc     = Func("reg", func(c appengine.Context, arg string) {
+	regFunc     = Func("reg", func(c context.Context, arg string) {
 		regFuncRuns++
 		regFuncMsg = arg
 	})
 
 	custFuncTally = 0
-	custFunc      = Func("cust", func(c appengine.Context, ct *CustomType, ci CustomInterface) {
+	custFunc      = Func("cust", func(c context.Context, ct *CustomType, ci CustomInterface) {
 		a, b := 2, 3
 		if ct != nil {
 			a = ct.N
@@ -57,11 +60,11 @@ var (
 		custFuncTally += a + b
 	})
 
-	anotherCustFunc = Func("cust2", func(c appengine.Context, n int, ct *CustomType, ci CustomInterface) {
+	anotherCustFunc = Func("cust2", func(c context.Context, n int, ct *CustomType, ci CustomInterface) {
 	})
 
 	varFuncMsg = ""
-	varFunc    = Func("variadic", func(c appengine.Context, format string, args ...int) {
+	varFunc    = Func("variadic", func(c context.Context, format string, args ...int) {
 		// convert []int to []interface{} for fmt.Sprintf.
 		as := make([]interface{}, len(args))
 		for i, a := range args {
@@ -72,7 +75,7 @@ var (
 
 	errFuncRuns = 0
 	errFuncErr  = errors.New("error!")
-	errFunc     = Func("err", func(c appengine.Context) error {
+	errFunc     = Func("err", func(c context.Context) error {
 		errFuncRuns++
 		if errFuncRuns == 1 {
 			return nil
@@ -82,21 +85,31 @@ var (
 )
 
 type fakeContext struct {
-	appengine.Context
+	ctx     context.Context
 	logging [][]interface{}
 }
 
-func (f *fakeContext) log(level, format string, args ...interface{}) {
-	f.logging = append(f.logging, append([]interface{}{level, format}, args...))
+func newFakeContext() *fakeContext {
+	f := new(fakeContext)
+	f.ctx = internal.WithCallOverride(context.Background(), f.call)
+	f.ctx = internal.WithLogOverride(f.ctx, f.logf)
+	return f
 }
 
-func (f *fakeContext) Infof(format string, args ...interface{})  { f.log("INFO", format, args...) }
-func (f *fakeContext) Errorf(format string, args ...interface{}) { f.log("ERROR", format, args...) }
+func (f *fakeContext) call(ctx context.Context, service, method string, in, out proto.Message, opts *internal.CallOptions) error {
+	panic("should never be called")
+}
+
+var logLevels = map[int64]string{1: "INFO", 3: "ERROR"}
+
+func (f *fakeContext) logf(level int64, format string, args ...interface{}) {
+	f.logging = append(f.logging, append([]interface{}{logLevels[level], format}, args...))
+}
 
 func TestInvalidFunction(t *testing.T) {
-	c := &fakeContext{}
+	c := newFakeContext()
 
-	invalidFunc.Call(c)
+	invalidFunc.Call(c.ctx)
 
 	wantLogging := [][]interface{}{
 		{"ERROR", "%v", fmt.Errorf("delay: func is invalid: %s", errFirstArg)},
@@ -109,22 +122,22 @@ func TestInvalidFunction(t *testing.T) {
 func TestVariadicFunctionArguments(t *testing.T) {
 	// Check the argument type validation for variadic functions.
 
-	c := &fakeContext{}
+	c := newFakeContext()
 
 	calls := 0
-	taskqueueAdder = func(c appengine.Context, t *taskqueue.Task, _ string) (*taskqueue.Task, error) {
+	taskqueueAdder = func(c context.Context, t *taskqueue.Task, _ string) (*taskqueue.Task, error) {
 		calls++
 		return t, nil
 	}
 
-	varFunc.Call(c, "hi")
-	varFunc.Call(c, "%d", 12)
-	varFunc.Call(c, "%d %d %d", 3, 1, 4)
+	varFunc.Call(c.ctx, "hi")
+	varFunc.Call(c.ctx, "%d", 12)
+	varFunc.Call(c.ctx, "%d %d %d", 3, 1, 4)
 	if calls != 3 {
 		t.Errorf("Got %d calls to taskqueueAdder, want 3", calls)
 	}
 
-	varFunc.Call(c, "%d %s", 12, "a string is bad")
+	varFunc.Call(c.ctx, "%d %s", 12, "a string is bad")
 	wantLogging := [][]interface{}{
 		{"ERROR", "%v", errors.New("delay: argument 3 has wrong type: string is not assignable to int")},
 	}
@@ -136,11 +149,11 @@ func TestVariadicFunctionArguments(t *testing.T) {
 func TestBadArguments(t *testing.T) {
 	// Try running regFunc with different sets of inappropriate arguments.
 
-	c := &fakeContext{}
+	c := newFakeContext()
 
-	regFunc.Call(c)
-	regFunc.Call(c, "lala", 53)
-	regFunc.Call(c, 53)
+	regFunc.Call(c.ctx)
+	regFunc.Call(c.ctx, "lala", 53)
+	regFunc.Call(c.ctx, 53)
 
 	wantLogging := [][]interface{}{
 		{"ERROR", "%v", errors.New("delay: too few arguments to func: 1 < 2")},
@@ -153,11 +166,11 @@ func TestBadArguments(t *testing.T) {
 }
 
 func TestRunningFunction(t *testing.T) {
-	c := &fakeContext{}
+	c := newFakeContext()
 
 	// Fake out the adding of a task.
 	var task *taskqueue.Task
-	taskqueueAdder = func(_ appengine.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
+	taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
 		if queue != "" {
 			t.Errorf(`Got queue %q, expected ""`, queue)
 		}
@@ -167,7 +180,7 @@ func TestRunningFunction(t *testing.T) {
 
 	regFuncRuns, regFuncMsg = 0, "" // reset state
 	const msg = "Why, hello!"
-	regFunc.Call(c, msg)
+	regFunc.Call(c.ctx, msg)
 
 	// Simulate the Task Queue service.
 	req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
@@ -175,7 +188,7 @@ func TestRunningFunction(t *testing.T) {
 		t.Fatalf("Failed making http.Request: %v", err)
 	}
 	rw := httptest.NewRecorder()
-	runFunc(c, rw, req)
+	runFunc(c.ctx, rw, req)
 
 	if regFuncRuns != 1 {
 		t.Errorf("regFuncRuns: got %d, want 1", regFuncRuns)
@@ -186,11 +199,11 @@ func TestRunningFunction(t *testing.T) {
 }
 
 func TestCustomType(t *testing.T) {
-	c := &fakeContext{}
+	c := newFakeContext()
 
 	// Fake out the adding of a task.
 	var task *taskqueue.Task
-	taskqueueAdder = func(_ appengine.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
+	taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
 		if queue != "" {
 			t.Errorf(`Got queue %q, expected ""`, queue)
 		}
@@ -199,7 +212,7 @@ func TestCustomType(t *testing.T) {
 	}
 
 	custFuncTally = 0 // reset state
-	custFunc.Call(c, &CustomType{N: 11}, CustomImpl(13))
+	custFunc.Call(c.ctx, &CustomType{N: 11}, CustomImpl(13))
 
 	// Simulate the Task Queue service.
 	req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
@@ -207,7 +220,7 @@ func TestCustomType(t *testing.T) {
 		t.Fatalf("Failed making http.Request: %v", err)
 	}
 	rw := httptest.NewRecorder()
-	runFunc(c, rw, req)
+	runFunc(c.ctx, rw, req)
 
 	if custFuncTally != 24 {
 		t.Errorf("custFuncTally = %d, want 24", custFuncTally)
@@ -216,7 +229,7 @@ func TestCustomType(t *testing.T) {
 	// Try the same, but with nil values; one is a nil pointer (and thus a non-nil interface value),
 	// and the other is a nil interface value.
 	custFuncTally = 0 // reset state
-	custFunc.Call(c, (*CustomType)(nil), nil)
+	custFunc.Call(c.ctx, (*CustomType)(nil), nil)
 
 	// Simulate the Task Queue service.
 	req, err = http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
@@ -224,7 +237,7 @@ func TestCustomType(t *testing.T) {
 		t.Fatalf("Failed making http.Request: %v", err)
 	}
 	rw = httptest.NewRecorder()
-	runFunc(c, rw, req)
+	runFunc(c.ctx, rw, req)
 
 	if custFuncTally != 5 {
 		t.Errorf("custFuncTally = %d, want 5", custFuncTally)
@@ -232,11 +245,11 @@ func TestCustomType(t *testing.T) {
 }
 
 func TestRunningVariadic(t *testing.T) {
-	c := &fakeContext{}
+	c := newFakeContext()
 
 	// Fake out the adding of a task.
 	var task *taskqueue.Task
-	taskqueueAdder = func(_ appengine.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
+	taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
 		if queue != "" {
 			t.Errorf(`Got queue %q, expected ""`, queue)
 		}
@@ -245,7 +258,7 @@ func TestRunningVariadic(t *testing.T) {
 	}
 
 	varFuncMsg = "" // reset state
-	varFunc.Call(c, "Amiga %d has %d KB RAM", 500, 512)
+	varFunc.Call(c.ctx, "Amiga %d has %d KB RAM", 500, 512)
 
 	// Simulate the Task Queue service.
 	req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
@@ -253,7 +266,7 @@ func TestRunningVariadic(t *testing.T) {
 		t.Fatalf("Failed making http.Request: %v", err)
 	}
 	rw := httptest.NewRecorder()
-	runFunc(c, rw, req)
+	runFunc(c.ctx, rw, req)
 
 	const expected = "Amiga 500 has 512 KB RAM"
 	if varFuncMsg != expected {
@@ -262,11 +275,11 @@ func TestRunningVariadic(t *testing.T) {
 }
 
 func TestErrorFunction(t *testing.T) {
-	c := &fakeContext{}
+	c := newFakeContext()
 
 	// Fake out the adding of a task.
 	var task *taskqueue.Task
-	taskqueueAdder = func(_ appengine.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
+	taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
 		if queue != "" {
 			t.Errorf(`Got queue %q, expected ""`, queue)
 		}
@@ -274,7 +287,7 @@ func TestErrorFunction(t *testing.T) {
 		return tk, nil
 	}
 
-	errFunc.Call(c)
+	errFunc.Call(c.ctx)
 
 	// Simulate the Task Queue service.
 	// The first call should succeed; the second call should fail.
@@ -284,7 +297,7 @@ func TestErrorFunction(t *testing.T) {
 			t.Fatalf("Failed making http.Request: %v", err)
 		}
 		rw := httptest.NewRecorder()
-		runFunc(c, rw, req)
+		runFunc(c.ctx, rw, req)
 	}
 	{
 		req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
@@ -292,7 +305,7 @@ func TestErrorFunction(t *testing.T) {
 			t.Fatalf("Failed making http.Request: %v", err)
 		}
 		rw := httptest.NewRecorder()
-		runFunc(c, rw, req)
+		runFunc(c.ctx, rw, req)
 		if rw.Code != http.StatusInternalServerError {
 			t.Errorf("Got status code %d, want %d", rw.Code, http.StatusInternalServerError)
 		}

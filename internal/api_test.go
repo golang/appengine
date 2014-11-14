@@ -114,7 +114,7 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		case "RunSlowly":
 			// TestAPICallRPCFailure creates f.hang, but does not strobe it
-			// until c.Call returns with remotepb.RpcError_CANCELLED.
+			// until Call returns with remotepb.RpcError_CANCELLED.
 			// This is here to force a happens-before relationship between
 			// the httptest server handler and shutdown.
 			<-f.hang
@@ -166,7 +166,7 @@ func TestAPICall(t *testing.T) {
 		Value: proto.String("Doctor Who"),
 	}
 	res := &basepb.StringProto{}
-	err := c.Call("actordb", "LookupActor", req, res, nil)
+	err := Call(toContext(c), "actordb", "LookupActor", req, res, nil)
 	if err != nil {
 		t.Fatalf("API call failed: %v", err)
 	}
@@ -193,7 +193,7 @@ func TestAPICallRPCFailure(t *testing.T) {
 		opts := &CallOptions{
 			Timeout: 100 * time.Millisecond,
 		}
-		err := c.Call("errors", tc.method, &basepb.VoidProto{}, &basepb.VoidProto{}, opts)
+		err := Call(toContext(c), "errors", tc.method, &basepb.VoidProto{}, &basepb.VoidProto{}, opts)
 		ce, ok := err.(*CallError)
 		if !ok {
 			t.Errorf("%s: API call error is %T (%v), want *CallError", tc.method, err, err)
@@ -217,7 +217,7 @@ func TestAPICallDialFailure(t *testing.T) {
 	os.Setenv("API_PORT", "")
 
 	start := time.Now()
-	err := c.Call("foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{}, nil)
+	err := Call(toContext(c), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{}, nil)
 	const max = 1 * time.Second
 	if taken := time.Since(start); taken > max {
 		t.Errorf("Dial hang took too long: %v > %v", taken, max)
@@ -233,7 +233,7 @@ func TestDelayedLogFlushing(t *testing.T) {
 
 	http.HandleFunc("/quick_log", func(w http.ResponseWriter, r *http.Request) {
 		c := NewContext(r)
-		c.Infof("It's a lovely day.")
+		Logf(c, 1, "It's a lovely day.")
 		w.WriteHeader(200)
 		w.Write(make([]byte, 100<<10)) // write 100 KB to force HTTP flush
 	})
@@ -336,7 +336,7 @@ func TestAPICallAllocations(t *testing.T) {
 	}
 	var apiErr error
 	avg := testing.AllocsPerRun(100, func() {
-		if err := c.Call("actordb", "LookupActor", req, res, opts); err != nil && apiErr == nil {
+		if err := Call(toContext(c), "actordb", "LookupActor", req, res, opts); err != nil && apiErr == nil {
 			apiErr = err // get the first error only
 		}
 	})
@@ -345,7 +345,7 @@ func TestAPICallAllocations(t *testing.T) {
 	}
 
 	// Lots of room for improvement...
-	const min, max float64 = 75, 85
+	const min, max float64 = 80, 90
 	if avg < min || max < avg {
 		t.Errorf("Allocations per API call = %g, want in [%g,%g]", avg, min, max)
 	}

@@ -36,6 +36,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
@@ -107,7 +108,7 @@ func singleError(err error) error {
 
 // Get gets the item for the given key. ErrCacheMiss is returned for a memcache
 // cache miss. The key must be at most 250 bytes in length.
-func Get(c appengine.Context, key string) (*Item, error) {
+func Get(c context.Context, key string) (*Item, error) {
 	m, err := GetMulti(c, []string{key})
 	if err != nil {
 		return nil, err
@@ -121,7 +122,7 @@ func Get(c appengine.Context, key string) (*Item, error) {
 // GetMulti is a batch version of Get. The returned map from keys to items may
 // have fewer elements than the input slice, due to memcache cache misses.
 // Each key must be at most 250 bytes in length.
-func GetMulti(c appengine.Context, key []string) (map[string]*Item, error) {
+func GetMulti(c context.Context, key []string) (map[string]*Item, error) {
 	if len(key) == 0 {
 		return nil, nil
 	}
@@ -134,7 +135,7 @@ func GetMulti(c appengine.Context, key []string) (map[string]*Item, error) {
 		ForCas: proto.Bool(true),
 	}
 	res := &pb.MemcacheGetResponse{}
-	if err := c.Call("memcache", "Get", req, res, nil); err != nil {
+	if err := internal.Call(c, "memcache", "Get", req, res, nil); err != nil {
 		return nil, err
 	}
 	m := make(map[string]*Item, len(res.Item))
@@ -148,14 +149,14 @@ func GetMulti(c appengine.Context, key []string) (map[string]*Item, error) {
 // Delete deletes the item for the given key.
 // ErrCacheMiss is returned if the specified item can not be found.
 // The key must be at most 250 bytes in length.
-func Delete(c appengine.Context, key string) error {
+func Delete(c context.Context, key string) error {
 	return singleError(DeleteMulti(c, []string{key}))
 }
 
 // DeleteMulti is a batch version of Delete.
 // If any keys cannot be found, an appengine.MultiError is returned.
 // Each key must be at most 250 bytes in length.
-func DeleteMulti(c appengine.Context, key []string) error {
+func DeleteMulti(c context.Context, key []string) error {
 	if len(key) == 0 {
 		return nil
 	}
@@ -166,7 +167,7 @@ func DeleteMulti(c appengine.Context, key []string) error {
 		req.Item[i] = &pb.MemcacheDeleteRequest_Item{Key: []byte(k)}
 	}
 	res := &pb.MemcacheDeleteResponse{}
-	if err := c.Call("memcache", "Delete", req, res, nil); err != nil {
+	if err := internal.Call(c, "memcache", "Delete", req, res, nil); err != nil {
 		return err
 	}
 	if len(res.DeleteStatus) != len(key) {
@@ -198,7 +199,7 @@ func DeleteMulti(c appengine.Context, key []string) error {
 // memcacheg, the provided initial value is used to atomically
 // populate it before the delta is applied.
 // The key must be at most 250 bytes in length.
-func Increment(c appengine.Context, key string, delta int64, initialValue uint64) (newValue uint64, err error) {
+func Increment(c context.Context, key string, delta int64, initialValue uint64) (newValue uint64, err error) {
 	return incr(c, key, delta, &initialValue)
 }
 
@@ -207,11 +208,11 @@ func Increment(c appengine.Context, key string, delta int64, initialValue uint64
 // IncrementExisting can save work if calculating the initial value is
 // expensive.
 // An error is returned if the specified item can not be found.
-func IncrementExisting(c appengine.Context, key string, delta int64) (newValue uint64, err error) {
+func IncrementExisting(c context.Context, key string, delta int64) (newValue uint64, err error) {
 	return incr(c, key, delta, nil)
 }
 
-func incr(c appengine.Context, key string, delta int64, initialValue *uint64) (newValue uint64, err error) {
+func incr(c context.Context, key string, delta int64, initialValue *uint64) (newValue uint64, err error) {
 	req := &pb.MemcacheIncrementRequest{
 		Key:          []byte(key),
 		InitialValue: initialValue,
@@ -223,7 +224,7 @@ func incr(c appengine.Context, key string, delta int64, initialValue *uint64) (n
 		req.Direction = pb.MemcacheIncrementRequest_DECREMENT.Enum()
 	}
 	res := &pb.MemcacheIncrementResponse{}
-	err = c.Call("memcache", "Increment", req, res, nil)
+	err = internal.Call(c, "memcache", "Increment", req, res, nil)
 	if err != nil {
 		return
 	}
@@ -235,7 +236,7 @@ func incr(c appengine.Context, key string, delta int64, initialValue *uint64) (n
 
 // set sets the given items using the given conflict resolution policy.
 // appengine.MultiError may be returned.
-func set(c appengine.Context, item []*Item, value [][]byte, policy pb.MemcacheSetRequest_SetPolicy) error {
+func set(c context.Context, item []*Item, value [][]byte, policy pb.MemcacheSetRequest_SetPolicy) error {
 	if len(item) == 0 {
 		return nil
 	}
@@ -282,7 +283,7 @@ func set(c appengine.Context, item []*Item, value [][]byte, policy pb.MemcacheSe
 		req.Item[i] = p
 	}
 	res := &pb.MemcacheSetResponse{}
-	if err := c.Call("memcache", "Set", req, res, nil); err != nil {
+	if err := internal.Call(c, "memcache", "Set", req, res, nil); err != nil {
 		return err
 	}
 	if len(res.SetStatus) != len(item) {
@@ -313,25 +314,25 @@ func set(c appengine.Context, item []*Item, value [][]byte, policy pb.MemcacheSe
 }
 
 // Set writes the given item, unconditionally.
-func Set(c appengine.Context, item *Item) error {
+func Set(c context.Context, item *Item) error {
 	return singleError(set(c, []*Item{item}, nil, pb.MemcacheSetRequest_SET))
 }
 
 // SetMulti is a batch version of Set.
 // appengine.MultiError may be returned.
-func SetMulti(c appengine.Context, item []*Item) error {
+func SetMulti(c context.Context, item []*Item) error {
 	return set(c, item, nil, pb.MemcacheSetRequest_SET)
 }
 
 // Add writes the given item, if no value already exists for its key.
 // ErrNotStored is returned if that condition is not met.
-func Add(c appengine.Context, item *Item) error {
+func Add(c context.Context, item *Item) error {
 	return singleError(set(c, []*Item{item}, nil, pb.MemcacheSetRequest_ADD))
 }
 
 // AddMulti is a batch version of Add.
 // appengine.MultiError may be returned.
-func AddMulti(c appengine.Context, item []*Item) error {
+func AddMulti(c context.Context, item []*Item) error {
 	return set(c, item, nil, pb.MemcacheSetRequest_ADD)
 }
 
@@ -341,13 +342,13 @@ func AddMulti(c appengine.Context, item []*Item) error {
 // all other item fields may differ.
 // ErrCASConflict is returned if the value was modified in between the calls.
 // ErrNotStored is returned if the value was evicted in between the calls.
-func CompareAndSwap(c appengine.Context, item *Item) error {
+func CompareAndSwap(c context.Context, item *Item) error {
 	return singleError(set(c, []*Item{item}, nil, pb.MemcacheSetRequest_CAS))
 }
 
 // CompareAndSwapMulti is a batch version of CompareAndSwap.
 // appengine.MultiError may be returned.
-func CompareAndSwapMulti(c appengine.Context, item []*Item) error {
+func CompareAndSwapMulti(c context.Context, item []*Item) error {
 	return set(c, item, nil, pb.MemcacheSetRequest_CAS)
 }
 
@@ -365,7 +366,7 @@ type Codec struct {
 // Get gets the item for the given key and decodes the obtained value into v.
 // ErrCacheMiss is returned for a memcache cache miss.
 // The key must be at most 250 bytes in length.
-func (cd Codec) Get(c appengine.Context, key string, v interface{}) (*Item, error) {
+func (cd Codec) Get(c context.Context, key string, v interface{}) (*Item, error) {
 	i, err := Get(c, key)
 	if err != nil {
 		return nil, err
@@ -376,7 +377,7 @@ func (cd Codec) Get(c appengine.Context, key string, v interface{}) (*Item, erro
 	return i, nil
 }
 
-func (cd Codec) set(c appengine.Context, items []*Item, policy pb.MemcacheSetRequest_SetPolicy) error {
+func (cd Codec) set(c context.Context, items []*Item, policy pb.MemcacheSetRequest_SetPolicy) error {
 	var vs [][]byte
 	var me appengine.MultiError
 	for i, item := range items {
@@ -400,25 +401,25 @@ func (cd Codec) set(c appengine.Context, items []*Item, policy pb.MemcacheSetReq
 }
 
 // Set writes the given item, unconditionally.
-func (cd Codec) Set(c appengine.Context, item *Item) error {
+func (cd Codec) Set(c context.Context, item *Item) error {
 	return singleError(cd.set(c, []*Item{item}, pb.MemcacheSetRequest_SET))
 }
 
 // SetMulti is a batch version of Set.
 // appengine.MultiError may be returned.
-func (cd Codec) SetMulti(c appengine.Context, items []*Item) error {
+func (cd Codec) SetMulti(c context.Context, items []*Item) error {
 	return cd.set(c, items, pb.MemcacheSetRequest_SET)
 }
 
 // Add writes the given item, if no value already exists for its key.
 // ErrNotStored is returned if that condition is not met.
-func (cd Codec) Add(c appengine.Context, item *Item) error {
+func (cd Codec) Add(c context.Context, item *Item) error {
 	return singleError(cd.set(c, []*Item{item}, pb.MemcacheSetRequest_ADD))
 }
 
 // AddMulti is a batch version of Add.
 // appengine.MultiError may be returned.
-func (cd Codec) AddMulti(c appengine.Context, items []*Item) error {
+func (cd Codec) AddMulti(c context.Context, items []*Item) error {
 	return cd.set(c, items, pb.MemcacheSetRequest_ADD)
 }
 
@@ -428,13 +429,13 @@ func (cd Codec) AddMulti(c appengine.Context, items []*Item) error {
 // all other item fields may differ.
 // ErrCASConflict is returned if the value was modified in between the calls.
 // ErrNotStored is returned if the value was evicted in between the calls.
-func (cd Codec) CompareAndSwap(c appengine.Context, item *Item) error {
+func (cd Codec) CompareAndSwap(c context.Context, item *Item) error {
 	return singleError(cd.set(c, []*Item{item}, pb.MemcacheSetRequest_CAS))
 }
 
 // CompareAndSwapMulti is a batch version of CompareAndSwap.
 // appengine.MultiError may be returned.
-func (cd Codec) CompareAndSwapMulti(c appengine.Context, items []*Item) error {
+func (cd Codec) CompareAndSwapMulti(c context.Context, items []*Item) error {
 	return cd.set(c, items, pb.MemcacheSetRequest_CAS)
 }
 
@@ -471,10 +472,10 @@ type Statistics struct {
 }
 
 // Stats retrieves the current memcache statistics.
-func Stats(c appengine.Context) (*Statistics, error) {
+func Stats(c context.Context) (*Statistics, error) {
 	req := &pb.MemcacheStatsRequest{}
 	res := &pb.MemcacheStatsResponse{}
-	if err := c.Call("memcache", "Stats", req, res, nil); err != nil {
+	if err := internal.Call(c, "memcache", "Stats", req, res, nil); err != nil {
 		return nil, err
 	}
 	if res.Stats == nil {
@@ -491,10 +492,10 @@ func Stats(c appengine.Context) (*Statistics, error) {
 }
 
 // Flush flushes all items from memcache.
-func Flush(c appengine.Context) error {
+func Flush(c context.Context) error {
 	req := &pb.MemcacheFlushRequest{}
 	res := &pb.MemcacheFlushResponse{}
-	return c.Call("memcache", "FlushAll", req, res, nil)
+	return internal.Call(c, "memcache", "FlushAll", req, res, nil)
 }
 
 func namespaceMod(m proto.Message, namespace string) {

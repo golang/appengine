@@ -104,6 +104,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
@@ -211,7 +212,7 @@ func Open(name string) (*Index, error) {
 //
 // src must be a non-nil struct pointer or implement the FieldLoadSaver
 // interface.
-func (x *Index) Put(c appengine.Context, id string, src interface{}) (string, error) {
+func (x *Index) Put(c context.Context, id string, src interface{}) (string, error) {
 	fields, meta, err := saveDoc(src)
 	if err != nil {
 		return "", err
@@ -241,7 +242,7 @@ func (x *Index) Put(c appengine.Context, id string, src interface{}) (string, er
 		},
 	}
 	res := &pb.IndexDocumentResponse{}
-	if err := c.Call("search", "IndexDocument", req, res, nil); err != nil {
+	if err := internal.Call(c, "search", "IndexDocument", req, res, nil); err != nil {
 		return "", err
 	}
 	if len(res.Status) > 0 {
@@ -269,7 +270,7 @@ func (x *Index) Put(c appengine.Context, id string, src interface{}) (string, er
 // unexported in the destination struct. ErrFieldMismatch is only returned if
 // dst is a struct pointer. It is up to the callee to decide whether this error
 // is fatal, recoverable, or ignorable.
-func (x *Index) Get(c appengine.Context, id string, dst interface{}) error {
+func (x *Index) Get(c context.Context, id string, dst interface{}) error {
 	if id == "" || !validIndexNameOrDocID(id) {
 		return fmt.Errorf("search: invalid ID %q", id)
 	}
@@ -281,7 +282,7 @@ func (x *Index) Get(c appengine.Context, id string, dst interface{}) error {
 		},
 	}
 	res := &pb.ListDocumentsResponse{}
-	if err := c.Call("search", "ListDocuments", req, res, nil); err != nil {
+	if err := internal.Call(c, "search", "ListDocuments", req, res, nil); err != nil {
 		return err
 	}
 	if res.Status == nil || res.Status.GetCode() != pb.SearchServiceError_OK {
@@ -297,7 +298,7 @@ func (x *Index) Get(c appengine.Context, id string, dst interface{}) error {
 }
 
 // Delete deletes a document from the index.
-func (x *Index) Delete(c appengine.Context, id string) error {
+func (x *Index) Delete(c context.Context, id string) error {
 	req := &pb.DeleteDocumentRequest{
 		Params: &pb.DeleteDocumentParams{
 			DocId:     []string{id},
@@ -305,7 +306,7 @@ func (x *Index) Delete(c appengine.Context, id string) error {
 		},
 	}
 	res := &pb.DeleteDocumentResponse{}
-	if err := c.Call("search", "DeleteDocument", req, res, nil); err != nil {
+	if err := internal.Call(c, "search", "DeleteDocument", req, res, nil); err != nil {
 		return err
 	}
 	if len(res.Status) != 1 {
@@ -319,7 +320,7 @@ func (x *Index) Delete(c appengine.Context, id string) error {
 
 // List lists all of the documents in an index. The documents are returned in
 // increasing ID order.
-func (x *Index) List(c appengine.Context, opts *ListOptions) *Iterator {
+func (x *Index) List(c context.Context, opts *ListOptions) *Iterator {
 	t := &Iterator{
 		c:             c,
 		index:         x,
@@ -356,7 +357,7 @@ func moreList(t *Iterator) error {
 	}
 
 	res := &pb.ListDocumentsResponse{}
-	if err := t.c.Call("search", "ListDocuments", req, res, nil); err != nil {
+	if err := internal.Call(t.c, "search", "ListDocuments", req, res, nil); err != nil {
 		return err
 	}
 	if res.Status == nil || res.Status.GetCode() != pb.SearchServiceError_OK {
@@ -389,7 +390,7 @@ type ListOptions struct {
 }
 
 // Search searches the index for the given query.
-func (x *Index) Search(c appengine.Context, query string, opts *SearchOptions) *Iterator {
+func (x *Index) Search(c context.Context, query string, opts *SearchOptions) *Iterator {
 	t := &Iterator{
 		c:           c,
 		index:       x,
@@ -442,7 +443,7 @@ func moreSearch(t *Iterator) error {
 		req.Params.Cursor = t.searchCursor
 	}
 	res := &pb.SearchResponse{}
-	if err := t.c.Call("search", "Search", req, res, nil); err != nil {
+	if err := internal.Call(t.c, "search", "Search", req, res, nil); err != nil {
 		return err
 	}
 	if res.Status == nil || res.Status.GetCode() != pb.SearchServiceError_OK {
@@ -588,7 +589,7 @@ func sortToProto(sort *SortOptions, params *pb.SearchParams) error {
 // Iterator is the result of searching an index for a query or listing an
 // index.
 type Iterator struct {
-	c     appengine.Context
+	c     context.Context
 	index *Index
 	err   error
 

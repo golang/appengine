@@ -11,7 +11,7 @@ package appengine // import "google.golang.org/appengine"
 import (
 	"net/http"
 
-	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
 )
@@ -23,40 +23,13 @@ func IsDevAppServer() bool {
 	return false
 }
 
-// Context represents the context of an in-flight HTTP request.
-type Context interface {
-	// Debugf formats its arguments according to the format, analogous to fmt.Printf,
-	// and records the text as a log message at Debug level.
-	Debugf(format string, args ...interface{})
-
-	// Infof is like Debugf, but at Info level.
-	Infof(format string, args ...interface{})
-
-	// Warningf is like Debugf, but at Warning level.
-	Warningf(format string, args ...interface{})
-
-	// Errorf is like Debugf, but at Error level.
-	Errorf(format string, args ...interface{})
-
-	// Criticalf is like Debugf, but at Critical level.
-	Criticalf(format string, args ...interface{})
-
-	// The remaining methods are for internal use only.
-	// Developer-facing APIs wrap these methods to provide a more friendly API.
-
-	// Internal use only.
-	Call(service, method string, in, out proto.Message, opts *internal.CallOptions) error
-	// Internal use only. Use AppID instead.
-	FullyQualifiedAppID() string
-	// Internal use only.
-	Request() interface{}
-}
-
 // NewContext returns a context for an in-flight HTTP request.
-// Repeated calls will return the same value.
-func NewContext(req *http.Request) Context {
+// This function is cheap.
+func NewContext(req *http.Request) context.Context {
 	return internal.NewContext(req)
 }
+
+// TODO(dsymonds): Add a Call function here? Otherwise other packages can't access internal.Call.
 
 // TODO(dsymonds): Add BackgroundContext function?
 

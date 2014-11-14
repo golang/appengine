@@ -9,8 +9,11 @@ import (
 	"net/http"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
+	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/user"
 )
 
@@ -28,7 +31,7 @@ func init() {
 }
 
 // guestbookKey returns the key used for all guestbook entries.
-func guestbookKey(c appengine.Context) *datastore.Key {
+func guestbookKey(c context.Context) *datastore.Key {
 	// The string "default_guestbook" here could be varied to have multiple guestbooks.
 	return datastore.NewKey(c, "Guestbook", "default_guestbook", 0, nil)
 }
@@ -51,11 +54,11 @@ func handleMainPage(w http.ResponseWriter, r *http.Request) {
 	var gg []*Greeting
 	if _, err := q.GetAll(c, &gg); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		c.Errorf("GetAll: %v", err)
+		log.Errorf(c, "GetAll: %v", err)
 		return
 	}
-	c.Infof("Datastore lookup took %s", time.Since(tic).String())
-	c.Infof("Rendering %d greetings", len(gg))
+	log.Infof(c, "Datastore lookup took %s", time.Since(tic).String())
+	log.Infof(c, "Rendering %d greetings", len(gg))
 
 	var email, logout, login string
 	if u := user.Current(c); u != nil {
@@ -75,7 +78,7 @@ func handleMainPage(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tpl.ExecuteTemplate(w, "guestbook.html", data); err != nil {
-		c.Errorf("%v", err)
+		log.Errorf(c, "%v", err)
 	}
 }
 

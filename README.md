@@ -12,7 +12,7 @@ for more information.
 ## Directory structure
 The top level directory of this repository is the `appengine` package. It
 contains the
-basic types (e.g. `appengine.Context`) that are used across APIs. Specific API
+basic APIs (e.g. `appengine.NewContext`) that apply across APIs. Specific API
 packages are in subdirectories (e.g. `datastore`).
 
 There is an `internal` subdirectory that contains service protocol buffers,
@@ -51,7 +51,10 @@ Most App Engine services are available with exactly the same API.
 A few APIs were cleaned up, and some are not available yet.
 This list summarises the differences:
 
-* `appengine.Datacenter` now takes an `appengine.Context` argument.
+* `appengine.Context` has been replaced with the `Context` type from `golang.org/x/net/context`.
+* Logging methods that were on `appengine.Context` are now functions in `google.golang.org/appengine/log`.
+* `appengine.Timeout` has been removed. Use `context.WithTimeout` instead.
+* `appengine.Datacenter` now takes a `context.Context` argument.
 * `datastore.PropertyLoadSaver` has been simplified to use slices in place of channels.
 * `search.FieldLoadSaver` now handles document metadata.
 * `taskqueue.QueueStats` no longer takes a maxTasks argument. That argument has been

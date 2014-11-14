@@ -8,10 +8,10 @@ user request by using the taskqueue API.
 
 To declare a function that may be executed later, call Func
 in a top-level assignment context, passing it an arbitrary string key
-and a function whose first argument is of type appengine.Context.
+and a function whose first argument is of type context.Context.
 	var laterFunc = delay.Func("key", myFunc)
 It is also possible to use a function literal.
-	var laterFunc = delay.Func("key", func(c appengine.Context, x string) {
+	var laterFunc = delay.Func("key", func(c context.Context, x string) {
 		// ...
 	})
 
@@ -52,7 +52,10 @@ import (
 	"reflect"
 	"runtime"
 
+	"golang.org/x/net/context"
+
 	"google.golang.org/appengine"
+	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/taskqueue"
 )
 
@@ -75,15 +78,15 @@ var (
 	funcs = make(map[string]*Function)
 
 	// precomputed types
-	contextType = reflect.TypeOf((*appengine.Context)(nil)).Elem()
+	contextType = reflect.TypeOf((*context.Context)(nil)).Elem()
 	errorType   = reflect.TypeOf((*error)(nil)).Elem()
 
 	// errors
-	errFirstArg = errors.New("first argument must be appengine.Context")
+	errFirstArg = errors.New("first argument must be context.Context")
 )
 
 // Func declares a new Function. The second argument must be a function with a
-// first argument of type appengine.Context.
+// first argument of type context.Context.
 // This function must be called at program initialization time. That means it
 // must be called in a global variable declaration or from an init function.
 // This restriction is necessary because the instance that delays a function
@@ -135,14 +138,14 @@ type invocation struct {
 // is equivalent to
 //   t, _ := f.Task(...)
 //   taskqueue.Add(c, t, "")
-func (f *Function) Call(c appengine.Context, args ...interface{}) {
+func (f *Function) Call(c context.Context, args ...interface{}) {
 	t, err := f.Task(args...)
 	if err != nil {
-		c.Errorf("%v", err)
+		log.Errorf(c, "%v", err)
 		return
 	}
 	if _, err := taskqueueAdder(c, t, queue); err != nil {
-		c.Errorf("delay: taskqueue.Add failed: %v", err)
+		log.Errorf(c, "delay: taskqueue.Add failed: %v", err)
 		return
 	}
 }
@@ -155,7 +158,7 @@ func (f *Function) Task(args ...interface{}) (*taskqueue.Task, error) {
 		return nil, fmt.Errorf("delay: func is invalid: %v", f.err)
 	}
 
-	nArgs := len(args) + 1 // +1 for the appengine.Context
+	nArgs := len(args) + 1 // +1 for the context.Context
 	ft := f.fv.Type()
 	minArgs := ft.NumIn()
 	if ft.IsVariadic() {
@@ -226,20 +229,20 @@ func init() {
 	})
 }
 
-func runFunc(c appengine.Context, w http.ResponseWriter, req *http.Request) {
+func runFunc(c context.Context, w http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 
 	var inv invocation
 	if err := gob.NewDecoder(req.Body).Decode(&inv); err != nil {
-		c.Errorf("delay: failed decoding task payload: %v", err)
-		c.Warningf("delay: dropping task")
+		log.Errorf(c, "delay: failed decoding task payload: %v", err)
+		log.Warningf(c, "delay: dropping task")
 		return
 	}
 
 	f := funcs[inv.Key]
 	if f == nil {
-		c.Errorf("delay: no func with key %q found", inv.Key)
-		c.Warningf("delay: dropping task")
+		log.Errorf(c, "delay: no func with key %q found", inv.Key)
+		log.Warningf(c, "delay: dropping task")
 		return
 	}
 
@@ -267,7 +270,7 @@ func runFunc(c appengine.Context, w http.ResponseWriter, req *http.Request) {
 
 	if n := ft.NumOut(); n > 0 && ft.Out(n-1) == errorType {
 		if errv := out[n-1]; !errv.IsNil() {
-			c.Errorf("delay: func failed (will retry): %v", errv.Interface())
+			log.Errorf(c, "delay: func failed (will retry): %v", errv.Interface())
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}

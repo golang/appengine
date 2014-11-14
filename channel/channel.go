@@ -23,6 +23,8 @@ package channel // import "google.golang.org/appengine/channel"
 import (
 	"encoding/json"
 
+	"golang.org/x/net/context"
+
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
 	basepb "google.golang.org/appengine/internal/base"
@@ -31,29 +33,29 @@ import (
 
 // Create creates a channel and returns a token for use by the client.
 // The clientID is an application-provided string used to identify the client.
-func Create(c appengine.Context, clientID string) (token string, err error) {
+func Create(c context.Context, clientID string) (token string, err error) {
 	req := &pb.CreateChannelRequest{
 		ApplicationKey: &clientID,
 	}
 	resp := &pb.CreateChannelResponse{}
-	err = c.Call(service, "CreateChannel", req, resp, nil)
+	err = internal.Call(c, service, "CreateChannel", req, resp, nil)
 	token = resp.GetToken()
 	return token, remapError(err)
 }
 
 // Send sends a message on the channel associated with clientID.
-func Send(c appengine.Context, clientID, message string) error {
+func Send(c context.Context, clientID, message string) error {
 	req := &pb.SendMessageRequest{
 		ApplicationKey: &clientID,
 		Message:        &message,
 	}
 	resp := &basepb.VoidProto{}
-	return remapError(c.Call(service, "SendChannelMessage", req, resp, nil))
+	return remapError(internal.Call(c, service, "SendChannelMessage", req, resp, nil))
 }
 
 // SendJSON is a helper function that sends a JSON-encoded value
 // on the channel associated with clientID.
-func SendJSON(c appengine.Context, clientID string, value interface{}) error {
+func SendJSON(c context.Context, clientID string, value interface{}) error {
 	m, err := json.Marshal(value)
 	if err != nil {
 		return err

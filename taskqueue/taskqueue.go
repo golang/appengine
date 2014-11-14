@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
@@ -151,7 +152,7 @@ var (
 	defaultNamespace = http.CanonicalHeaderKey("X-AppEngine-Default-Namespace")
 )
 
-func newAddReq(c appengine.Context, task *Task, queueName string) (*pb.TaskQueueAddRequest, error) {
+func newAddReq(c context.Context, task *Task, queueName string) (*pb.TaskQueueAddRequest, error) {
 	if queueName == "" {
 		queueName = "default"
 	}
@@ -230,13 +231,13 @@ var alreadyAddedErrors = map[pb.TaskQueueServiceError_ErrorCode]bool{
 // An empty queue name means that the default queue will be used.
 // Add returns an equivalent Task with defaults filled in, including setting
 // the task's Name field to the chosen name if the original was empty.
-func Add(c appengine.Context, task *Task, queueName string) (*Task, error) {
+func Add(c context.Context, task *Task, queueName string) (*Task, error) {
 	req, err := newAddReq(c, task, queueName)
 	if err != nil {
 		return nil, err
 	}
 	res := &pb.TaskQueueAddResponse{}
-	if err := c.Call("taskqueue", "Add", req, res, nil); err != nil {
+	if err := internal.Call(c, "taskqueue", "Add", req, res, nil); err != nil {
 		apiErr, ok := err.(*internal.APIError)
 		if ok && alreadyAddedErrors[pb.TaskQueueServiceError_ErrorCode(apiErr.Code)] {
 			return nil, ErrTaskAlreadyAdded
@@ -256,7 +257,7 @@ func Add(c appengine.Context, task *Task, queueName string) (*Task, error) {
 // AddMulti returns a slice of equivalent tasks with defaults filled in, including setting
 // each task's Name field to the chosen name if the original was empty.
 // If a given task is badly formed or could not be added, an appengine.MultiError is returned.
-func AddMulti(c appengine.Context, tasks []*Task, queueName string) ([]*Task, error) {
+func AddMulti(c context.Context, tasks []*Task, queueName string) ([]*Task, error) {
 	req := &pb.TaskQueueBulkAddRequest{
 		AddRequest: make([]*pb.TaskQueueAddRequest, len(tasks)),
 	}
@@ -269,7 +270,7 @@ func AddMulti(c appengine.Context, tasks []*Task, queueName string) ([]*Task, er
 		return nil, me
 	}
 	res := &pb.TaskQueueBulkAddResponse{}
-	if err := c.Call("taskqueue", "BulkAdd", req, res, nil); err != nil {
+	if err := internal.Call(c, "taskqueue", "BulkAdd", req, res, nil); err != nil {
 		return nil, err
 	}
 	if len(res.Taskresult) != len(tasks) {
@@ -302,7 +303,7 @@ func AddMulti(c appengine.Context, tasks []*Task, queueName string) ([]*Task, er
 }
 
 // Delete deletes a task from a named queue.
-func Delete(c appengine.Context, task *Task, queueName string) error {
+func Delete(c context.Context, task *Task, queueName string) error {
 	err := DeleteMulti(c, []*Task{task}, queueName)
 	if me, ok := err.(appengine.MultiError); ok {
 		return me[0]
@@ -312,7 +313,7 @@ func Delete(c appengine.Context, task *Task, queueName string) error {
 
 // DeleteMulti deletes multiple tasks from a named queue.
 // If a given task could not be deleted, an appengine.MultiError is returned.
-func DeleteMulti(c appengine.Context, tasks []*Task, queueName string) error {
+func DeleteMulti(c context.Context, tasks []*Task, queueName string) error {
 	taskNames := make([][]byte, len(tasks))
 	for i, t := range tasks {
 		taskNames[i] = []byte(t.Name)
@@ -325,7 +326,7 @@ func DeleteMulti(c appengine.Context, tasks []*Task, queueName string) error {
 		TaskName:  taskNames,
 	}
 	res := &pb.TaskQueueDeleteResponse{}
-	if err := c.Call("taskqueue", "Delete", req, res, nil); err != nil {
+	if err := internal.Call(c, "taskqueue", "Delete", req, res, nil); err != nil {
 		return err
 	}
 	if a, b := len(req.TaskName), len(res.Result); a != b {
@@ -347,7 +348,7 @@ func DeleteMulti(c appengine.Context, tasks []*Task, queueName string) error {
 	return nil
 }
 
-func lease(c appengine.Context, maxTasks int, queueName string, leaseTime int, groupByTag bool, tag []byte) ([]*Task, error) {
+func lease(c context.Context, maxTasks int, queueName string, leaseTime int, groupByTag bool, tag []byte) ([]*Task, error) {
 	if queueName == "" {
 		queueName = "default"
 	}
@@ -362,7 +363,7 @@ func lease(c appengine.Context, maxTasks int, queueName string, leaseTime int, g
 	callOpts := &internal.CallOptions{
 		Timeout: 10 * time.Second,
 	}
-	if err := c.Call("taskqueue", "QueryAndOwnTasks", req, res, callOpts); err != nil {
+	if err := internal.Call(c, "taskqueue", "QueryAndOwnTasks", req, res, callOpts); err != nil {
 		return nil, err
 	}
 	tasks := make([]*Task, len(res.Task))
@@ -382,7 +383,7 @@ func lease(c appengine.Context, maxTasks int, queueName string, leaseTime int, g
 // Lease leases tasks from a queue.
 // leaseTime is in seconds.
 // The number of tasks fetched will be at most maxTasks.
-func Lease(c appengine.Context, maxTasks int, queueName string, leaseTime int) ([]*Task, error) {
+func Lease(c context.Context, maxTasks int, queueName string, leaseTime int) ([]*Task, error) {
 	return lease(c, maxTasks, queueName, leaseTime, false, nil)
 }
 
@@ -390,12 +391,12 @@ func Lease(c appengine.Context, maxTasks int, queueName string, leaseTime int) (
 // If tag is empty, then the returned tasks are grouped by the tag of the task with earliest ETA.
 // leaseTime is in seconds.
 // The number of tasks fetched will be at most maxTasks.
-func LeaseByTag(c appengine.Context, maxTasks int, queueName string, leaseTime int, tag string) ([]*Task, error) {
+func LeaseByTag(c context.Context, maxTasks int, queueName string, leaseTime int, tag string) ([]*Task, error) {
 	return lease(c, maxTasks, queueName, leaseTime, true, []byte(tag))
 }
 
 // Purge removes all tasks from a queue.
-func Purge(c appengine.Context, queueName string) error {
+func Purge(c context.Context, queueName string) error {
 	if queueName == "" {
 		queueName = "default"
 	}
@@ -403,13 +404,13 @@ func Purge(c appengine.Context, queueName string) error {
 		QueueName: []byte(queueName),
 	}
 	res := &pb.TaskQueuePurgeQueueResponse{}
-	return c.Call("taskqueue", "PurgeQueue", req, res, nil)
+	return internal.Call(c, "taskqueue", "PurgeQueue", req, res, nil)
 }
 
 // ModifyLease modifies the lease of a task.
 // Used to request more processing time, or to abandon processing.
 // leaseTime is in seconds and must not be negative.
-func ModifyLease(c appengine.Context, task *Task, queueName string, leaseTime int) error {
+func ModifyLease(c context.Context, task *Task, queueName string, leaseTime int) error {
 	if queueName == "" {
 		queueName = "default"
 	}
@@ -420,7 +421,7 @@ func ModifyLease(c appengine.Context, task *Task, queueName string, leaseTime in
 		LeaseSeconds: proto.Float64(float64(leaseTime)),
 	}
 	res := &pb.TaskQueueModifyTaskLeaseResponse{}
-	if err := c.Call("taskqueue", "ModifyTaskLease", req, res, nil); err != nil {
+	if err := internal.Call(c, "taskqueue", "ModifyTaskLease", req, res, nil); err != nil {
 		return err
 	}
 	task.ETA = time.Unix(0, *res.UpdatedEtaUsec*1e3)
@@ -438,7 +439,7 @@ type QueueStatistics struct {
 }
 
 // QueueStats retrieves statistics about queues.
-func QueueStats(c appengine.Context, queueNames []string) ([]QueueStatistics, error) {
+func QueueStats(c context.Context, queueNames []string) ([]QueueStatistics, error) {
 	req := &pb.TaskQueueFetchQueueStatsRequest{
 		QueueName: make([][]byte, len(queueNames)),
 	}
@@ -452,7 +453,7 @@ func QueueStats(c appengine.Context, queueNames []string) ([]QueueStatistics, er
 	callOpts := &internal.CallOptions{
 		Timeout: 10 * time.Second,
 	}
-	if err := c.Call("taskqueue", "FetchQueueStats", req, res, callOpts); err != nil {
+	if err := internal.Call(c, "taskqueue", "FetchQueueStats", req, res, callOpts); err != nil {
 		return nil, err
 	}
 	qs := make([]QueueStatistics, len(res.Queuestats))

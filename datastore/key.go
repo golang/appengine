@@ -14,8 +14,8 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/datastore"
 )
@@ -242,7 +242,7 @@ func DecodeKey(encoded string) (*Key, error) {
 
 // NewIncompleteKey creates a new incomplete key.
 // kind cannot be empty.
-func NewIncompleteKey(c appengine.Context, kind string, parent *Key) *Key {
+func NewIncompleteKey(c context.Context, kind string, parent *Key) *Key {
 	return NewKey(c, kind, "", 0, parent)
 }
 
@@ -251,7 +251,7 @@ func NewIncompleteKey(c appengine.Context, kind string, parent *Key) *Key {
 // Either one or both of stringID and intID must be zero. If both are zero,
 // the key returned is incomplete.
 // parent must either be a complete key or nil.
-func NewKey(c appengine.Context, kind, stringID string, intID int64, parent *Key) *Key {
+func NewKey(c context.Context, kind, stringID string, intID int64, parent *Key) *Key {
 	// If there's a parent key, use its namespace.
 	// Otherwise, do a fake RPC to try to get a namespace if c is a namespacedContext (or wraps one).
 	var namespace string
@@ -266,7 +266,7 @@ func NewKey(c appengine.Context, kind, stringID string, intID int64, parent *Key
 		stringID:  stringID,
 		intID:     intID,
 		parent:    parent,
-		appID:     c.FullyQualifiedAppID(),
+		appID:     internal.FullyQualifiedAppID(c),
 		namespace: namespace,
 	}
 }
@@ -280,7 +280,7 @@ func NewKey(c appengine.Context, kind, stringID string, intID int64, parent *Key
 // other words, valid intIDs x satisfy low <= x && x < high.
 //
 // If no error is returned, low + n == high.
-func AllocateIDs(c appengine.Context, kind string, parent *Key, n int) (low, high int64, err error) {
+func AllocateIDs(c context.Context, kind string, parent *Key, n int) (low, high int64, err error) {
 	if kind == "" {
 		return 0, 0, errors.New("datastore: AllocateIDs given an empty kind")
 	}
@@ -295,7 +295,7 @@ func AllocateIDs(c appengine.Context, kind string, parent *Key, n int) (low, hig
 		Size:     proto.Int64(int64(n)),
 	}
 	res := &pb.AllocateIdsResponse{}
-	if err := c.Call("datastore_v3", "AllocateIds", req, res, nil); err != nil {
+	if err := internal.Call(c, "datastore_v3", "AllocateIds", req, res, nil); err != nil {
 		return 0, 0, err
 	}
 	// The protobuf is inclusive at both ends. Idiomatic Go (e.g. slices, for loops)

@@ -36,12 +36,12 @@ func TestDialLimit(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		go func() {
 			defer wg.Done()
-			c.Call("errors", "RunSlowly", &basepb.VoidProto{}, &basepb.VoidProto{}, nil)
+			Call(toContext(c), "errors", "RunSlowly", &basepb.VoidProto{}, &basepb.VoidProto{}, nil)
 		}()
 	}
 	time.Sleep(50 * time.Millisecond) // let those two RPCs start
 
-	err := c.Call("errors", "Non200", &basepb.VoidProto{}, &basepb.VoidProto{}, &CallOptions{
+	err := Call(toContext(c), "errors", "Non200", &basepb.VoidProto{}, &basepb.VoidProto{}, &CallOptions{
 		Timeout: 50 * time.Millisecond,
 	})
 	if err != errTimeout {

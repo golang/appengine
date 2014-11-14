@@ -5,7 +5,9 @@
 package user
 
 import (
-	"google.golang.org/appengine"
+	"golang.org/x/net/context"
+
+	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/user"
 )
 
@@ -13,14 +15,14 @@ import (
 // request. If the OAuth consumer did not make a valid OAuth request, or the
 // scope is non-empty and the current user does not have this scope, this method
 // will return an error.
-func CurrentOAuth(c appengine.Context, scope string) (*User, error) {
+func CurrentOAuth(c context.Context, scope string) (*User, error) {
 	req := &pb.GetOAuthUserRequest{}
 	if scope != "" {
 		req.Scope = &scope
 	}
 	res := &pb.GetOAuthUserResponse{}
 
-	err := c.Call("user", "GetOAuthUser", req, res, nil)
+	err := internal.Call(c, "user", "GetOAuthUser", req, res, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -34,11 +36,11 @@ func CurrentOAuth(c appengine.Context, scope string) (*User, error) {
 
 // OAuthConsumerKey returns the OAuth consumer key provided with the current
 // request. This method will return an error if the OAuth request was invalid.
-func OAuthConsumerKey(c appengine.Context) (string, error) {
+func OAuthConsumerKey(c context.Context) (string, error) {
 	req := &pb.CheckOAuthSignatureRequest{}
 	res := &pb.CheckOAuthSignatureResponse{}
 
-	err := c.Call("user", "CheckOAuthSignature", req, res, nil)
+	err := internal.Call(c, "user", "CheckOAuthSignature", req, res, nil)
 	if err != nil {
 		return "", err
 	}

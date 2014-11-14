@@ -18,7 +18,7 @@ To receive messages,
 		xmpp.Handle(handleChat)
 	}
 
-	func handleChat(c appengine.Context, m *xmpp.Message) {
+	func handleChat(c context.Context, m *xmpp.Message) {
 		// ...
 	}
 */
@@ -28,6 +28,8 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
@@ -81,7 +83,7 @@ var (
 
 // Handle arranges for f to be called for incoming XMPP messages.
 // Only messages of type "chat" or "normal" will be handled.
-func Handle(f func(c appengine.Context, m *Message)) {
+func Handle(f func(c context.Context, m *Message)) {
 	http.HandleFunc("/_ah/xmpp/message/chat/", func(_ http.ResponseWriter, r *http.Request) {
 		f(appengine.NewContext(r), &Message{
 			Sender: r.FormValue("from"),
@@ -93,7 +95,7 @@ func Handle(f func(c appengine.Context, m *Message)) {
 
 // Send sends a message.
 // If any failures occur with specific recipients, the error will be an appengine.MultiError.
-func (m *Message) Send(c appengine.Context) error {
+func (m *Message) Send(c context.Context) error {
 	req := &pb.XmppMessageRequest{
 		Jid:    m.To,
 		Body:   &m.Body,
@@ -106,7 +108,7 @@ func (m *Message) Send(c appengine.Context) error {
 		req.FromJid = &m.Sender
 	}
 	res := &pb.XmppMessageResponse{}
-	if err := c.Call("xmpp", "SendMessage", req, res, nil); err != nil {
+	if err := internal.Call(c, "xmpp", "SendMessage", req, res, nil); err != nil {
 		return err
 	}
 
@@ -128,7 +130,7 @@ func (m *Message) Send(c appengine.Context) error {
 
 // Invite sends an invitation. If the from address is an empty string
 // the default (yourapp@appspot.com/bot) will be used.
-func Invite(c appengine.Context, to, from string) error {
+func Invite(c context.Context, to, from string) error {
 	req := &pb.XmppInviteRequest{
 		Jid: &to,
 	}
@@ -136,11 +138,11 @@ func Invite(c appengine.Context, to, from string) error {
 		req.FromJid = &from
 	}
 	res := &pb.XmppInviteResponse{}
-	return c.Call("xmpp", "SendInvite", req, res, nil)
+	return internal.Call(c, "xmpp", "SendInvite", req, res, nil)
 }
 
 // Send sends a presence update.
-func (p *Presence) Send(c appengine.Context) error {
+func (p *Presence) Send(c context.Context) error {
 	req := &pb.XmppSendPresenceRequest{
 		Jid: &p.To,
 	}
@@ -157,7 +159,7 @@ func (p *Presence) Send(c appengine.Context) error {
 		req.Status = &p.Status
 	}
 	res := &pb.XmppSendPresenceResponse{}
-	return c.Call("xmpp", "SendPresence", req, res, nil)
+	return internal.Call(c, "xmpp", "SendPresence", req, res, nil)
 }
 
 var presenceMap = map[pb.PresenceResponse_SHOW]string{
@@ -173,7 +175,7 @@ var presenceMap = map[pb.PresenceResponse_SHOW]string{
 // (yourapp@appspot.com/bot) will be used.
 // Possible return values are "", "away", "dnd", "chat", "xa".
 // ErrPresenceUnavailable is returned if the presence is unavailable.
-func GetPresence(c appengine.Context, to string, from string) (string, error) {
+func GetPresence(c context.Context, to string, from string) (string, error) {
 	req := &pb.PresenceRequest{
 		Jid: &to,
 	}
@@ -181,7 +183,7 @@ func GetPresence(c appengine.Context, to string, from string) (string, error) {
 		req.FromJid = &from
 	}
 	res := &pb.PresenceResponse{}
-	if err := c.Call("xmpp", "GetPresence", req, res, nil); err != nil {
+	if err := internal.Call(c, "xmpp", "GetPresence", req, res, nil); err != nil {
 		return "", err
 	}
 	if !*res.IsAvailable || res.Presence == nil {
@@ -199,7 +201,7 @@ func GetPresence(c appengine.Context, to string, from string) (string, error) {
 // (yourapp@appspot.com/bot) will be used.
 // Possible return values are "", "away", "dnd", "chat", "xa".
 // If any presence is unavailable, an appengine.MultiError is returned
-func GetPresenceMulti(c appengine.Context, to []string, from string) ([]string, error) {
+func GetPresenceMulti(c context.Context, to []string, from string) ([]string, error) {
 	req := &pb.BulkPresenceRequest{
 		Jid: to,
 	}
@@ -208,7 +210,7 @@ func GetPresenceMulti(c appengine.Context, to []string, from string) ([]string, 
 	}
 	res := &pb.BulkPresenceResponse{}
 
-	if err := c.Call("xmpp", "BulkGetPresence", req, res, nil); err != nil {
+	if err := internal.Call(c, "xmpp", "BulkGetPresence", req, res, nil); err != nil {
 		return nil, err
 	}
 

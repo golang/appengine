@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/user"
 )
@@ -43,12 +43,12 @@ func (u *User) String() string {
 
 // LoginURL returns a URL that, when visited, prompts the user to sign in,
 // then redirects the user to the URL specified by dest.
-func LoginURL(c appengine.Context, dest string) (string, error) {
+func LoginURL(c context.Context, dest string) (string, error) {
 	return LoginURLFederated(c, dest, "")
 }
 
 // LoginURLFederated is like LoginURL but accepts a user's OpenID identifier.
-func LoginURLFederated(c appengine.Context, dest, identity string) (string, error) {
+func LoginURLFederated(c context.Context, dest, identity string) (string, error) {
 	req := &pb.CreateLoginURLRequest{
 		DestinationUrl: proto.String(dest),
 	}
@@ -56,7 +56,7 @@ func LoginURLFederated(c appengine.Context, dest, identity string) (string, erro
 		req.FederatedIdentity = proto.String(identity)
 	}
 	res := &pb.CreateLoginURLResponse{}
-	if err := c.Call("user", "CreateLoginURL", req, res, nil); err != nil {
+	if err := internal.Call(c, "user", "CreateLoginURL", req, res, nil); err != nil {
 		return "", err
 	}
 	return *res.LoginUrl, nil
@@ -64,12 +64,12 @@ func LoginURLFederated(c appengine.Context, dest, identity string) (string, erro
 
 // LogoutURL returns a URL that, when visited, signs the user out,
 // then redirects the user to the URL specified by dest.
-func LogoutURL(c appengine.Context, dest string) (string, error) {
+func LogoutURL(c context.Context, dest string) (string, error) {
 	req := &pb.CreateLogoutURLRequest{
 		DestinationUrl: proto.String(dest),
 	}
 	res := &pb.CreateLogoutURLResponse{}
-	if err := c.Call("user", "CreateLogoutURL", req, res, nil); err != nil {
+	if err := internal.Call(c, "user", "CreateLogoutURL", req, res, nil); err != nil {
 		return "", err
 	}
 	return *res.LogoutUrl, nil
@@ -77,7 +77,7 @@ func LogoutURL(c appengine.Context, dest string) (string, error) {
 
 // Current returns the currently logged-in user,
 // or nil if the user is not signed in.
-func Current(c appengine.Context) *User {
+func Current(c context.Context) *User {
 	u := &User{
 		Email:             internal.VirtAPI(c, "user:Email"),
 		AuthDomain:        internal.VirtAPI(c, "user:AuthDomain"),
@@ -94,7 +94,7 @@ func Current(c appengine.Context) *User {
 
 // IsAdmin returns true if the current user is signed in and
 // is currently registered as an administrator of the application.
-func IsAdmin(c appengine.Context) bool {
+func IsAdmin(c context.Context) bool {
 	return internal.VirtAPI(c, "user:IsAdmin") == "1"
 }
 

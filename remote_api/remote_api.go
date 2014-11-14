@@ -20,6 +20,7 @@ import (
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/remote_api"
+	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/user"
 )
 
@@ -55,7 +56,7 @@ func handle(w http.ResponseWriter, req *http.Request) {
 			rtok = "0"
 		}
 		w.Header().Set("Content-Type", "text/yaml; charset=utf-8")
-		fmt.Fprintf(w, `{app_id: %q, rtok: %q}`, c.FullyQualifiedAppID(), rtok)
+		fmt.Fprintf(w, `{app_id: %q, rtok: %q}`, internal.FullyQualifiedAppID(c), rtok)
 		return
 	}
 
@@ -63,26 +64,26 @@ func handle(w http.ResponseWriter, req *http.Request) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		c.Errorf("Failed reading body: %v", err)
+		log.Errorf(c, "Failed reading body: %v", err)
 		return
 	}
 	remReq := &pb.Request{}
 	if err := proto.Unmarshal(body, remReq); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		c.Errorf("Bad body: %v", err)
+		log.Errorf(c, "Bad body: %v", err)
 		return
 	}
 
 	service, method := *remReq.ServiceName, *remReq.Method
 	if !requestSupported(service, method) {
 		w.WriteHeader(http.StatusBadRequest)
-		c.Errorf("Unsupported RPC /%s.%s", service, method)
+		log.Errorf(c, "Unsupported RPC /%s.%s", service, method)
 		return
 	}
 
 	rawReq := &rawMessage{remReq.Request}
 	rawRes := &rawMessage{}
-	err = c.Call(service, method, rawReq, rawRes, nil)
+	err = internal.Call(c, service, method, rawReq, rawRes, nil)
 
 	remRes := &pb.Response{}
 	if err == nil {
@@ -94,7 +95,7 @@ func handle(w http.ResponseWriter, req *http.Request) {
 		}
 	} else {
 		// This shouldn't normally happen.
-		c.Errorf("appengine/remote_api: Unexpected error of type %T: %v", err, err)
+		log.Errorf(c, "appengine/remote_api: Unexpected error of type %T: %v", err, err)
 		remRes.ApplicationError = &pb.ApplicationError{
 			Code:   proto.Int32(0),
 			Detail: proto.String(err.Error()),
@@ -104,11 +105,11 @@ func handle(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		// This should not be possible.
 		w.WriteHeader(500)
-		c.Errorf("proto.Marshal: %v", err)
+		log.Errorf(c, "proto.Marshal: %v", err)
 		return
 	}
 
-	c.Infof("Spooling %d bytes of response to /%s.%s", len(out), service, method)
+	log.Infof(c, "Spooling %d bytes of response to /%s.%s", len(out), service, method)
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.Header().Set("Content-Length", strconv.Itoa(len(out)))
 	w.Write(out)

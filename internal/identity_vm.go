@@ -7,6 +7,8 @@ package internal
 import (
 	"net/http"
 	"os"
+
+	netcontext "golang.org/x/net/context"
 )
 
 // These functions are implementations of the wrapper functions
@@ -18,16 +20,20 @@ const (
 	hDatacenter             = "X-AppEngine-Datacenter"
 )
 
-func DefaultVersionHostname(req interface{}) string {
-	return req.(*http.Request).Header.Get(hDefaultVersionHostname)
+func ctxHeaders(ctx netcontext.Context) http.Header {
+	return fromContext(ctx).Request().Header
 }
 
-func RequestID(req interface{}) string {
-	return req.(*http.Request).Header.Get(hRequestLogId)
+func DefaultVersionHostname(ctx netcontext.Context) string {
+	return ctxHeaders(ctx).Get(hDefaultVersionHostname)
 }
 
-func Datacenter(req interface{}) string {
-	return req.(*http.Request).Header.Get(hDatacenter)
+func RequestID(ctx netcontext.Context) string {
+	return ctxHeaders(ctx).Get(hRequestLogId)
+}
+
+func Datacenter(ctx netcontext.Context) string {
+	return ctxHeaders(ctx).Get(hDatacenter)
 }
 
 func ServerSoftware() string {

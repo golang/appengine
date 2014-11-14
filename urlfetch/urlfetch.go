@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/urlfetch"
 )
@@ -29,7 +29,7 @@ import (
 // this transport and use the Client rather than using this transport
 // directly.
 type Transport struct {
-	Context  appengine.Context
+	Context  context.Context
 	Deadline time.Duration // zero means 5-second default
 
 	// Controls whether the application checks the validity of SSL certificates
@@ -47,7 +47,7 @@ var _ http.RoundTripper = (*Transport)(nil)
 // Client returns an *http.Client using a default urlfetch Transport. This
 // client will have the default deadline of 5 seconds, and will check the
 // validity of SSL certificates.
-func Client(context appengine.Context) *http.Client {
+func Client(context context.Context) *http.Client {
 	return &http.Client{
 		Transport: &Transport{
 			Context: context,
@@ -167,7 +167,7 @@ func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	}
 
 	fres := &pb.URLFetchResponse{}
-	if err := t.Context.Call("urlfetch", "Fetch", freq, fres, opts); err != nil {
+	if err := internal.Call(t.Context, "urlfetch", "Fetch", freq, fres, opts); err != nil {
 		return nil, err
 	}
 

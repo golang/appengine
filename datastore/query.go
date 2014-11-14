@@ -13,8 +13,9 @@ import (
 	"strings"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
-	"google.golang.org/appengine"
+	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/datastore"
 )
 
@@ -331,7 +332,7 @@ func (q *Query) toProto(dst *pb.Query, appID string) error {
 }
 
 // Count returns the number of results for the query.
-func (q *Query) Count(c appengine.Context) (int, error) {
+func (q *Query) Count(c context.Context) (int, error) {
 	// Check that the query is well-formed.
 	if q.err != nil {
 		return 0, q.err
@@ -355,11 +356,11 @@ func (q *Query) Count(c appengine.Context) (int, error) {
 		}
 	}
 	req := &pb.Query{}
-	if err := newQ.toProto(req, c.FullyQualifiedAppID()); err != nil {
+	if err := newQ.toProto(req, internal.FullyQualifiedAppID(c)); err != nil {
 		return 0, err
 	}
 	res := &pb.QueryResult{}
-	if err := c.Call("datastore_v3", "RunQuery", req, res, nil); err != nil {
+	if err := internal.Call(c, "datastore_v3", "RunQuery", req, res, nil); err != nil {
 		return 0, err
 	}
 
@@ -403,7 +404,7 @@ func (q *Query) Count(c appengine.Context) (int, error) {
 
 // callNext issues a datastore_v3/Next RPC to advance a cursor, such as that
 // returned by a query with more results.
-func callNext(c appengine.Context, res *pb.QueryResult, offset, limit int32) error {
+func callNext(c context.Context, res *pb.QueryResult, offset, limit int32) error {
 	if res.Cursor == nil {
 		return errors.New("datastore: internal error: server did not return a cursor")
 	}
@@ -420,7 +421,7 @@ func callNext(c appengine.Context, res *pb.QueryResult, offset, limit int32) err
 		req.Compile = proto.Bool(true)
 	}
 	res.Reset()
-	return c.Call("datastore_v3", "Next", req, res, nil)
+	return internal.Call(c, "datastore_v3", "Next", req, res, nil)
 }
 
 // GetAll runs the query in the given context and returns all keys that match
@@ -437,7 +438,7 @@ func callNext(c appengine.Context, res *pb.QueryResult, offset, limit int32) err
 // added to dst.
 //
 // If q is a ``keys-only'' query, GetAll ignores dst and only returns the keys.
-func (q *Query) GetAll(c appengine.Context, dst interface{}) ([]*Key, error) {
+func (q *Query) GetAll(c context.Context, dst interface{}) ([]*Key, error) {
 	var (
 		dv               reflect.Value
 		mat              multiArgType
@@ -504,7 +505,7 @@ func (q *Query) GetAll(c appengine.Context, dst interface{}) ([]*Key, error) {
 }
 
 // Run runs the query in the given context.
-func (q *Query) Run(c appengine.Context) *Iterator {
+func (q *Query) Run(c context.Context) *Iterator {
 	if q.err != nil {
 		return &Iterator{err: q.err}
 	}
@@ -515,11 +516,11 @@ func (q *Query) Run(c appengine.Context) *Iterator {
 		prevCC: q.start,
 	}
 	var req pb.Query
-	if err := q.toProto(&req, c.FullyQualifiedAppID()); err != nil {
+	if err := q.toProto(&req, internal.FullyQualifiedAppID(c)); err != nil {
 		t.err = err
 		return t
 	}
-	if err := c.Call("datastore_v3", "RunQuery", &req, &t.res, nil); err != nil {
+	if err := internal.Call(c, "datastore_v3", "RunQuery", &req, &t.res, nil); err != nil {
 		t.err = err
 		return t
 	}
@@ -545,7 +546,7 @@ func (q *Query) Run(c appengine.Context) *Iterator {
 
 // Iterator is the result of running a query.
 type Iterator struct {
-	c   appengine.Context
+	c   context.Context
 	err error
 	// res is the result of the most recent RunQuery or Next API call.
 	res pb.QueryResult

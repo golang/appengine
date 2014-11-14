@@ -10,9 +10,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
 )
 
@@ -168,17 +167,8 @@ func TestNilKeyJSON(t *testing.T) {
 	}
 }
 
-type fakeKeyer struct {
-	appengine.Context
-}
-
-func (fakeKeyer) FullyQualifiedAppID() string { return "s~some-app" }
-func (fakeKeyer) Call(service, method string, in, out proto.Message, opts *internal.CallOptions) error {
-	return nil
-}
-
 func TestIncompleteKeyWithParent(t *testing.T) {
-	var c appengine.Context = fakeKeyer{}
+	c := internal.WithAppIDOverride(context.Background(), "s~some-app")
 
 	// fadduh is a complete key.
 	fadduh := NewKey(c, "Person", "", 1, nil)
