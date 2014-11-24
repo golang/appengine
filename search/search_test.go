@@ -170,6 +170,24 @@ func TestLoadFieldList(t *testing.T) {
 	}
 }
 
+func TestLangFields(t *testing.T) {
+	fl := &FieldList{
+		{Name: "Foo", Value: "I am English", Language: "en"},
+		{Name: "Bar", Value: "私は日本人だ", Language: "jp"},
+	}
+	var got FieldList
+	protoFields, _, err := saveDoc(fl)
+	if err != nil {
+		t.Fatalf("saveDoc: %v", err)
+	}
+	if err := loadDoc(&got, protoFields, nil, nil); err != nil {
+		t.Fatalf("loadDoc: %v", err)
+	}
+	if want := fl; !reflect.DeepEqual(&got, want) {
+		t.Errorf("got  %v\nwant %v", got, want)
+	}
+}
+
 func TestSaveFieldList(t *testing.T) {
 	got, _, err := saveDoc(&searchFields)
 	if err != nil {

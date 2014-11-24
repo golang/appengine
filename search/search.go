@@ -740,7 +740,7 @@ func fieldsToProto(src []Field) ([]*pb.Field, error) {
 				if !validLanguage(f.Language) {
 					return nil, fmt.Errorf("search: invalid language for field %q: %q", f.Name, f.Language)
 				}
-				fieldValue.Language = &f.Language
+				fieldValue.Language = proto.String(f.Language)
 			default:
 				return nil, fmt.Errorf("search: setting language not supported for field %q of type %T", f.Name, f.Value)
 			}
