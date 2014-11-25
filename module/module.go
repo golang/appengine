@@ -11,7 +11,7 @@ including the module name.
 package module // import "google.golang.org/appengine/module"
 
 import (
-	"code.google.com/p/goprotobuf/proto"
+	"github.com/golang/protobuf/proto"
 
 	"google.golang.org/appengine"
 	pb "google.golang.org/appengine/internal/modules"

@@ -5,7 +5,7 @@ package internal
 import (
 	"reflect"
 
-	"code.google.com/p/goprotobuf/proto"
+	"github.com/golang/protobuf/proto"
 
 	pb "google.golang.org/appengine/internal/datastore"
 )

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"testing"
 
-	"code.google.com/p/goprotobuf/proto"
+	"github.com/golang/protobuf/proto"
 
 	"google.golang.org/appengine/internal"
 	"google.golang.org/appengine/internal/aetesting"

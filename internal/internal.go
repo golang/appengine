@@ -16,7 +16,7 @@ import (
 	"net/url"
 	"time"
 
-	"code.google.com/p/goprotobuf/proto"
+	"github.com/golang/protobuf/proto"
 
 	remotepb "google.golang.org/appengine/internal/remote_api"
 )

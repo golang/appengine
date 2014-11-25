@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"time"
 
-	"code.google.com/p/goprotobuf/proto"
+	"github.com/golang/protobuf/proto"
 
 	"google.golang.org/appengine"
 	pb "google.golang.org/appengine/internal/datastore"

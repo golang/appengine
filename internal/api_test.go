@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"code.google.com/p/goprotobuf/proto"
+	"github.com/golang/protobuf/proto"
 
 	basepb "google.golang.org/appengine/internal/base"
 	remotepb "google.golang.org/appengine/internal/remote_api"

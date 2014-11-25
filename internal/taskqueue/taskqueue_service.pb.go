@@ -51,7 +51,7 @@ It has these top-level messages:
 */
 package taskqueue
 
-import proto "code.google.com/p/goprotobuf/proto"
+import proto "github.com/golang/protobuf/proto"
 import math "math"
 import appengine "google.golang.org/appengine/internal/datastore"
 
@@ -314,6 +314,12 @@ func (m *TaskPayload) Marshal() ([]byte, error) {
 }
 func (m *TaskPayload) Unmarshal(buf []byte) error {
 	return proto.UnmarshalMessageSet(buf, m.ExtensionMap())
+}
+func (m *TaskPayload) MarshalJSON() ([]byte, error) {
+	return proto.MarshalMessageSetJSON(m.XXX_extensions)
+}
+func (m *TaskPayload) UnmarshalJSON(buf []byte) error {
+	return proto.UnmarshalMessageSetJSON(buf, m.XXX_extensions)
 }
 
 // ensure TaskPayload satisfies proto.Marshaler and proto.Unmarshaler

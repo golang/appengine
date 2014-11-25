@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"code.google.com/p/goprotobuf/proto"
+	"github.com/golang/protobuf/proto"
 
 	"google.golang.org/appengine/internal"
 	basepb "google.golang.org/appengine/internal/base"

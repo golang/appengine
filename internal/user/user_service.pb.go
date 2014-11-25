@@ -21,7 +21,7 @@ It has these top-level messages:
 */
 package user
 
-import proto "code.google.com/p/goprotobuf/proto"
+import proto "github.com/golang/protobuf/proto"
 import math "math"
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -84,7 +84,7 @@ func (*UserServiceError) ProtoMessage()    {}
 type CreateLoginURLRequest struct {
 	DestinationUrl    *string `protobuf:"bytes,1,req,name=destination_url" json:"destination_url,omitempty"`
 	AuthDomain        *string `protobuf:"bytes,2,opt,name=auth_domain" json:"auth_domain,omitempty"`
-	FederatedIdentity *string `protobuf:"bytes,3,opt,name=federated_identity" json:"federated_identity,omitempty"`
+	FederatedIdentity *string `protobuf:"bytes,3,opt,name=federated_identity,def=" json:"federated_identity,omitempty"`
 	XXX_unrecognized  []byte  `json:"-"`
 }
 
@@ -197,9 +197,9 @@ type GetOAuthUserResponse struct {
 	Email            *string  `protobuf:"bytes,1,req,name=email" json:"email,omitempty"`
 	UserId           *string  `protobuf:"bytes,2,req,name=user_id" json:"user_id,omitempty"`
 	AuthDomain       *string  `protobuf:"bytes,3,req,name=auth_domain" json:"auth_domain,omitempty"`
-	UserOrganization *string  `protobuf:"bytes,4,opt,name=user_organization" json:"user_organization,omitempty"`
+	UserOrganization *string  `protobuf:"bytes,4,opt,name=user_organization,def=" json:"user_organization,omitempty"`
 	IsAdmin          *bool    `protobuf:"varint,5,opt,name=is_admin,def=0" json:"is_admin,omitempty"`
-	ClientId         *string  `protobuf:"bytes,6,opt,name=client_id" json:"client_id,omitempty"`
+	ClientId         *string  `protobuf:"bytes,6,opt,name=client_id,def=" json:"client_id,omitempty"`
 	Scopes           []string `protobuf:"bytes,7,rep,name=scopes" json:"scopes,omitempty"`
 	XXX_unrecognized []byte   `json:"-"`
 }

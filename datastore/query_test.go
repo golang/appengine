@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"code.google.com/p/goprotobuf/proto"
+	"github.com/golang/protobuf/proto"
 
 	"google.golang.org/appengine/internal/aetesting"
 	pb "google.golang.org/appengine/internal/datastore"

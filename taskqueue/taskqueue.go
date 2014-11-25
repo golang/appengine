@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"time"
 
-	"code.google.com/p/goprotobuf/proto"
+	"github.com/golang/protobuf/proto"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"

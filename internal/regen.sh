@@ -2,7 +2,7 @@
 #
 # This script rebuilds the generated code for the protocol buffers.
 # To run this you will need protoc and goprotobuf installed;
-# see https://code.google.com/p/goprotobuf/ for instructions.
+# see https://github.com/golang/protobuf for instructions.
 
 PKG=google.golang.org/appengine
 

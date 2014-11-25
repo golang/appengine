@@ -31,7 +31,7 @@ It has these top-level messages:
 */
 package memcache
 
-import proto "code.google.com/p/goprotobuf/proto"
+import proto "github.com/golang/protobuf/proto"
 import math "math"
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -318,7 +318,7 @@ func (m *AppOverride) GetMemcacheShardingStrategy() []byte {
 
 type MemcacheGetRequest struct {
 	Key              [][]byte     `protobuf:"bytes,1,rep,name=key" json:"key,omitempty"`
-	NameSpace        *string      `protobuf:"bytes,2,opt,name=name_space" json:"name_space,omitempty"`
+	NameSpace        *string      `protobuf:"bytes,2,opt,name=name_space,def=" json:"name_space,omitempty"`
 	ForCas           *bool        `protobuf:"varint,4,opt,name=for_cas" json:"for_cas,omitempty"`
 	Override         *AppOverride `protobuf:"bytes,5,opt,name=override" json:"override,omitempty"`
 	XXX_unrecognized []byte       `json:"-"`
@@ -422,7 +422,7 @@ func (m *MemcacheGetResponse_Item) GetExpiresInSeconds() int32 {
 
 type MemcacheSetRequest struct {
 	Item             []*MemcacheSetRequest_Item `protobuf:"group,1,rep" json:"item,omitempty"`
-	NameSpace        *string                    `protobuf:"bytes,7,opt,name=name_space" json:"name_space,omitempty"`
+	NameSpace        *string                    `protobuf:"bytes,7,opt,name=name_space,def=" json:"name_space,omitempty"`
 	Override         *AppOverride               `protobuf:"bytes,10,opt,name=override" json:"override,omitempty"`
 	XXX_unrecognized []byte                     `json:"-"`
 }
@@ -537,7 +537,7 @@ func (m *MemcacheSetResponse) GetSetStatus() []MemcacheSetResponse_SetStatusCode
 
 type MemcacheDeleteRequest struct {
 	Item             []*MemcacheDeleteRequest_Item `protobuf:"group,1,rep" json:"item,omitempty"`
-	NameSpace        *string                       `protobuf:"bytes,4,opt,name=name_space" json:"name_space,omitempty"`
+	NameSpace        *string                       `protobuf:"bytes,4,opt,name=name_space,def=" json:"name_space,omitempty"`
 	Override         *AppOverride                  `protobuf:"bytes,5,opt,name=override" json:"override,omitempty"`
 	XXX_unrecognized []byte                        `json:"-"`
 }
@@ -611,7 +611,7 @@ func (m *MemcacheDeleteResponse) GetDeleteStatus() []MemcacheDeleteResponse_Dele
 
 type MemcacheIncrementRequest struct {
 	Key              []byte                              `protobuf:"bytes,1,req,name=key" json:"key,omitempty"`
-	NameSpace        *string                             `protobuf:"bytes,4,opt,name=name_space" json:"name_space,omitempty"`
+	NameSpace        *string                             `protobuf:"bytes,4,opt,name=name_space,def=" json:"name_space,omitempty"`
 	Delta            *uint64                             `protobuf:"varint,2,opt,name=delta,def=1" json:"delta,omitempty"`
 	Direction        *MemcacheIncrementRequest_Direction `protobuf:"varint,3,opt,name=direction,enum=appengine.MemcacheIncrementRequest_Direction,def=1" json:"direction,omitempty"`
 	InitialValue     *uint64                             `protobuf:"varint,5,opt,name=initial_value" json:"initial_value,omitempty"`
@@ -701,7 +701,7 @@ func (m *MemcacheIncrementResponse) GetIncrementStatus() MemcacheIncrementRespon
 }
 
 type MemcacheBatchIncrementRequest struct {
-	NameSpace        *string                     `protobuf:"bytes,1,opt,name=name_space" json:"name_space,omitempty"`
+	NameSpace        *string                     `protobuf:"bytes,1,opt,name=name_space,def=" json:"name_space,omitempty"`
 	Item             []*MemcacheIncrementRequest `protobuf:"bytes,2,rep,name=item" json:"item,omitempty"`
 	Override         *AppOverride                `protobuf:"bytes,3,opt,name=override" json:"override,omitempty"`
 	XXX_unrecognized []byte                      `json:"-"`
@@ -862,7 +862,7 @@ func (m *MemcacheStatsResponse) GetStats() *MergedNamespaceStats {
 
 type MemcacheGrabTailRequest struct {
 	ItemCount        *int32       `protobuf:"varint,1,req,name=item_count" json:"item_count,omitempty"`
-	NameSpace        *string      `protobuf:"bytes,2,opt,name=name_space" json:"name_space,omitempty"`
+	NameSpace        *string      `protobuf:"bytes,2,opt,name=name_space,def=" json:"name_space,omitempty"`
 	Override         *AppOverride `protobuf:"bytes,3,opt,name=override" json:"override,omitempty"`
 	XXX_unrecognized []byte       `json:"-"`
 }
