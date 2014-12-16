@@ -35,7 +35,9 @@ See https://cloud.google.com/appengine/docs/go/modules/#Go_Instance_scaling_and_
 
 ### 2. Update import paths
 
-The import paths for App Engine API packages need to be made relative to `google.golang.org/appengine`.
+The import paths for App Engine packages are now fully qualified, based at `google.golang.org/appengine`.
+You will need to update your code to use import paths starting with that; for instance,
+code importing `appengine/datastore` will now need to import `google.golang.org/appengine/datastore`.
 You can do that manually, or by running this command to recursively update all Go source files in the current directory:
 (may require GNU sed)
 ```
@@ -59,5 +61,5 @@ This list summarises the differences:
 * `appengine.BackendHostname` and `appengine.BackendInstance` were for the deprecated backends feature.
   Use `appengine.ModuleHostname`and `appengine.ModuleName` instead.
 * `appengine.IsCapabilityDisabled` and `appengine/capability` are obsolete.
-* Most of `appengine/file` is deprecated. Use [Google Cloud Storage](https://code.google.com/p/google-api-go-client/wiki/GettingStarted) instead.
+* Most of `appengine/file` is deprecated. Use [Google Cloud Storage](https://godoc.org/google.golang.org/cloud/storage) instead.
 * `appengine/socket` is deprecated. Use the standard `net` package instead.
