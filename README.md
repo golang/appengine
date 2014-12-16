@@ -1,5 +1,7 @@
 # Go App Engine for Managed VMs
 
+[![Build Status](https://travis-ci.org/golang/appengine.svg)](https://travis-ci.org/golang/appengine)
+
 This repository supports the Go runtime for Managed VMs on App Engine.
 It provides APIs for interacting with App Engine services.
 Its canonical import path is `google.golang.org/appengine`.
