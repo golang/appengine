@@ -6,9 +6,10 @@ go:
 install:
   - export GOPATH="$HOME/gopath"
   - mkdir -p "$GOPATH/src/google.golang.org"
-  - ln -s "$TRAVIS_BUILD_DIR" "$GOPATH/src/google.golang.org/appengine"
+  - mv "$TRAVIS_BUILD_DIR" "$GOPATH/src/google.golang.org/appengine"
   - go get -v -t -d google.golang.org/appengine/...
 
 script:
+  - echo "$GOPATH"
   - go test -v google.golang.org/appengine/...
   - go test -v -race google.golang.org/appengine/...
