@@ -458,6 +458,7 @@ func gobUnmarshal(data []byte, v interface{}) error {
 }
 
 // Statistics represents a set of statistics about the memcache cache.
+// This may include items that have expired but have not yet been removed from the cache.
 type Statistics struct {
 	Hits     uint64 // Counter of cache hits
 	Misses   uint64 // Counter of cache misses
