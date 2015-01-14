@@ -230,6 +230,9 @@ func checkMultiArg(v reflect.Value) (m multiArgType, elemType reflect.Type) {
 // unexported in the destination struct. ErrFieldMismatch is only returned if
 // dst is a struct pointer.
 func Get(c appengine.Context, key *Key, dst interface{}) error {
+	if dst == nil { // GetMulti catches nil interface; we need to catch nil ptr here
+		return ErrInvalidEntityType
+	}
 	err := GetMulti(c, []*Key{key}, []interface{}{dst})
 	if me, ok := err.(appengine.MultiError); ok {
 		return me[0]
@@ -280,6 +283,9 @@ func GetMulti(c appengine.Context, key []*Key, dst interface{}) error {
 			elem := v.Index(i)
 			if multiArgType == multiArgTypePropertyLoadSaver || multiArgType == multiArgTypeStruct {
 				elem = elem.Addr()
+			}
+			if multiArgType == multiArgTypeStructPtr && elem.IsNil() {
+				elem.Set(reflect.New(elem.Type().Elem()))
 			}
 			multiErr[i] = loadEntity(elem.Interface(), e.Entity)
 		}
