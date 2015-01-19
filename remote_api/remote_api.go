@@ -132,8 +132,14 @@ func (rm *rawMessage) Unmarshal(buf []byte) error {
 }
 
 func requestSupported(service, method string) bool {
-	// Only allow datastore_v3 for now, or AllocateIds for datastore_v4.
-	return service == "datastore_v3" || (service == "datastore_v4" && method == "AllocateIds")
+	// This list of supported services is taken from SERVICE_PB_MAP in remote_api_services.py
+	switch service {
+	case "app_identity_service", "blobstore", "capability_service", "channel", "datastore_v3",
+		"datastore_v4", "file", "images", "logservice", "mail", "matcher", "memcache", "remote_datastore",
+		"remote_socket", "search", "modules", "system", "taskqueue", "urlfetch", "user", "xmpp":
+		return true
+	}
+	return false
 }
 
 // Methods to satisfy proto.Message.
