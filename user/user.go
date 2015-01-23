@@ -78,13 +78,14 @@ func LogoutURL(c context.Context, dest string) (string, error) {
 // Current returns the currently logged-in user,
 // or nil if the user is not signed in.
 func Current(c context.Context) *User {
+	h := internal.IncomingHeaders(c)
 	u := &User{
-		Email:             internal.VirtAPI(c, "user:Email"),
-		AuthDomain:        internal.VirtAPI(c, "user:AuthDomain"),
-		ID:                internal.VirtAPI(c, "user:ID"),
-		Admin:             internal.VirtAPI(c, "user:IsAdmin") == "1",
-		FederatedIdentity: internal.VirtAPI(c, "user:FederatedIdentity"),
-		FederatedProvider: internal.VirtAPI(c, "user:FederatedProvider"),
+		Email:             h.Get("X-AppEngine-User-Email"),
+		AuthDomain:        h.Get("X-AppEngine-Auth-Domain"),
+		ID:                h.Get("X-AppEngine-User-Id"),
+		Admin:             h.Get("X-AppEngine-User-Is-Admin") == "1",
+		FederatedIdentity: h.Get("X-AppEngine-Federated-Identity"),
+		FederatedProvider: h.Get("X-AppEngine-Federated-Provider"),
 	}
 	if u.Email == "" && u.FederatedIdentity == "" {
 		return nil
@@ -95,7 +96,8 @@ func Current(c context.Context) *User {
 // IsAdmin returns true if the current user is signed in and
 // is currently registered as an administrator of the application.
 func IsAdmin(c context.Context) bool {
-	return internal.VirtAPI(c, "user:IsAdmin") == "1"
+	h := internal.IncomingHeaders(c)
+	return h.Get("X-AppEngine-User-Is-Admin") == "1"
 }
 
 func init() {

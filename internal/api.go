@@ -240,6 +240,10 @@ func WithAppIDOverride(ctx netcontext.Context, appID string) netcontext.Context 
 	return netcontext.WithValue(ctx, &appIDOverrideKey, appID)
 }
 
+func IncomingHeaders(ctx netcontext.Context) http.Header {
+	return fromContext(ctx).req.Header
+}
+
 func NewContext(req *http.Request) netcontext.Context {
 	ctxs.Lock()
 	c := ctxs.m[req]
@@ -392,13 +396,6 @@ func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error)
 var virtualMethodHeaders = map[string]string{
 	"GetNamespace":        curNamespaceHeader,
 	"GetDefaultNamespace": defNamespaceHeader,
-
-	"user:Email":             http.CanonicalHeaderKey("X-AppEngine-User-Email"),
-	"user:AuthDomain":        http.CanonicalHeaderKey("X-AppEngine-Auth-Domain"),
-	"user:ID":                http.CanonicalHeaderKey("X-AppEngine-User-Id"),
-	"user:IsAdmin":           http.CanonicalHeaderKey("X-AppEngine-User-Is-Admin"),
-	"user:FederatedIdentity": http.CanonicalHeaderKey("X-AppEngine-Federated-Identity"),
-	"user:FederatedProvider": http.CanonicalHeaderKey("X-AppEngine-Federated-Provider"),
 }
 
 func Call(ctx netcontext.Context, service, method string, in, out proto.Message, opts *CallOptions) error {
