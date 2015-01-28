@@ -83,7 +83,7 @@ func handle(w http.ResponseWriter, req *http.Request) {
 
 	rawReq := &rawMessage{remReq.Request}
 	rawRes := &rawMessage{}
-	err = internal.Call(c, service, method, rawReq, rawRes, nil)
+	err = internal.Call(c, service, method, rawReq, rawRes)
 
 	remRes := &pb.Response{}
 	if err == nil {

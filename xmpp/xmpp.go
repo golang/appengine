@@ -108,7 +108,7 @@ func (m *Message) Send(c context.Context) error {
 		req.FromJid = &m.Sender
 	}
 	res := &pb.XmppMessageResponse{}
-	if err := internal.Call(c, "xmpp", "SendMessage", req, res, nil); err != nil {
+	if err := internal.Call(c, "xmpp", "SendMessage", req, res); err != nil {
 		return err
 	}
 
@@ -138,7 +138,7 @@ func Invite(c context.Context, to, from string) error {
 		req.FromJid = &from
 	}
 	res := &pb.XmppInviteResponse{}
-	return internal.Call(c, "xmpp", "SendInvite", req, res, nil)
+	return internal.Call(c, "xmpp", "SendInvite", req, res)
 }
 
 // Send sends a presence update.
@@ -159,7 +159,7 @@ func (p *Presence) Send(c context.Context) error {
 		req.Status = &p.Status
 	}
 	res := &pb.XmppSendPresenceResponse{}
-	return internal.Call(c, "xmpp", "SendPresence", req, res, nil)
+	return internal.Call(c, "xmpp", "SendPresence", req, res)
 }
 
 var presenceMap = map[pb.PresenceResponse_SHOW]string{
@@ -183,7 +183,7 @@ func GetPresence(c context.Context, to string, from string) (string, error) {
 		req.FromJid = &from
 	}
 	res := &pb.PresenceResponse{}
-	if err := internal.Call(c, "xmpp", "GetPresence", req, res, nil); err != nil {
+	if err := internal.Call(c, "xmpp", "GetPresence", req, res); err != nil {
 		return "", err
 	}
 	if !*res.IsAvailable || res.Presence == nil {
@@ -210,7 +210,7 @@ func GetPresenceMulti(c context.Context, to []string, from string) ([]string, er
 	}
 	res := &pb.BulkPresenceResponse{}
 
-	if err := internal.Call(c, "xmpp", "BulkGetPresence", req, res, nil); err != nil {
+	if err := internal.Call(c, "xmpp", "BulkGetPresence", req, res); err != nil {
 		return nil, err
 	}
 

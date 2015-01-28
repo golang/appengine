@@ -63,7 +63,7 @@ func RunTransactionOnce(c netcontext.Context, f func(netcontext.Context) error, 
 	if xg {
 		req.AllowMultipleEg = proto.Bool(true)
 	}
-	if err := Call(c, "datastore_v3", "BeginTransaction", req, &t.transaction, nil); err != nil {
+	if err := Call(c, "datastore_v3", "BeginTransaction", req, &t.transaction); err != nil {
 		return err
 	}
 
@@ -76,7 +76,7 @@ func RunTransactionOnce(c netcontext.Context, f func(netcontext.Context) error, 
 		t.finished = true
 		// Ignore the error return value, since we are already returning a non-nil
 		// error (or we're panicking).
-		Call(c, "datastore_v3", "Rollback", &t.transaction, &basepb.VoidProto{}, nil)
+		Call(c, "datastore_v3", "Rollback", &t.transaction, &basepb.VoidProto{})
 	}()
 	if err := f(withTransaction(c, t)); err != nil {
 		return err
@@ -85,7 +85,7 @@ func RunTransactionOnce(c netcontext.Context, f func(netcontext.Context) error, 
 
 	// Commit the transaction.
 	res := &pb.CommitResponse{}
-	err := Call(c, "datastore_v3", "Commit", &t.transaction, res, nil)
+	err := Call(c, "datastore_v3", "Commit", &t.transaction, res)
 	if ae, ok := err.(*APIError); ok {
 		/* TODO: restore this conditional
 		if appengine.IsDevAppServer() {

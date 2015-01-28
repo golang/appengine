@@ -38,7 +38,7 @@ func Create(c context.Context, clientID string) (token string, err error) {
 		ApplicationKey: &clientID,
 	}
 	resp := &pb.CreateChannelResponse{}
-	err = internal.Call(c, service, "CreateChannel", req, resp, nil)
+	err = internal.Call(c, service, "CreateChannel", req, resp)
 	token = resp.GetToken()
 	return token, remapError(err)
 }
@@ -50,7 +50,7 @@ func Send(c context.Context, clientID, message string) error {
 		Message:        &message,
 	}
 	resp := &basepb.VoidProto{}
-	return remapError(internal.Call(c, service, "SendChannelMessage", req, resp, nil))
+	return remapError(internal.Call(c, service, "SendChannelMessage", req, resp))
 }
 
 // SendJSON is a helper function that sends a JSON-encoded value

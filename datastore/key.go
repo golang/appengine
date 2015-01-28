@@ -295,7 +295,7 @@ func AllocateIDs(c context.Context, kind string, parent *Key, n int) (low, high 
 		Size:     proto.Int64(int64(n)),
 	}
 	res := &pb.AllocateIdsResponse{}
-	if err := internal.Call(c, "datastore_v3", "AllocateIds", req, res, nil); err != nil {
+	if err := internal.Call(c, "datastore_v3", "AllocateIds", req, res); err != nil {
 		return 0, 0, err
 	}
 	// The protobuf is inclusive at both ends. Idiomatic Go (e.g. slices, for loops)

@@ -58,7 +58,7 @@ type single struct {
 	f               reflect.Value
 }
 
-func (s *single) call(ctx context.Context, service, method string, in, out proto.Message, opts *internal.CallOptions) error {
+func (s *single) call(ctx context.Context, service, method string, in, out proto.Message) error {
 	if service == "__go__" {
 		if method == "GetNamespace" {
 			return nil // always yield an empty namespace

@@ -22,7 +22,7 @@ func CurrentOAuth(c context.Context, scope string) (*User, error) {
 	}
 	res := &pb.GetOAuthUserResponse{}
 
-	err := internal.Call(c, "user", "GetOAuthUser", req, res, nil)
+	err := internal.Call(c, "user", "GetOAuthUser", req, res)
 	if err != nil {
 		return nil, err
 	}
@@ -40,7 +40,7 @@ func OAuthConsumerKey(c context.Context) (string, error) {
 	req := &pb.CheckOAuthSignatureRequest{}
 	res := &pb.CheckOAuthSignatureResponse{}
 
-	err := internal.Call(c, "user", "CheckOAuthSignature", req, res, nil)
+	err := internal.Call(c, "user", "CheckOAuthSignature", req, res)
 	if err != nil {
 		return "", err
 	}

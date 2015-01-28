@@ -112,7 +112,7 @@ func send(c context.Context, method string, msg *Message) error {
 		}
 	}
 	res := &bpb.VoidProto{}
-	if err := internal.Call(c, "mail", method, req, res, nil); err != nil {
+	if err := internal.Call(c, "mail", method, req, res); err != nil {
 		return err
 	}
 	return nil

@@ -242,7 +242,7 @@ func (x *Index) Put(c context.Context, id string, src interface{}) (string, erro
 		},
 	}
 	res := &pb.IndexDocumentResponse{}
-	if err := internal.Call(c, "search", "IndexDocument", req, res, nil); err != nil {
+	if err := internal.Call(c, "search", "IndexDocument", req, res); err != nil {
 		return "", err
 	}
 	if len(res.Status) > 0 {
@@ -282,7 +282,7 @@ func (x *Index) Get(c context.Context, id string, dst interface{}) error {
 		},
 	}
 	res := &pb.ListDocumentsResponse{}
-	if err := internal.Call(c, "search", "ListDocuments", req, res, nil); err != nil {
+	if err := internal.Call(c, "search", "ListDocuments", req, res); err != nil {
 		return err
 	}
 	if res.Status == nil || res.Status.GetCode() != pb.SearchServiceError_OK {
@@ -306,7 +306,7 @@ func (x *Index) Delete(c context.Context, id string) error {
 		},
 	}
 	res := &pb.DeleteDocumentResponse{}
-	if err := internal.Call(c, "search", "DeleteDocument", req, res, nil); err != nil {
+	if err := internal.Call(c, "search", "DeleteDocument", req, res); err != nil {
 		return err
 	}
 	if len(res.Status) != 1 {
@@ -357,7 +357,7 @@ func moreList(t *Iterator) error {
 	}
 
 	res := &pb.ListDocumentsResponse{}
-	if err := internal.Call(t.c, "search", "ListDocuments", req, res, nil); err != nil {
+	if err := internal.Call(t.c, "search", "ListDocuments", req, res); err != nil {
 		return err
 	}
 	if res.Status == nil || res.Status.GetCode() != pb.SearchServiceError_OK {
@@ -443,7 +443,7 @@ func moreSearch(t *Iterator) error {
 		req.Params.Cursor = t.searchCursor
 	}
 	res := &pb.SearchResponse{}
-	if err := internal.Call(t.c, "search", "Search", req, res, nil); err != nil {
+	if err := internal.Call(t.c, "search", "Search", req, res); err != nil {
 		return err
 	}
 	if res.Status == nil || res.Status.GetCode() != pb.SearchServiceError_OK {

@@ -48,7 +48,7 @@ func ModuleHostname(c context.Context, module, version, instance string) (string
 		req.Instance = &instance
 	}
 	res := &modpb.GetHostnameResponse{}
-	if err := internal.Call(c, "modules", "GetHostname", req, res, nil); err != nil {
+	if err := internal.Call(c, "modules", "GetHostname", req, res); err != nil {
 		return "", err
 	}
 	return *res.Hostname, nil
@@ -81,7 +81,7 @@ func AccessToken(c context.Context, scopes ...string) (token string, expiry time
 	req := &pb.GetAccessTokenRequest{Scope: scopes}
 	res := &pb.GetAccessTokenResponse{}
 
-	err = internal.Call(c, "app_identity_service", "GetAccessToken", req, res, nil)
+	err = internal.Call(c, "app_identity_service", "GetAccessToken", req, res)
 	if err != nil {
 		return "", time.Time{}, err
 	}
@@ -99,7 +99,7 @@ type Certificate struct {
 func PublicCertificates(c context.Context) ([]Certificate, error) {
 	req := &pb.GetPublicCertificateForAppRequest{}
 	res := &pb.GetPublicCertificateForAppResponse{}
-	if err := internal.Call(c, "app_identity_service", "GetPublicCertificatesForApp", req, res, nil); err != nil {
+	if err := internal.Call(c, "app_identity_service", "GetPublicCertificatesForApp", req, res); err != nil {
 		return nil, err
 	}
 	var cs []Certificate
@@ -118,7 +118,7 @@ func ServiceAccount(c context.Context) (string, error) {
 	req := &pb.GetServiceAccountNameRequest{}
 	res := &pb.GetServiceAccountNameResponse{}
 
-	err := internal.Call(c, "app_identity_service", "GetServiceAccountName", req, res, nil)
+	err := internal.Call(c, "app_identity_service", "GetServiceAccountName", req, res)
 	if err != nil {
 		return "", err
 	}
@@ -130,7 +130,7 @@ func SignBytes(c context.Context, bytes []byte) (string, []byte, error) {
 	req := &pb.SignForAppRequest{BytesToSign: bytes}
 	res := &pb.SignForAppResponse{}
 
-	err := internal.Call(c, "app_identity_service", "SignForApp", req, res, nil)
+	err := internal.Call(c, "app_identity_service", "SignForApp", req, res)
 	if err != nil {
 		return "", nil, err
 	}

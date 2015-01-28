@@ -135,7 +135,7 @@ func GetMulti(c context.Context, key []string) (map[string]*Item, error) {
 		ForCas: proto.Bool(true),
 	}
 	res := &pb.MemcacheGetResponse{}
-	if err := internal.Call(c, "memcache", "Get", req, res, nil); err != nil {
+	if err := internal.Call(c, "memcache", "Get", req, res); err != nil {
 		return nil, err
 	}
 	m := make(map[string]*Item, len(res.Item))
@@ -167,7 +167,7 @@ func DeleteMulti(c context.Context, key []string) error {
 		req.Item[i] = &pb.MemcacheDeleteRequest_Item{Key: []byte(k)}
 	}
 	res := &pb.MemcacheDeleteResponse{}
-	if err := internal.Call(c, "memcache", "Delete", req, res, nil); err != nil {
+	if err := internal.Call(c, "memcache", "Delete", req, res); err != nil {
 		return err
 	}
 	if len(res.DeleteStatus) != len(key) {
@@ -224,7 +224,7 @@ func incr(c context.Context, key string, delta int64, initialValue *uint64) (new
 		req.Direction = pb.MemcacheIncrementRequest_DECREMENT.Enum()
 	}
 	res := &pb.MemcacheIncrementResponse{}
-	err = internal.Call(c, "memcache", "Increment", req, res, nil)
+	err = internal.Call(c, "memcache", "Increment", req, res)
 	if err != nil {
 		return
 	}
@@ -283,7 +283,7 @@ func set(c context.Context, item []*Item, value [][]byte, policy pb.MemcacheSetR
 		req.Item[i] = p
 	}
 	res := &pb.MemcacheSetResponse{}
-	if err := internal.Call(c, "memcache", "Set", req, res, nil); err != nil {
+	if err := internal.Call(c, "memcache", "Set", req, res); err != nil {
 		return err
 	}
 	if len(res.SetStatus) != len(item) {
@@ -475,7 +475,7 @@ type Statistics struct {
 func Stats(c context.Context) (*Statistics, error) {
 	req := &pb.MemcacheStatsRequest{}
 	res := &pb.MemcacheStatsResponse{}
-	if err := internal.Call(c, "memcache", "Stats", req, res, nil); err != nil {
+	if err := internal.Call(c, "memcache", "Stats", req, res); err != nil {
 		return nil, err
 	}
 	if res.Stats == nil {
@@ -495,7 +495,7 @@ func Stats(c context.Context) (*Statistics, error) {
 func Flush(c context.Context) error {
 	req := &pb.MemcacheFlushRequest{}
 	res := &pb.MemcacheFlushResponse{}
-	return internal.Call(c, "memcache", "FlushAll", req, res, nil)
+	return internal.Call(c, "memcache", "FlushAll", req, res)
 }
 
 func namespaceMod(m proto.Message, namespace string) {

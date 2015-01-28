@@ -20,7 +20,7 @@ func DefaultBucketName(c context.Context) (string, error) {
 	req := &aipb.GetDefaultGcsBucketNameRequest{}
 	res := &aipb.GetDefaultGcsBucketNameResponse{}
 
-	err := internal.Call(c, "app_identity_service", "GetDefaultGcsBucketName", req, res, nil)
+	err := internal.Call(c, "app_identity_service", "GetDefaultGcsBucketName", req, res)
 	if err != nil {
 		return "", fmt.Errorf("file: no default bucket name returned in RPC response: %v", res)
 	}

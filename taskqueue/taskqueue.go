@@ -237,7 +237,7 @@ func Add(c context.Context, task *Task, queueName string) (*Task, error) {
 		return nil, err
 	}
 	res := &pb.TaskQueueAddResponse{}
-	if err := internal.Call(c, "taskqueue", "Add", req, res, nil); err != nil {
+	if err := internal.Call(c, "taskqueue", "Add", req, res); err != nil {
 		apiErr, ok := err.(*internal.APIError)
 		if ok && alreadyAddedErrors[pb.TaskQueueServiceError_ErrorCode(apiErr.Code)] {
 			return nil, ErrTaskAlreadyAdded
@@ -270,7 +270,7 @@ func AddMulti(c context.Context, tasks []*Task, queueName string) ([]*Task, erro
 		return nil, me
 	}
 	res := &pb.TaskQueueBulkAddResponse{}
-	if err := internal.Call(c, "taskqueue", "BulkAdd", req, res, nil); err != nil {
+	if err := internal.Call(c, "taskqueue", "BulkAdd", req, res); err != nil {
 		return nil, err
 	}
 	if len(res.Taskresult) != len(tasks) {
@@ -326,7 +326,7 @@ func DeleteMulti(c context.Context, tasks []*Task, queueName string) error {
 		TaskName:  taskNames,
 	}
 	res := &pb.TaskQueueDeleteResponse{}
-	if err := internal.Call(c, "taskqueue", "Delete", req, res, nil); err != nil {
+	if err := internal.Call(c, "taskqueue", "Delete", req, res); err != nil {
 		return err
 	}
 	if a, b := len(req.TaskName), len(res.Result); a != b {
@@ -360,10 +360,7 @@ func lease(c context.Context, maxTasks int, queueName string, leaseTime int, gro
 		Tag:          tag,
 	}
 	res := &pb.TaskQueueQueryAndOwnTasksResponse{}
-	callOpts := &internal.CallOptions{
-		Timeout: 10 * time.Second,
-	}
-	if err := internal.Call(c, "taskqueue", "QueryAndOwnTasks", req, res, callOpts); err != nil {
+	if err := internal.Call(c, "taskqueue", "QueryAndOwnTasks", req, res); err != nil {
 		return nil, err
 	}
 	tasks := make([]*Task, len(res.Task))
@@ -404,7 +401,7 @@ func Purge(c context.Context, queueName string) error {
 		QueueName: []byte(queueName),
 	}
 	res := &pb.TaskQueuePurgeQueueResponse{}
-	return internal.Call(c, "taskqueue", "PurgeQueue", req, res, nil)
+	return internal.Call(c, "taskqueue", "PurgeQueue", req, res)
 }
 
 // ModifyLease modifies the lease of a task.
@@ -421,7 +418,7 @@ func ModifyLease(c context.Context, task *Task, queueName string, leaseTime int)
 		LeaseSeconds: proto.Float64(float64(leaseTime)),
 	}
 	res := &pb.TaskQueueModifyTaskLeaseResponse{}
-	if err := internal.Call(c, "taskqueue", "ModifyTaskLease", req, res, nil); err != nil {
+	if err := internal.Call(c, "taskqueue", "ModifyTaskLease", req, res); err != nil {
 		return err
 	}
 	task.ETA = time.Unix(0, *res.UpdatedEtaUsec*1e3)
@@ -450,10 +447,7 @@ func QueueStats(c context.Context, queueNames []string) ([]QueueStatistics, erro
 		req.QueueName[i] = []byte(q)
 	}
 	res := &pb.TaskQueueFetchQueueStatsResponse{}
-	callOpts := &internal.CallOptions{
-		Timeout: 10 * time.Second,
-	}
-	if err := internal.Call(c, "taskqueue", "FetchQueueStats", req, res, callOpts); err != nil {
+	if err := internal.Call(c, "taskqueue", "FetchQueueStats", req, res); err != nil {
 		return nil, err
 	}
 	qs := make([]QueueStatistics, len(res.Queuestats))

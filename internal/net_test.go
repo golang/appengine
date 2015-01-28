@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	netcontext "golang.org/x/net/context"
+
 	basepb "google.golang.org/appengine/internal/base"
 )
 
@@ -36,14 +38,13 @@ func TestDialLimit(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		go func() {
 			defer wg.Done()
-			Call(toContext(c), "errors", "RunSlowly", &basepb.VoidProto{}, &basepb.VoidProto{}, nil)
+			Call(toContext(c), "errors", "RunSlowly", &basepb.VoidProto{}, &basepb.VoidProto{})
 		}()
 	}
 	time.Sleep(50 * time.Millisecond) // let those two RPCs start
 
-	err := Call(toContext(c), "errors", "Non200", &basepb.VoidProto{}, &basepb.VoidProto{}, &CallOptions{
-		Timeout: 50 * time.Millisecond,
-	})
+	ctx, _ := netcontext.WithTimeout(toContext(c), 50*time.Millisecond)
+	err := Call(ctx, "errors", "Non200", &basepb.VoidProto{}, &basepb.VoidProto{})
 	if err != errTimeout {
 		t.Errorf("Non200 RPC returned with err %v, want errTimeout", err)
 	}

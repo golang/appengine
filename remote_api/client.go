@@ -78,7 +78,7 @@ func (c *remoteContext) logf(level int64, format string, args ...interface{}) {
 	log.Printf(logLevels[level]+": "+format, args...)
 }
 
-func (c *remoteContext) call(ctx context.Context, service, method string, in, out proto.Message, opts *internal.CallOptions) error {
+func (c *remoteContext) call(ctx context.Context, service, method string, in, out proto.Message) error {
 	req, err := proto.Marshal(in)
 	if err != nil {
 		return fmt.Errorf("error marshalling request: %v", err)
@@ -96,7 +96,7 @@ func (c *remoteContext) call(ctx context.Context, service, method string, in, ou
 		return fmt.Errorf("proto.Marshal: %v", err)
 	}
 
-	// TODO(djd): Respect opts.Timeout?
+	// TODO(djd): Respect ctx.Deadline()?
 	resp, err := c.client.Post(c.url, "application/octet-stream", bytes.NewReader(req))
 	if err != nil {
 		return fmt.Errorf("error sending request: %v", err)

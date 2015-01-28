@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	netcontext "golang.org/x/net/context"
 
 	basepb "google.golang.org/appengine/internal/base"
 	remotepb "google.golang.org/appengine/internal/remote_api"
@@ -166,7 +167,7 @@ func TestAPICall(t *testing.T) {
 		Value: proto.String("Doctor Who"),
 	}
 	res := &basepb.StringProto{}
-	err := Call(toContext(c), "actordb", "LookupActor", req, res, nil)
+	err := Call(toContext(c), "actordb", "LookupActor", req, res)
 	if err != nil {
 		t.Fatalf("API call failed: %v", err)
 	}
@@ -190,10 +191,8 @@ func TestAPICallRPCFailure(t *testing.T) {
 	}
 	f.hang = make(chan int) // only for RunSlowly
 	for _, tc := range testCases {
-		opts := &CallOptions{
-			Timeout: 100 * time.Millisecond,
-		}
-		err := Call(toContext(c), "errors", tc.method, &basepb.VoidProto{}, &basepb.VoidProto{}, opts)
+		ctx, _ := netcontext.WithTimeout(toContext(c), 100*time.Millisecond)
+		err := Call(ctx, "errors", tc.method, &basepb.VoidProto{}, &basepb.VoidProto{})
 		ce, ok := err.(*CallError)
 		if !ok {
 			t.Errorf("%s: API call error is %T (%v), want *CallError", tc.method, err, err)
@@ -217,7 +216,7 @@ func TestAPICallDialFailure(t *testing.T) {
 	os.Setenv("API_PORT", "")
 
 	start := time.Now()
-	err := Call(toContext(c), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{}, nil)
+	err := Call(toContext(c), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{})
 	const max = 1 * time.Second
 	if taken := time.Since(start); taken > max {
 		t.Errorf("Dial hang took too long: %v > %v", taken, max)
@@ -331,12 +330,10 @@ func TestAPICallAllocations(t *testing.T) {
 		Value: proto.String("Doctor Who"),
 	}
 	res := &basepb.StringProto{}
-	opts := &CallOptions{
-		Timeout: 100 * time.Millisecond,
-	}
 	var apiErr error
 	avg := testing.AllocsPerRun(100, func() {
-		if err := Call(toContext(c), "actordb", "LookupActor", req, res, opts); err != nil && apiErr == nil {
+		ctx, _ := netcontext.WithTimeout(toContext(c), 100*time.Millisecond)
+		if err := Call(ctx, "actordb", "LookupActor", req, res); err != nil && apiErr == nil {
 			apiErr = err // get the first error only
 		}
 	})
@@ -345,7 +342,7 @@ func TestAPICallAllocations(t *testing.T) {
 	}
 
 	// Lots of room for improvement...
-	const min, max float64 = 80, 90
+	const min, max float64 = 80, 95
 	if avg < min || max < avg {
 		t.Errorf("Allocations per API call = %g, want in [%g,%g]", avg, min, max)
 	}

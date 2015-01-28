@@ -270,7 +270,7 @@ func GetMulti(c context.Context, key []*Key, dst interface{}) error {
 		Key: multiKeyToProto(internal.FullyQualifiedAppID(c), key),
 	}
 	res := &pb.GetResponse{}
-	if err := internal.Call(c, "datastore_v3", "Get", req, res, nil); err != nil {
+	if err := internal.Call(c, "datastore_v3", "Get", req, res); err != nil {
 		return err
 	}
 	if len(key) != len(res.Entity) {
@@ -347,7 +347,7 @@ func PutMulti(c context.Context, key []*Key, src interface{}) ([]*Key, error) {
 		req.Entity = append(req.Entity, sProto)
 	}
 	res := &pb.PutResponse{}
-	if err := internal.Call(c, "datastore_v3", "Put", req, res, nil); err != nil {
+	if err := internal.Call(c, "datastore_v3", "Put", req, res); err != nil {
 		return nil, err
 	}
 	if len(key) != len(res.Key) {
@@ -385,7 +385,7 @@ func DeleteMulti(c context.Context, key []*Key) error {
 		Key: multiKeyToProto(internal.FullyQualifiedAppID(c), key),
 	}
 	res := &pb.DeleteResponse{}
-	return internal.Call(c, "datastore_v3", "Delete", req, res, nil)
+	return internal.Call(c, "datastore_v3", "Delete", req, res)
 }
 
 func namespaceMod(m proto.Message, namespace string) {

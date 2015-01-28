@@ -303,7 +303,7 @@ func makeRequest(params *Query, appID, versionID string) (*pb.LogReadRequest, er
 // same structs.
 func (r *Result) run() error {
 	res := &pb.LogReadResponse{}
-	if err := internal.Call(r.context, "logservice", "Read", r.request, res, nil); err != nil {
+	if err := internal.Call(r.context, "logservice", "Read", r.request, res); err != nil {
 		return err
 	}
 

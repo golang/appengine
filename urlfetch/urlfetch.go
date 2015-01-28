@@ -136,11 +136,11 @@ func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 		FollowRedirects:               proto.Bool(false), // http.Client's responsibility
 		MustValidateServerCertificate: proto.Bool(!t.AllowInvalidServerCertificate),
 	}
-	opts := &internal.CallOptions{}
+	ctx := t.Context
 
 	if t.Deadline != 0 {
 		freq.Deadline = proto.Float64(t.Deadline.Seconds())
-		opts.Timeout = t.Deadline
+		ctx, _ = context.WithTimeout(ctx, t.Deadline)
 	}
 
 	for k, vals := range req.Header {
@@ -167,7 +167,7 @@ func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	}
 
 	fres := &pb.URLFetchResponse{}
-	if err := internal.Call(t.Context, "urlfetch", "Fetch", freq, fres, opts); err != nil {
+	if err := internal.Call(ctx, "urlfetch", "Fetch", freq, fres); err != nil {
 		return nil, err
 	}
 

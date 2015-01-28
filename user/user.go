@@ -56,7 +56,7 @@ func LoginURLFederated(c context.Context, dest, identity string) (string, error)
 		req.FederatedIdentity = proto.String(identity)
 	}
 	res := &pb.CreateLoginURLResponse{}
-	if err := internal.Call(c, "user", "CreateLoginURL", req, res, nil); err != nil {
+	if err := internal.Call(c, "user", "CreateLoginURL", req, res); err != nil {
 		return "", err
 	}
 	return *res.LoginUrl, nil
@@ -69,7 +69,7 @@ func LogoutURL(c context.Context, dest string) (string, error) {
 		DestinationUrl: proto.String(dest),
 	}
 	res := &pb.CreateLogoutURLResponse{}
-	if err := internal.Call(c, "user", "CreateLogoutURL", req, res, nil); err != nil {
+	if err := internal.Call(c, "user", "CreateLogoutURL", req, res); err != nil {
 		return "", err
 	}
 	return *res.LogoutUrl, nil

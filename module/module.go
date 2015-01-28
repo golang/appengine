@@ -22,7 +22,7 @@ import (
 func List(c context.Context) ([]string, error) {
 	req := &pb.GetModulesRequest{}
 	res := &pb.GetModulesResponse{}
-	err := internal.Call(c, "modules", "GetModules", req, res, nil)
+	err := internal.Call(c, "modules", "GetModules", req, res)
 	return res.Module, err
 }
 
@@ -38,7 +38,7 @@ func NumInstances(c context.Context, module, version string) (int, error) {
 	}
 	res := &pb.GetNumInstancesResponse{}
 
-	if err := internal.Call(c, "modules", "GetNumInstances", req, res, nil); err != nil {
+	if err := internal.Call(c, "modules", "GetNumInstances", req, res); err != nil {
 		return 0, err
 	}
 	return int(*res.Instances), nil
@@ -57,7 +57,7 @@ func SetNumInstances(c context.Context, module, version string, instances int) e
 	}
 	req.Instances = proto.Int64(int64(instances))
 	res := &pb.SetNumInstancesResponse{}
-	return internal.Call(c, "modules", "SetNumInstances", req, res, nil)
+	return internal.Call(c, "modules", "SetNumInstances", req, res)
 }
 
 // Versions returns the names of the versions that belong to the specified module.
@@ -68,7 +68,7 @@ func Versions(c context.Context, module string) ([]string, error) {
 		req.Module = &module
 	}
 	res := &pb.GetVersionsResponse{}
-	err := internal.Call(c, "modules", "GetVersions", req, res, nil)
+	err := internal.Call(c, "modules", "GetVersions", req, res)
 	return res.GetVersion(), err
 }
 
@@ -80,7 +80,7 @@ func DefaultVersion(c context.Context, module string) (string, error) {
 		req.Module = &module
 	}
 	res := &pb.GetDefaultVersionResponse{}
-	err := internal.Call(c, "modules", "GetDefaultVersion", req, res, nil)
+	err := internal.Call(c, "modules", "GetDefaultVersion", req, res)
 	return res.GetVersion(), err
 }
 
@@ -95,7 +95,7 @@ func Start(c context.Context, module, version string) error {
 		req.Version = &version
 	}
 	res := &pb.StartModuleResponse{}
-	return internal.Call(c, "modules", "StartModule", req, res, nil)
+	return internal.Call(c, "modules", "StartModule", req, res)
 }
 
 // Stop stops the specified version of the specified module.
@@ -109,5 +109,5 @@ func Stop(c context.Context, module, version string) error {
 		req.Version = &version
 	}
 	res := &pb.StopModuleResponse{}
-	return internal.Call(c, "modules", "StopModule", req, res, nil)
+	return internal.Call(c, "modules", "StopModule", req, res)
 }

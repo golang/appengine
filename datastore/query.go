@@ -360,7 +360,7 @@ func (q *Query) Count(c context.Context) (int, error) {
 		return 0, err
 	}
 	res := &pb.QueryResult{}
-	if err := internal.Call(c, "datastore_v3", "RunQuery", req, res, nil); err != nil {
+	if err := internal.Call(c, "datastore_v3", "RunQuery", req, res); err != nil {
 		return 0, err
 	}
 
@@ -421,7 +421,7 @@ func callNext(c context.Context, res *pb.QueryResult, offset, limit int32) error
 		req.Compile = proto.Bool(true)
 	}
 	res.Reset()
-	return internal.Call(c, "datastore_v3", "Next", req, res, nil)
+	return internal.Call(c, "datastore_v3", "Next", req, res)
 }
 
 // GetAll runs the query in the given context and returns all keys that match
@@ -520,7 +520,7 @@ func (q *Query) Run(c context.Context) *Iterator {
 		t.err = err
 		return t
 	}
-	if err := internal.Call(c, "datastore_v3", "RunQuery", &req, &t.res, nil); err != nil {
+	if err := internal.Call(c, "datastore_v3", "RunQuery", &req, &t.res); err != nil {
 		t.err = err
 		return t
 	}

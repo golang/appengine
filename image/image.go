@@ -36,7 +36,7 @@ func ServingURL(c context.Context, key appengine.BlobKey, opts *ServingURLOption
 		req.CreateSecureUrl = &opts.Secure
 	}
 	res := &pb.ImagesGetUrlBaseResponse{}
-	if err := internal.Call(c, "images", "GetUrlBase", req, res, nil); err != nil {
+	if err := internal.Call(c, "images", "GetUrlBase", req, res); err != nil {
 		return nil, err
 	}
 
@@ -59,7 +59,7 @@ func DeleteServingURL(c context.Context, key appengine.BlobKey) error {
 		BlobKey: (*string)(&key),
 	}
 	res := &pb.ImagesDeleteUrlBaseResponse{}
-	return internal.Call(c, "images", "DeleteUrlBase", req, res, nil)
+	return internal.Call(c, "images", "DeleteUrlBase", req, res)
 }
 
 func init() {

@@ -14,16 +14,11 @@ import (
 	"log"
 	"net/http"
 	"net/url"
-	"time"
 
 	"github.com/golang/protobuf/proto"
 
 	remotepb "google.golang.org/appengine/internal/remote_api"
 )
-
-type CallOptions struct {
-	Timeout time.Duration // if non-zero, overrides RPC default
-}
 
 // errorCodeMaps is a map of service name to the error code map for the service.
 var errorCodeMaps = make(map[string]map[int32]string)

@@ -36,7 +36,7 @@ type namespacedContext struct {
 	namespace string
 }
 
-func (n *namespacedContext) call(_ context.Context, service, method string, in, out proto.Message, opts *internal.CallOptions) error {
+func (n *namespacedContext) call(_ context.Context, service, method string, in, out proto.Message) error {
 	// Apply any namespace mods.
 	if mod, ok := internal.NamespaceMods[service]; ok {
 		mod(in, n.namespace)
@@ -46,5 +46,5 @@ func (n *namespacedContext) call(_ context.Context, service, method string, in, 
 		return nil
 	}
 
-	return internal.Call(n.ctx, service, method, in, out, opts)
+	return internal.Call(n.ctx, service, method, in, out)
 }

@@ -218,7 +218,7 @@ func toContext(c *context) netcontext.Context {
 	return netcontext.WithValue(netcontext.Background(), &contextKey, c)
 }
 
-type callOverrideFunc func(ctx netcontext.Context, service, method string, in, out proto.Message, opts *CallOptions) error
+type callOverrideFunc func(ctx netcontext.Context, service, method string, in, out proto.Message) error
 
 var callOverrideKey = "holds a callOverrideFunc"
 
@@ -398,9 +398,9 @@ var virtualMethodHeaders = map[string]string{
 	"GetDefaultNamespace": defNamespaceHeader,
 }
 
-func Call(ctx netcontext.Context, service, method string, in, out proto.Message, opts *CallOptions) error {
+func Call(ctx netcontext.Context, service, method string, in, out proto.Message) error {
 	if f, ok := ctx.Value(&callOverrideKey).(callOverrideFunc); ok {
-		return f(ctx, service, method, in, out, opts)
+		return f(ctx, service, method, in, out)
 	}
 
 	c := fromContext(ctx)
@@ -424,10 +424,9 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message,
 	}
 
 	// Default RPC timeout is 60s.
-	// TODO(dsymonds): Use ctx's timeout if present, and remove Timeout from CallOptions.
 	timeout := 60 * time.Second
-	if opts != nil && opts.Timeout > 0 {
-		timeout = opts.Timeout
+	if deadline, ok := ctx.Deadline(); ok {
+		timeout = deadline.Sub(time.Now())
 	}
 
 	data, err := proto.Marshal(in)
@@ -589,7 +588,7 @@ func (c *context) flushLog(force bool) (flushed bool) {
 	c.pendingLogs.Lock()
 	c.pendingLogs.flushes++
 	c.pendingLogs.Unlock()
-	if err := Call(toContext(c), "logservice", "Flush", req, res, nil); err != nil {
+	if err := Call(toContext(c), "logservice", "Flush", req, res); err != nil {
 		log.Printf("internal.flushLog: Flush RPC: %v", err)
 		rescueLogs = true
 		return false
@@ -625,11 +624,6 @@ func ContextForTesting(req *http.Request) netcontext.Context {
 	return toContext(&context{req: req})
 }
 
-var virtualOpts = &CallOptions{
-	// Virtual API calls should happen nearly instantaneously.
-	Timeout: 1 * time.Millisecond,
-}
-
 // TODO(dsymonds): Remove all virtual APIs throughout,
 // and replace them with context values.
 
@@ -638,7 +632,7 @@ var virtualOpts = &CallOptions{
 // It returns an empty string if the call fails.
 func VirtAPI(c netcontext.Context, method string) string {
 	s := &basepb.StringProto{}
-	if err := Call(c, "__go__", method, &basepb.VoidProto{}, s, virtualOpts); err != nil {
+	if err := Call(c, "__go__", method, &basepb.VoidProto{}, s); err != nil {
 		log.Printf("/__go__.%s failed: %v", method, err)
 	}
 	return s.GetValue()

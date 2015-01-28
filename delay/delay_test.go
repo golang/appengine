@@ -96,7 +96,7 @@ func newFakeContext() *fakeContext {
 	return f
 }
 
-func (f *fakeContext) call(ctx context.Context, service, method string, in, out proto.Message, opts *internal.CallOptions) error {
+func (f *fakeContext) call(ctx context.Context, service, method string, in, out proto.Message) error {
 	panic("should never be called")
 }
 
