@@ -423,8 +423,9 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message,
 		applyTransaction(in, &t.transaction)
 	}
 
-	// Default RPC timeout is 5s.
-	timeout := 5 * time.Second
+	// Default RPC timeout is 60s.
+	// TODO(dsymonds): Use ctx's timeout if present, and remove Timeout from CallOptions.
+	timeout := 60 * time.Second
 	if opts != nil && opts.Timeout > 0 {
 		timeout = opts.Timeout
 	}
