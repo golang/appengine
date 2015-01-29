@@ -37,7 +37,6 @@ var (
 	// Incoming headers.
 	ticketHeader       = http.CanonicalHeaderKey("X-AppEngine-API-Ticket")
 	dapperHeader       = http.CanonicalHeaderKey("X-Google-DapperTraceInfo")
-	defNamespaceHeader = http.CanonicalHeaderKey("X-AppEngine-Default-Namespace")
 	curNamespaceHeader = http.CanonicalHeaderKey("X-AppEngine-Current-Namespace")
 	userIPHeader       = http.CanonicalHeaderKey("X-AppEngine-User-IP")
 	remoteAddrHeader   = http.CanonicalHeaderKey("X-AppEngine-Remote-Addr")
@@ -215,7 +214,11 @@ func fromContext(ctx netcontext.Context) *context {
 }
 
 func toContext(c *context) netcontext.Context {
-	return netcontext.WithValue(netcontext.Background(), &contextKey, c)
+	ctx := netcontext.WithValue(netcontext.Background(), &contextKey, c)
+	if ns := c.req.Header.Get(curNamespaceHeader); ns != "" {
+		ctx = WithNamespace(ctx, ns)
+	}
+	return ctx
 }
 
 type callOverrideFunc func(ctx netcontext.Context, service, method string, in, out proto.Message) error
@@ -238,6 +241,18 @@ var appIDOverrideKey = "holds a string, being the full app ID"
 
 func WithAppIDOverride(ctx netcontext.Context, appID string) netcontext.Context {
 	return netcontext.WithValue(ctx, &appIDOverrideKey, appID)
+}
+
+var namespaceKey = "holds the namespace string"
+
+func WithNamespace(ctx netcontext.Context, ns string) netcontext.Context {
+	return netcontext.WithValue(ctx, &namespaceKey, ns)
+}
+
+func NamespaceFromContext(ctx netcontext.Context) string {
+	// If there's no namespace, return the empty string.
+	ns, _ := ctx.Value(&namespaceKey).(string)
+	return ns
 }
 
 func IncomingHeaders(ctx netcontext.Context) http.Header {
@@ -393,11 +408,6 @@ func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error)
 	return hrespBody, nil
 }
 
-var virtualMethodHeaders = map[string]string{
-	"GetNamespace":        curNamespaceHeader,
-	"GetDefaultNamespace": defNamespaceHeader,
-}
-
 func Call(ctx netcontext.Context, service, method string, in, out proto.Message) error {
 	if f, ok := ctx.Value(&callOverrideKey).(callOverrideFunc); ok {
 		return f(ctx, service, method, in, out)
@@ -407,12 +417,6 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message)
 	if c == nil {
 		// Give a good error message rather than a panic lower down.
 		return errors.New("not an App Engine context")
-	}
-	if service == "__go__" {
-		if hdr, ok := virtualMethodHeaders[method]; ok {
-			out.(*basepb.StringProto).Value = proto.String(c.req.Header.Get(hdr))
-			return nil
-		}
 	}
 
 	// Apply transaction modifications if we're in a transaction.
@@ -622,18 +626,4 @@ func (c *context) logFlusher(stop <-chan int) {
 
 func ContextForTesting(req *http.Request) netcontext.Context {
 	return toContext(&context{req: req})
-}
-
-// TODO(dsymonds): Remove all virtual APIs throughout,
-// and replace them with context values.
-
-// VirtAPI invokes a virtual API call for the __go__ service.
-// It is for methods that accept a VoidProto and return a StringProto.
-// It returns an empty string if the call fails.
-func VirtAPI(c netcontext.Context, method string) string {
-	s := &basepb.StringProto{}
-	if err := Call(c, "__go__", method, &basepb.VoidProto{}, s); err != nil {
-		log.Printf("/__go__.%s failed: %v", method, err)
-	}
-	return s.GetValue()
 }

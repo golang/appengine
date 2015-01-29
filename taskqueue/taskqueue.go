@@ -198,7 +198,7 @@ func newAddReq(c context.Context, task *Task, queueName string) (*pb.TaskQueueAd
 		// Namespace headers.
 		if _, ok := task.Header[currentNamespace]; !ok {
 			// Fetch the current namespace of this request.
-			ns := internal.VirtAPI(c, "GetNamespace")
+			ns := internal.NamespaceFromContext(c)
 			req.Header = append(req.Header, &pb.TaskQueueAddRequest_Header{
 				Key:   []byte(currentNamespace),
 				Value: []byte(ns),
@@ -206,7 +206,7 @@ func newAddReq(c context.Context, task *Task, queueName string) (*pb.TaskQueueAd
 		}
 		if _, ok := task.Header[defaultNamespace]; !ok {
 			// Fetch the X-AppEngine-Default-Namespace header of this request.
-			if ns := internal.VirtAPI(c, "GetDefaultNamespace"); ns != "" {
+			if ns := internal.IncomingHeaders(c).Get(defaultNamespace); ns != "" {
 				req.Header = append(req.Header, &pb.TaskQueueAddRequest_Header{
 					Key:   []byte(defaultNamespace),
 					Value: []byte(ns),

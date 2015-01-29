@@ -12,7 +12,6 @@ import (
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
-	basepb "google.golang.org/appengine/internal/base"
 )
 
 // Namespace returns a replacement context that operates within the given namespace.
@@ -24,7 +23,7 @@ func Namespace(c context.Context, namespace string) (context.Context, error) {
 		ctx:       c,
 		namespace: namespace,
 	}
-	return internal.WithCallOverride(c, n.call), nil
+	return internal.WithNamespace(internal.WithCallOverride(c, n.call), namespace), nil
 }
 
 // validNamespace matches valid namespace names.
@@ -41,10 +40,5 @@ func (n *namespacedContext) call(_ context.Context, service, method string, in, 
 	if mod, ok := internal.NamespaceMods[service]; ok {
 		mod(in, n.namespace)
 	}
-	if service == "__go__" && method == "GetNamespace" {
-		out.(*basepb.StringProto).Value = proto.String(n.namespace)
-		return nil
-	}
-
 	return internal.Call(n.ctx, service, method, in, out)
 }

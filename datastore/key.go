@@ -253,12 +253,12 @@ func NewIncompleteKey(c context.Context, kind string, parent *Key) *Key {
 // parent must either be a complete key or nil.
 func NewKey(c context.Context, kind, stringID string, intID int64, parent *Key) *Key {
 	// If there's a parent key, use its namespace.
-	// Otherwise, do a fake RPC to try to get a namespace if c is a namespacedContext (or wraps one).
+	// Otherwise, use any namespace attached to the context.
 	var namespace string
 	if parent != nil {
 		namespace = parent.namespace
 	} else {
-		namespace = internal.VirtAPI(c, "GetNamespace")
+		namespace = internal.NamespaceFromContext(c)
 	}
 
 	return &Key{
