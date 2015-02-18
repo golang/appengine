@@ -136,7 +136,7 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 func executeRequestSafely(c *context, r *http.Request) {
 	defer func() {
 		if x := recover(); x != nil {
-			c.logf(4, "%s", renderPanic(x)) // 4 == critical
+			logf(c, 4, "%s", renderPanic(x)) // 4 == critical
 		}
 	}()
 
@@ -221,40 +221,6 @@ func toContext(c *context) netcontext.Context {
 	return ctx
 }
 
-type callOverrideFunc func(ctx netcontext.Context, service, method string, in, out proto.Message) error
-
-var callOverrideKey = "holds a callOverrideFunc"
-
-func WithCallOverride(ctx netcontext.Context, f callOverrideFunc) netcontext.Context {
-	return netcontext.WithValue(ctx, &callOverrideKey, f)
-}
-
-type logOverrideFunc func(level int64, format string, args ...interface{})
-
-var logOverrideKey = "holds a logOverrideFunc"
-
-func WithLogOverride(ctx netcontext.Context, f logOverrideFunc) netcontext.Context {
-	return netcontext.WithValue(ctx, &logOverrideKey, f)
-}
-
-var appIDOverrideKey = "holds a string, being the full app ID"
-
-func WithAppIDOverride(ctx netcontext.Context, appID string) netcontext.Context {
-	return netcontext.WithValue(ctx, &appIDOverrideKey, appID)
-}
-
-var namespaceKey = "holds the namespace string"
-
-func WithNamespace(ctx netcontext.Context, ns string) netcontext.Context {
-	return netcontext.WithValue(ctx, &namespaceKey, ns)
-}
-
-func NamespaceFromContext(ctx netcontext.Context) string {
-	// If there's no namespace, return the empty string.
-	ns, _ := ctx.Value(&namespaceKey).(string)
-	return ns
-}
-
 func IncomingHeaders(ctx netcontext.Context) http.Header {
 	return fromContext(ctx).req.Header
 }
@@ -284,11 +250,11 @@ func BackgroundContext() netcontext.Context {
 	// Compute background security ticket.
 	appID := partitionlessAppID()
 	escAppID := strings.Replace(strings.Replace(appID, ":", "_", -1), ".", "_", -1)
-	majVersion := VersionID()
+	majVersion := VersionID(nil)
 	if i := strings.Index(majVersion, "_"); i >= 0 {
 		majVersion = majVersion[:i]
 	}
-	ticket := fmt.Sprintf("%s/%s.%s.%s", escAppID, ModuleName(), majVersion, InstanceID())
+	ticket := fmt.Sprintf("%s/%s.%s.%s", escAppID, ModuleName(nil), majVersion, InstanceID())
 
 	ctxs.bg = &context{
 		req: &http.Request{
@@ -340,7 +306,7 @@ func (c *context) Write(b []byte) (int, error) {
 
 func (c *context) WriteHeader(code int) {
 	if c.outCode != 0 {
-		c.logf(3, "WriteHeader called multiple times on request.") // error level
+		logf(c, 3, "WriteHeader called multiple times on request.") // error level
 		return
 	}
 	c.outCode = code
@@ -513,7 +479,7 @@ var logLevelName = map[int64]string{
 	4: "CRITICAL",
 }
 
-func (c *context) logf(level int64, format string, args ...interface{}) {
+func logf(c *context, level int64, format string, args ...interface{}) {
 	s := fmt.Sprintf(format, args...)
 	s = strings.TrimRight(s, "\n") // Remove any trailing newline characters.
 	c.addLogLine(&logpb.UserAppLogLine{
@@ -522,25 +488,6 @@ func (c *context) logf(level int64, format string, args ...interface{}) {
 		Message:       &s,
 	})
 	log.Print(logLevelName[level] + ": " + s)
-}
-
-func Logf(ctx netcontext.Context, level int64, format string, args ...interface{}) {
-	if f, ok := ctx.Value(&logOverrideKey).(logOverrideFunc); ok {
-		f(level, format, args...)
-		return
-	}
-	c := fromContext(ctx)
-	c.logf(level, format, args...)
-}
-
-// FullyQualifiedAppID returns the fully-qualified application ID.
-// This may contain a partition prefix (e.g. "s~" for High Replication apps),
-// or a domain prefix (e.g. "example.com:").
-func FullyQualifiedAppID(ctx netcontext.Context) string {
-	if id, ok := ctx.Value(&appIDOverrideKey).(string); ok {
-		return id
-	}
-	return fullyQualifiedAppID()
 }
 
 // flushLog attempts to flush any pending logs to the appserver.

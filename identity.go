@@ -28,7 +28,7 @@ func DefaultVersionHostname(c context.Context) string {
 
 // ModuleName returns the module name of the current instance.
 func ModuleName(c context.Context) string {
-	return internal.ModuleName()
+	return internal.ModuleName(c)
 }
 
 // ModuleHostname returns a hostname of a module instance.
@@ -58,7 +58,7 @@ func ModuleHostname(c context.Context, module, version, instance string) (string
 // It will be of the form "X.Y", where X is specified in app.yaml,
 // and Y is a number generated when each version of the app is uploaded.
 // It does not include a module name.
-func VersionID(c context.Context) string { return internal.VersionID() }
+func VersionID(c context.Context) string { return internal.VersionID(c) }
 
 // InstanceID returns a mostly-unique identifier for this instance.
 func InstanceID() string { return internal.InstanceID() }

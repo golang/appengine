@@ -46,14 +46,14 @@ func ServerSoftware() string {
 
 // TODO(dsymonds): Remove the metadata fetches.
 
-func ModuleName() string {
+func ModuleName(_ netcontext.Context) string {
 	if s := os.Getenv("GAE_MODULE_NAME"); s != "" {
 		return s
 	}
 	return string(mustGetMetadata("instance/attributes/gae_backend_name"))
 }
 
-func VersionID() string {
+func VersionID(_ netcontext.Context) string {
 	if s := os.Getenv("GAE_MODULE_VERSION"); s != "" {
 		return s
 	}
@@ -76,7 +76,7 @@ func partitionlessAppID() string {
 	return appID
 }
 
-func fullyQualifiedAppID() string {
+func fullyQualifiedAppID(_ netcontext.Context) string {
 	appID := partitionlessAppID()
 
 	part := os.Getenv("GAE_PARTITION")
