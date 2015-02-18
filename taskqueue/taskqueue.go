@@ -206,7 +206,7 @@ func newAddReq(c context.Context, task *Task, queueName string) (*pb.TaskQueueAd
 		}
 		if _, ok := task.Header[defaultNamespace]; !ok {
 			// Fetch the X-AppEngine-Default-Namespace header of this request.
-			if ns := internal.IncomingHeaders(c).Get(defaultNamespace); ns != "" {
+			if ns := getDefaultNamespace(c); ns != "" {
 				req.Header = append(req.Header, &pb.TaskQueueAddRequest_Header{
 					Key:   []byte(defaultNamespace),
 					Value: []byte(ns),
