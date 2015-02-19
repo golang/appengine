@@ -3,10 +3,11 @@
 package taskqueue
 
 import (
+	basepb "appengine_internal/base"
+
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
-	basepb "google.golang.org/appengine/internal/base"
 )
 
 func getDefaultNamespace(ctx context.Context) string {
