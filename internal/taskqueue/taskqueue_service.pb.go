@@ -1883,8 +1883,4 @@ func (m *TaskQueueModifyTaskLeaseResponse) GetUpdatedEtaUsec() int64 {
 }
 
 func init() {
-	proto.RegisterEnum("appengine.TaskQueueServiceError_ErrorCode", TaskQueueServiceError_ErrorCode_name, TaskQueueServiceError_ErrorCode_value)
-	proto.RegisterEnum("appengine.TaskQueueMode_Mode", TaskQueueMode_Mode_name, TaskQueueMode_Mode_value)
-	proto.RegisterEnum("appengine.TaskQueueAddRequest_RequestMethod", TaskQueueAddRequest_RequestMethod_name, TaskQueueAddRequest_RequestMethod_value)
-	proto.RegisterEnum("appengine.TaskQueueQueryTasksResponse_Task_RequestMethod", TaskQueueQueryTasksResponse_Task_RequestMethod_name, TaskQueueQueryTasksResponse_Task_RequestMethod_value)
 }

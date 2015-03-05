@@ -933,10 +933,4 @@ func (m *MemcacheGrabTailResponse_Item) GetFlags() uint32 {
 }
 
 func init() {
-	proto.RegisterEnum("appengine.MemcacheServiceError_ErrorCode", MemcacheServiceError_ErrorCode_name, MemcacheServiceError_ErrorCode_value)
-	proto.RegisterEnum("appengine.MemcacheSetRequest_SetPolicy", MemcacheSetRequest_SetPolicy_name, MemcacheSetRequest_SetPolicy_value)
-	proto.RegisterEnum("appengine.MemcacheSetResponse_SetStatusCode", MemcacheSetResponse_SetStatusCode_name, MemcacheSetResponse_SetStatusCode_value)
-	proto.RegisterEnum("appengine.MemcacheDeleteResponse_DeleteStatusCode", MemcacheDeleteResponse_DeleteStatusCode_name, MemcacheDeleteResponse_DeleteStatusCode_value)
-	proto.RegisterEnum("appengine.MemcacheIncrementRequest_Direction", MemcacheIncrementRequest_Direction_name, MemcacheIncrementRequest_Direction_value)
-	proto.RegisterEnum("appengine.MemcacheIncrementResponse_IncrementStatusCode", MemcacheIncrementResponse_IncrementStatusCode_name, MemcacheIncrementResponse_IncrementStatusCode_value)
 }

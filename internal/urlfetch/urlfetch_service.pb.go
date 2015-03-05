@@ -350,6 +350,4 @@ func (m *URLFetchResponse_Header) GetValue() string {
 }
 
 func init() {
-	proto.RegisterEnum("appengine.URLFetchServiceError_ErrorCode", URLFetchServiceError_ErrorCode_name, URLFetchServiceError_ErrorCode_value)
-	proto.RegisterEnum("appengine.URLFetchRequest_RequestMethod", URLFetchRequest_RequestMethod_name, URLFetchRequest_RequestMethod_value)
 }

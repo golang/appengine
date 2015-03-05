@@ -2056,17 +2056,4 @@ func (m *SearchResponse) GetFacetResult() []*FacetResult {
 }
 
 func init() {
-	proto.RegisterEnum("search.Scope_Type", Scope_Type_name, Scope_Type_value)
-	proto.RegisterEnum("search.Entry_Permission", Entry_Permission_name, Entry_Permission_value)
-	proto.RegisterEnum("search.FieldValue_ContentType", FieldValue_ContentType_name, FieldValue_ContentType_value)
-	proto.RegisterEnum("search.FacetValue_ContentType", FacetValue_ContentType_name, FacetValue_ContentType_value)
-	proto.RegisterEnum("search.Document_Storage", Document_Storage_name, Document_Storage_value)
-	proto.RegisterEnum("search.SearchServiceError_ErrorCode", SearchServiceError_ErrorCode_name, SearchServiceError_ErrorCode_value)
-	proto.RegisterEnum("search.IndexSpec_Consistency", IndexSpec_Consistency_name, IndexSpec_Consistency_value)
-	proto.RegisterEnum("search.IndexSpec_Source", IndexSpec_Source_name, IndexSpec_Source_value)
-	proto.RegisterEnum("search.IndexSpec_Mode", IndexSpec_Mode_name, IndexSpec_Mode_value)
-	proto.RegisterEnum("search.IndexDocumentParams_Freshness", IndexDocumentParams_Freshness_name, IndexDocumentParams_Freshness_value)
-	proto.RegisterEnum("search.ScorerSpec_Scorer", ScorerSpec_Scorer_name, ScorerSpec_Scorer_value)
-	proto.RegisterEnum("search.SearchParams_CursorType", SearchParams_CursorType_name, SearchParams_CursorType_value)
-	proto.RegisterEnum("search.SearchParams_ParsingMode", SearchParams_ParsingMode_name, SearchParams_ParsingMode_value)
 }

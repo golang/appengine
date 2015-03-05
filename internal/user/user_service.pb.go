@@ -284,5 +284,4 @@ func (m *CheckOAuthSignatureResponse) GetOauthConsumerKey() string {
 }
 
 func init() {
-	proto.RegisterEnum("appengine.UserServiceError_ErrorCode", UserServiceError_ErrorCode_name, UserServiceError_ErrorCode_value)
 }

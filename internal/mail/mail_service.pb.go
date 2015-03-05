@@ -224,5 +224,4 @@ func (m *MailMessage) GetHeader() []*MailHeader {
 }
 
 func init() {
-	proto.RegisterEnum("appengine.MailServiceError_ErrorCode", MailServiceError_ErrorCode_name, MailServiceError_ErrorCode_value)
 }

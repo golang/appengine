@@ -370,5 +370,4 @@ func (m *GetHostnameResponse) GetHostname() string {
 }
 
 func init() {
-	proto.RegisterEnum("appengine.ModulesServiceError_ErrorCode", ModulesServiceError_ErrorCode_name, ModulesServiceError_ErrorCode_value)
 }

@@ -422,7 +422,4 @@ func (m *XmppInviteResponse) String() string { return proto.CompactTextString(m)
 func (*XmppInviteResponse) ProtoMessage()    {}
 
 func init() {
-	proto.RegisterEnum("appengine.XmppServiceError_ErrorCode", XmppServiceError_ErrorCode_name, XmppServiceError_ErrorCode_value)
-	proto.RegisterEnum("appengine.PresenceResponse_SHOW", PresenceResponse_SHOW_name, PresenceResponse_SHOW_value)
-	proto.RegisterEnum("appengine.XmppMessageResponse_XmppMessageStatus", XmppMessageResponse_XmppMessageStatus_name, XmppMessageResponse_XmppMessageStatus_value)
 }

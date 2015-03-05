@@ -840,9 +840,4 @@ func (m *ImagesDeleteUrlBaseResponse) String() string { return proto.CompactText
 func (*ImagesDeleteUrlBaseResponse) ProtoMessage()    {}
 
 func init() {
-	proto.RegisterEnum("appengine.ImagesServiceError_ErrorCode", ImagesServiceError_ErrorCode_name, ImagesServiceError_ErrorCode_value)
-	proto.RegisterEnum("appengine.ImagesServiceTransform_Type", ImagesServiceTransform_Type_name, ImagesServiceTransform_Type_value)
-	proto.RegisterEnum("appengine.InputSettings_ORIENTATION_CORRECTION_TYPE", InputSettings_ORIENTATION_CORRECTION_TYPE_name, InputSettings_ORIENTATION_CORRECTION_TYPE_value)
-	proto.RegisterEnum("appengine.OutputSettings_MIME_TYPE", OutputSettings_MIME_TYPE_name, OutputSettings_MIME_TYPE_value)
-	proto.RegisterEnum("appengine.CompositeImageOptions_ANCHOR", CompositeImageOptions_ANCHOR_name, CompositeImageOptions_ANCHOR_value)
 }

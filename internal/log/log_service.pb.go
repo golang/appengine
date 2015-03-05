@@ -894,5 +894,4 @@ func (m *LogUsageResponse) GetSummary() *LogUsageRecord {
 }
 
 func init() {
-	proto.RegisterEnum("appengine.LogServiceError_ErrorCode", LogServiceError_ErrorCode_name, LogServiceError_ErrorCode_value)
 }

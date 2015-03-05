@@ -226,5 +226,4 @@ func (m *Response) GetRpcError() *RpcError {
 }
 
 func init() {
-	proto.RegisterEnum("remote_api.RpcError_ErrorCode", RpcError_ErrorCode_name, RpcError_ErrorCode_value)
 }

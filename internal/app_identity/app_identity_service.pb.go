@@ -291,5 +291,4 @@ func (m *GetDefaultGcsBucketNameResponse) GetDefaultGcsBucketName() string {
 }
 
 func init() {
-	proto.RegisterEnum("appengine.AppIdentityServiceError_ErrorCode", AppIdentityServiceError_ErrorCode_name, AppIdentityServiceError_ErrorCode_value)
 }

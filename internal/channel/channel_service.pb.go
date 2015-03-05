@@ -149,5 +149,4 @@ func (m *SendMessageRequest) GetMessage() string {
 }
 
 func init() {
-	proto.RegisterEnum("appengine.ChannelServiceError_ErrorCode", ChannelServiceError_ErrorCode_name, ChannelServiceError_ErrorCode_value)
 }

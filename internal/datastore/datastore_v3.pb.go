@@ -2773,15 +2773,4 @@ func (m *CommitResponse_Version) GetVersion() int64 {
 }
 
 func init() {
-	proto.RegisterEnum("appengine.Property_Meaning", Property_Meaning_name, Property_Meaning_value)
-	proto.RegisterEnum("appengine.Property_FtsTokenizationOption", Property_FtsTokenizationOption_name, Property_FtsTokenizationOption_value)
-	proto.RegisterEnum("appengine.EntityProto_Kind", EntityProto_Kind_name, EntityProto_Kind_value)
-	proto.RegisterEnum("appengine.Index_Property_Direction", Index_Property_Direction_name, Index_Property_Direction_value)
-	proto.RegisterEnum("appengine.CompositeIndex_State", CompositeIndex_State_name, CompositeIndex_State_value)
-	proto.RegisterEnum("appengine.Snapshot_Status", Snapshot_Status_name, Snapshot_Status_value)
-	proto.RegisterEnum("appengine.Query_Hint", Query_Hint_name, Query_Hint_value)
-	proto.RegisterEnum("appengine.Query_Filter_Operator", Query_Filter_Operator_name, Query_Filter_Operator_value)
-	proto.RegisterEnum("appengine.Query_Order_Direction", Query_Order_Direction_name, Query_Order_Direction_value)
-	proto.RegisterEnum("appengine.Error_ErrorCode", Error_ErrorCode_name, Error_ErrorCode_value)
-	proto.RegisterEnum("appengine.PutRequest_AutoIdPolicy", PutRequest_AutoIdPolicy_name, PutRequest_AutoIdPolicy_value)
 }
