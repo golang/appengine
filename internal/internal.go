@@ -14,6 +14,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 
 	"github.com/golang/protobuf/proto"
 
@@ -133,7 +134,12 @@ func (e *CallError) IsTimeout() bool {
 func Main() {
 	installHealthChecker(http.DefaultServeMux)
 
-	if err := http.ListenAndServe(":8080", http.HandlerFunc(handleHTTP)); err != nil {
+	port := "8080"
+	if s := os.Getenv("PORT"); s != "" {
+		port = s
+	}
+
+	if err := http.ListenAndServe(":"+port, http.HandlerFunc(handleHTTP)); err != nil {
 		log.Fatalf("http.ListenAndServe: %v", err)
 	}
 }
