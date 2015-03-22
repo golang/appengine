@@ -14,7 +14,7 @@ Example:
 		Body:    "Don't forget our plans. Hark, 'til later.",
 	}
 	if err := mail.Send(c, msg); err != nil {
-		c.Errorf("Alas, my user, the email failed to sendeth: %v", err)
+		log.Errorf(c, "Alas, my user, the email failed to sendeth: %v", err)
 	}
 */
 package mail // import "google.golang.org/appengine/mail"

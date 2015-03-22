@@ -16,14 +16,14 @@ Example:
 	for results := query.Run(c); ; {
 		record, err := results.Next()
 		if err == log.Done {
-			c.Infof("Done processing results")
+			log.Infof(c, "Done processing results")
 			break
 		}
 		if err != nil {
-			c.Errorf("Failed to retrieve next log: %v", err)
+			log.Errorf(c, "Failed to retrieve next log: %v", err)
 			break
 		}
-		c.Infof("Saw record %v", record)
+		log.Infof(c, "Saw record %v", record)
 	}
 */
 package log // import "google.golang.org/appengine/log"
