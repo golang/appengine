@@ -48,6 +48,9 @@ var ErrConcurrentTransaction = errors.New("datastore: concurrent transaction")
 // must be careful not to assume that any of f's changes have been committed
 // until RunInTransaction returns nil.
 //
+// Since f may be called multiple times, f should usually be idempotent.
+// datastore.Get is not idempotent when unmarshaling slice fields.
+//
 // Nested transactions are not supported; c may not be a transaction context.
 func RunInTransaction(c context.Context, f func(tc context.Context) error, opts *TransactionOptions) error {
 	xg := false
