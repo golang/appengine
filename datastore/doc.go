@@ -105,9 +105,9 @@ ignore that field. If options is "noindex" then the field will not be indexed.
 If the options is "" then the comma may be omitted. There are no other
 recognized options.
 
-Fields (except for []byte) are indexed by default. Strings longer than 500
-characters cannot be indexed; fields used to store long strings should be
-tagged with "noindex". Similarly, ByteStrings longer than 500 bytes cannot be
+Fields (except for []byte) are indexed by default. Strings longer than 1500
+bytes cannot be indexed; fields used to store long strings should be
+tagged with "noindex". Similarly, ByteStrings longer than 1500 bytes cannot be
 indexed.
 
 Example code:
