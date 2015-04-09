@@ -91,3 +91,7 @@ func fullyQualifiedAppID(_ netcontext.Context) string {
 	}
 	return appID
 }
+
+func IsDevAppServer() bool {
+	return os.Getenv("RUN_WITH_DEVAPPSERVER") != ""
+}

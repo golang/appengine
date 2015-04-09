@@ -19,8 +19,7 @@ import (
 // IsDevAppServer reports whether the App Engine app is running in the
 // development App Server.
 func IsDevAppServer() bool {
-	// TODO(dsymonds): Detect this.
-	return false
+	return internal.IsDevAppServer()
 }
 
 // NewContext returns a context for an in-flight HTTP request.

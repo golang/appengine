@@ -18,5 +18,6 @@ func ServerSoftware() string                   { return appengine.ServerSoftware
 func ModuleName(ctx netcontext.Context) string { return appengine.ModuleName(fromContext(ctx)) }
 func VersionID(ctx netcontext.Context) string  { return appengine.VersionID(fromContext(ctx)) }
 func InstanceID() string                       { return appengine.InstanceID() }
+func IsDevAppServer() bool                     { return appengine.IsDevAppServer() }
 
 func fullyQualifiedAppID(ctx netcontext.Context) string { return fromContext(ctx).FullyQualifiedAppID() }
