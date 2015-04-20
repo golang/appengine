@@ -27,8 +27,8 @@ func ClassicContextFromContext(ctx netcontext.Context) appengine.Context {
 	return fromContext(ctx)
 }
 
-func toContext(c appengine.Context) netcontext.Context {
-	ctx := netcontext.WithValue(netcontext.Background(), &contextKey, c)
+func withContext(parent netcontext.Context, c appengine.Context) netcontext.Context {
+	ctx := netcontext.WithValue(parent, &contextKey, c)
 
 	s := &basepb.StringProto{}
 	c.Call("__go__", "GetNamespace", &basepb.VoidProto{}, s, nil)
@@ -39,9 +39,9 @@ func toContext(c appengine.Context) netcontext.Context {
 	return ctx
 }
 
-func NewContext(req *http.Request) netcontext.Context {
+func WithContext(parent netcontext.Context, req *http.Request) netcontext.Context {
 	c := appengine.NewContext(req)
-	return toContext(c)
+	return withContext(parent, c)
 }
 
 func Call(ctx netcontext.Context, service, method string, in, out proto.Message) error {

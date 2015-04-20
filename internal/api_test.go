@@ -2,6 +2,8 @@
 // Use of this source code is governed by the Apache 2.0
 // license that can be found in the LICENSE file.
 
+// +build !appengine
+
 package internal
 
 import (
@@ -231,7 +233,7 @@ func TestDelayedLogFlushing(t *testing.T) {
 	defer cleanup()
 
 	http.HandleFunc("/quick_log", func(w http.ResponseWriter, r *http.Request) {
-		c := NewContext(r)
+		c := WithContext(netcontext.Background(), r)
 		Logf(c, 1, "It's a lovely day.")
 		w.WriteHeader(200)
 		w.Write(make([]byte, 100<<10)) // write 100 KB to force HTTP flush
