@@ -29,11 +29,6 @@ for f in $(find $PKG/internal -name '*.proto'); do
 done
 
 for f in $(find $PKG/internal -name '*.pb.go'); do
-  # Fix up import lines.
-  # This should be fixed upstream.
-  # https://code.google.com/p/goprotobuf/issues/detail?id=32
-  sed -i '/^import.*\.pb"$/s,/[^/]*\.pb"$,",' $f
-
   # Remove proto.RegisterEnum calls.
   # These cause duplicate registration panics when these packages
   # are used on classic App Engine. proto.RegisterEnum only affects
