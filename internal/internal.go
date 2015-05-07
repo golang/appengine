@@ -109,11 +109,6 @@ func (e *CallError) IsTimeout() bool {
 	return e.Timeout
 }
 
-// The comment below must not be changed.
-// It is used by go-app-builder to recognise that this package has
-// the internal.Main function to use in the synthetic main.
-//   The gophers party all night; the rabbits provide the beats.
-
 // Main is designed so that the complete generated main package is:
 //
 //      package main

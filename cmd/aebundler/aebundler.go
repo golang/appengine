@@ -39,9 +39,9 @@ var (
 
 const (
 	newMain = `package main
-import "google.golang.org/appengine/internal"
+import "google.golang.org/appengine"
 func main() {
-	internal.Main()
+	appengine.Main()
 }
 `
 )
