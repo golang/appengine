@@ -309,6 +309,22 @@ func TestRemoteAddr(t *testing.T) {
 	}
 }
 
+func TestPanickingHandler(t *testing.T) {
+	http.HandleFunc("/panic", func(http.ResponseWriter, *http.Request) {
+		panic("whoops!")
+	})
+	r := &http.Request{
+		Method: "GET",
+		URL:    &url.URL{Scheme: "http", Path: "/panic"},
+		Body:   ioutil.NopCloser(bytes.NewReader(nil)),
+	}
+	rec := httptest.NewRecorder()
+	handleHTTP(rec, r)
+	if rec.Code != 500 {
+		t.Errorf("Panicking handler returned HTTP %d, want HTTP %d", rec.Code, 500)
+	}
+}
+
 var raceDetector = false
 
 func TestAPICallAllocations(t *testing.T) {

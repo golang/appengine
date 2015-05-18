@@ -139,6 +139,7 @@ func executeRequestSafely(c *context, r *http.Request) {
 	defer func() {
 		if x := recover(); x != nil {
 			logf(c, 4, "%s", renderPanic(x)) // 4 == critical
+			c.outCode = 500
 		}
 	}()
 
