@@ -45,6 +45,10 @@ func usage() {
 func main() {
 	flag.Usage = usage
 	flag.Parse()
+	if flag.NArg() < 1 {
+		usage()
+		os.Exit(1)
+	}
 
 	if err := aedeploy(); err != nil {
 		fmt.Fprintf(os.Stderr, os.Args[0]+": Error: %v\n", err)
