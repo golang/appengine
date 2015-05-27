@@ -29,8 +29,7 @@ import (
 // this transport and use the Client rather than using this transport
 // directly.
 type Transport struct {
-	Context  context.Context
-	Deadline time.Duration // zero means 5-second default
+	Context context.Context
 
 	// Controls whether the application checks the validity of SSL certificates
 	// over HTTPS connections. A value of false (the default) instructs the
@@ -47,10 +46,13 @@ var _ http.RoundTripper = (*Transport)(nil)
 // Client returns an *http.Client using a default urlfetch Transport. This
 // client will have the default deadline of 5 seconds, and will check the
 // validity of SSL certificates.
-func Client(context context.Context) *http.Client {
+//
+// Any deadline of the provided context will be used for requests through this client;
+// if the client does not have a deadline then a 5 second default is used.
+func Client(ctx context.Context) *http.Client {
 	return &http.Client{
 		Transport: &Transport{
-			Context: context,
+			Context: ctx,
 		},
 	}
 }
@@ -136,11 +138,8 @@ func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 		FollowRedirects:               proto.Bool(false), // http.Client's responsibility
 		MustValidateServerCertificate: proto.Bool(!t.AllowInvalidServerCertificate),
 	}
-	ctx := t.Context
-
-	if t.Deadline != 0 {
-		freq.Deadline = proto.Float64(t.Deadline.Seconds())
-		ctx, _ = context.WithTimeout(ctx, t.Deadline)
+	if deadline, ok := t.Context.Deadline(); ok {
+		freq.Deadline = proto.Float64(deadline.Sub(time.Now()).Seconds())
 	}
 
 	for k, vals := range req.Header {
@@ -167,7 +166,7 @@ func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	}
 
 	fres := &pb.URLFetchResponse{}
-	if err := internal.Call(ctx, "urlfetch", "Fetch", freq, fres); err != nil {
+	if err := internal.Call(t.Context, "urlfetch", "Fetch", freq, fres); err != nil {
 		return nil, err
 	}
 
