@@ -229,7 +229,10 @@ func toContext(c *context) netcontext.Context {
 }
 
 func IncomingHeaders(ctx netcontext.Context) http.Header {
-	return fromContext(ctx).req.Header
+	if c := fromContext(ctx); c != nil {
+		return c.req.Header
+	}
+	return nil
 }
 
 func WithContext(parent netcontext.Context, req *http.Request) netcontext.Context {
