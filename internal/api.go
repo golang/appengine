@@ -385,7 +385,7 @@ func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error)
 }
 
 func Call(ctx netcontext.Context, service, method string, in, out proto.Message) error {
-	if f, ok := ctx.Value(&callOverrideKey).(callOverrideFunc); ok {
+	if f, ctx, ok := callOverrideFromContext(ctx); ok {
 		return f(ctx, service, method, in, out)
 	}
 

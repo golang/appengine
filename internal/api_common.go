@@ -7,10 +7,29 @@ import (
 
 type callOverrideFunc func(ctx netcontext.Context, service, method string, in, out proto.Message) error
 
-var callOverrideKey = "holds a callOverrideFunc"
+var callOverrideKey = "holds []callOverrideFunc"
 
 func WithCallOverride(ctx netcontext.Context, f callOverrideFunc) netcontext.Context {
-	return netcontext.WithValue(ctx, &callOverrideKey, f)
+	// We avoid appending to any existing call override
+	// so we don't risk overwriting a popped stack below.
+	var cofs []callOverrideFunc
+	if uf, ok := ctx.Value(&callOverrideKey).([]callOverrideFunc); ok {
+		cofs = append(cofs, uf...)
+	}
+	cofs = append(cofs, f)
+	return netcontext.WithValue(ctx, &callOverrideKey, cofs)
+}
+
+func callOverrideFromContext(ctx netcontext.Context) (callOverrideFunc, netcontext.Context, bool) {
+	cofs, _ := ctx.Value(&callOverrideKey).([]callOverrideFunc)
+	if len(cofs) == 0 {
+		return nil, nil, false
+	}
+	// We found a list of overrides; grab the last, and reconstitute a
+	// context that will hide it.
+	f := cofs[len(cofs)-1]
+	ctx = netcontext.WithValue(ctx, &callOverrideKey, cofs[:len(cofs)-1])
+	return f, ctx, true
 }
 
 type logOverrideFunc func(level int64, format string, args ...interface{})

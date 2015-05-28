@@ -20,7 +20,6 @@ func Namespace(c context.Context, namespace string) (context.Context, error) {
 		return nil, fmt.Errorf("appengine: namespace %q does not match /%s/", namespace, validNamespace)
 	}
 	n := &namespacedContext{
-		ctx:       c,
 		namespace: namespace,
 	}
 	return internal.WithNamespace(internal.WithCallOverride(c, n.call), namespace), nil
@@ -31,14 +30,13 @@ var validNamespace = regexp.MustCompile(`^[0-9A-Za-z._-]{0,100}$`)
 
 // namespacedContext wraps a Context to support namespaces.
 type namespacedContext struct {
-	ctx       context.Context
 	namespace string
 }
 
-func (n *namespacedContext) call(_ context.Context, service, method string, in, out proto.Message) error {
+func (n *namespacedContext) call(ctx context.Context, service, method string, in, out proto.Message) error {
 	// Apply any namespace mods.
 	if mod, ok := internal.NamespaceMods[service]; ok {
 		mod(in, n.namespace)
 	}
-	return internal.Call(n.ctx, service, method, in, out)
+	return internal.Call(ctx, service, method, in, out)
 }

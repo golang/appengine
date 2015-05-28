@@ -45,7 +45,7 @@ func WithContext(parent netcontext.Context, req *http.Request) netcontext.Contex
 }
 
 func Call(ctx netcontext.Context, service, method string, in, out proto.Message) error {
-	if f, ok := ctx.Value(&callOverrideKey).(callOverrideFunc); ok {
+	if f, ctx, ok := callOverrideFromContext(ctx); ok {
 		return f(ctx, service, method, in, out)
 	}
 
