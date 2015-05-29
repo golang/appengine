@@ -109,13 +109,8 @@ func (f *fakeContext) logf(level int64, format string, args ...interface{}) {
 func TestInvalidFunction(t *testing.T) {
 	c := newFakeContext()
 
-	invalidFunc.Call(c.ctx)
-
-	wantLogging := [][]interface{}{
-		{"ERROR", "%v", fmt.Errorf("delay: func is invalid: %s", errFirstArg)},
-	}
-	if !reflect.DeepEqual(c.logging, wantLogging) {
-		t.Errorf("Incorrect logging: got %+v, want %+v", c.logging, wantLogging)
+	if got, want := invalidFunc.Call(c.ctx), fmt.Errorf("delay: func is invalid: %s", errFirstArg); got.Error() != want.Error() {
+		t.Errorf("Incorrect error: got %q, want %q", got, want)
 	}
 }
 
@@ -137,12 +132,8 @@ func TestVariadicFunctionArguments(t *testing.T) {
 		t.Errorf("Got %d calls to taskqueueAdder, want 3", calls)
 	}
 
-	varFunc.Call(c.ctx, "%d %s", 12, "a string is bad")
-	wantLogging := [][]interface{}{
-		{"ERROR", "%v", errors.New("delay: argument 3 has wrong type: string is not assignable to int")},
-	}
-	if !reflect.DeepEqual(c.logging, wantLogging) {
-		t.Errorf("Incorrect logging: got %+v, want %+v", c.logging, wantLogging)
+	if got, want := varFunc.Call(c.ctx, "%d %s", 12, "a string is bad"), errors.New("delay: argument 3 has wrong type: string is not assignable to int"); got.Error() != want.Error() {
+		t.Errorf("Incorrect error: got %q, want %q", got, want)
 	}
 }
 
@@ -151,17 +142,28 @@ func TestBadArguments(t *testing.T) {
 
 	c := newFakeContext()
 
-	regFunc.Call(c.ctx)
-	regFunc.Call(c.ctx, "lala", 53)
-	regFunc.Call(c.ctx, 53)
-
-	wantLogging := [][]interface{}{
-		{"ERROR", "%v", errors.New("delay: too few arguments to func: 1 < 2")},
-		{"ERROR", "%v", errors.New("delay: too many arguments to func: 3 > 2")},
-		{"ERROR", "%v", errors.New("delay: argument 1 has wrong type: int is not assignable to string")},
+	tests := []struct {
+		args    []interface{} // all except context
+		wantErr string
+	}{
+		{
+			args:    nil,
+			wantErr: "delay: too few arguments to func: 1 < 2",
+		},
+		{
+			args:    []interface{}{"lala", 53},
+			wantErr: "delay: too many arguments to func: 3 > 2",
+		},
+		{
+			args:    []interface{}{53},
+			wantErr: "delay: argument 1 has wrong type: int is not assignable to string",
+		},
 	}
-	if !reflect.DeepEqual(c.logging, wantLogging) {
-		t.Errorf("Incorrect logging: got %+v, want %+v", c.logging, wantLogging)
+	for i, tc := range tests {
+		got := regFunc.Call(c.ctx, tc.args...)
+		if got.Error() != tc.wantErr {
+			t.Errorf("Call %v: got %q, want %q", i, got, tc.wantErr)
+		}
 	}
 }
 

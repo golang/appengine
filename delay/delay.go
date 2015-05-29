@@ -134,20 +134,17 @@ type invocation struct {
 }
 
 // Call invokes a delayed function.
-//   f.Call(c, ...)
+//   err := f.Call(c, ...)
 // is equivalent to
 //   t, _ := f.Task(...)
-//   taskqueue.Add(c, t, "")
-func (f *Function) Call(c context.Context, args ...interface{}) {
+//   err := taskqueue.Add(c, t, "")
+func (f *Function) Call(c context.Context, args ...interface{}) error {
 	t, err := f.Task(args...)
 	if err != nil {
-		log.Errorf(c, "%v", err)
-		return
+		return err
 	}
-	if _, err := taskqueueAdder(c, t, queue); err != nil {
-		log.Errorf(c, "delay: taskqueue.Add failed: %v", err)
-		return
-	}
+	_, err = taskqueueAdder(c, t, queue)
+	return err
 }
 
 // Task creates a Task that will invoke the function.

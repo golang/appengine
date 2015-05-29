@@ -56,6 +56,7 @@ This list summarises the differences:
 * `appengine.Timeout` has been removed. Use `context.WithTimeout` instead.
 * `appengine.Datacenter` now takes a `context.Context` argument.
 * `datastore.PropertyLoadSaver` has been simplified to use slices in place of channels.
+* `delay.Call` now returns an error.
 * `search.FieldLoadSaver` now handles document metadata.
 * `urlfetch.Transport` no longer has a Deadline field; set a deadline on the
   `context.Context` instead.
