@@ -2,7 +2,7 @@
 // Use of this source code is governed by the Apache 2.0
 // license that can be found in the LICENSE file.
 
-package helloworld
+package main
 
 import (
 	"html/template"
@@ -15,8 +15,9 @@ import (
 
 var initTime = time.Now()
 
-func init() {
+func main() {
 	http.HandleFunc("/", handle)
+	appengine.Main()
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {

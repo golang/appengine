@@ -2,7 +2,7 @@
 // Use of this source code is governed by the Apache 2.0
 // license that can be found in the LICENSE file.
 
-package guestbook
+package main
 
 import (
 	"html/template"
@@ -25,9 +25,10 @@ type Greeting struct {
 	Date    time.Time
 }
 
-func init() {
+func main() {
 	http.HandleFunc("/", handleMainPage)
 	http.HandleFunc("/sign", handleSign)
+	appengine.Main()
 }
 
 // guestbookKey returns the key used for all guestbook entries.
