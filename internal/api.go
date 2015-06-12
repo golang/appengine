@@ -261,7 +261,7 @@ func BackgroundContext() netcontext.Context {
 	appID := partitionlessAppID()
 	escAppID := strings.Replace(strings.Replace(appID, ":", "_", -1), ".", "_", -1)
 	majVersion := VersionID(nil)
-	if i := strings.Index(majVersion, "_"); i >= 0 {
+	if i := strings.Index(majVersion, "."); i > 0 {
 		majVersion = majVersion[:i]
 	}
 	ticket := fmt.Sprintf("%s/%s.%s.%s", escAppID, ModuleName(nil), majVersion, InstanceID())
