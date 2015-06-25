@@ -26,8 +26,8 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := appengine.NewContext(r)
-	log.Infof(c, "Serving the front page.")
+	ctx := appengine.NewContext(r)
+	log.Infof(ctx, "Serving the front page.")
 
 	tmpl.Execute(w, time.Since(initTime))
 }

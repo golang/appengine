@@ -32,9 +32,9 @@ func main() {
 }
 
 // guestbookKey returns the key used for all guestbook entries.
-func guestbookKey(c context.Context) *datastore.Key {
+func guestbookKey(ctx context.Context) *datastore.Key {
 	// The string "default_guestbook" here could be varied to have multiple guestbooks.
-	return datastore.NewKey(c, "Guestbook", "default_guestbook", 0, nil)
+	return datastore.NewKey(ctx, "Guestbook", "default_guestbook", 0, nil)
 }
 
 var tpl = template.Must(template.ParseGlob("templates/*.html"))
@@ -49,24 +49,24 @@ func handleMainPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	c := appengine.NewContext(r)
+	ctx := appengine.NewContext(r)
 	tic := time.Now()
-	q := datastore.NewQuery("Greeting").Ancestor(guestbookKey(c)).Order("-Date").Limit(10)
+	q := datastore.NewQuery("Greeting").Ancestor(guestbookKey(ctx)).Order("-Date").Limit(10)
 	var gg []*Greeting
-	if _, err := q.GetAll(c, &gg); err != nil {
+	if _, err := q.GetAll(ctx, &gg); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		log.Errorf(c, "GetAll: %v", err)
+		log.Errorf(ctx, "GetAll: %v", err)
 		return
 	}
-	log.Infof(c, "Datastore lookup took %s", time.Since(tic).String())
-	log.Infof(c, "Rendering %d greetings", len(gg))
+	log.Infof(ctx, "Datastore lookup took %s", time.Since(tic).String())
+	log.Infof(ctx, "Rendering %d greetings", len(gg))
 
 	var email, logout, login string
-	if u := user.Current(c); u != nil {
-		logout, _ = user.LogoutURL(c, "/")
+	if u := user.Current(ctx); u != nil {
+		logout, _ = user.LogoutURL(ctx, "/")
 		email = u.Email
 	} else {
-		login, _ = user.LoginURL(c, "/")
+		login, _ = user.LoginURL(ctx, "/")
 	}
 	data := struct {
 		Greetings            []*Greeting
@@ -79,7 +79,7 @@ func handleMainPage(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if err := tpl.ExecuteTemplate(w, "guestbook.html", data); err != nil {
-		log.Errorf(c, "%v", err)
+		log.Errorf(ctx, "%v", err)
 	}
 }
 
@@ -88,16 +88,16 @@ func handleSign(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "POST requests only", http.StatusMethodNotAllowed)
 		return
 	}
-	c := appengine.NewContext(r)
+	ctx := appengine.NewContext(r)
 	g := &Greeting{
 		Content: r.FormValue("content"),
 		Date:    time.Now(),
 	}
-	if u := user.Current(c); u != nil {
+	if u := user.Current(ctx); u != nil {
 		g.Author = u.String()
 	}
-	key := datastore.NewIncompleteKey(c, "Greeting", guestbookKey(c))
-	if _, err := datastore.Put(c, key, g); err != nil {
+	key := datastore.NewIncompleteKey(ctx, "Greeting", guestbookKey(ctx))
+	if _, err := datastore.Put(ctx, key, g); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
