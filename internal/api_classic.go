@@ -70,7 +70,22 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message)
 		}
 	}
 
-	return c.Call(service, method, in, out, opts)
+	err := c.Call(service, method, in, out, opts)
+	switch v := err.(type) {
+	case *appengine_internal.APIError:
+		return &APIError{
+			Service: v.Service,
+			Detail:  v.Detail,
+			Code:    v.Code,
+		}
+	case *appengine_internal.CallError:
+		return &CallError{
+			Detail:  v.Detail,
+			Code:    v.Code,
+			Timeout: v.Timeout,
+		}
+	}
+	return err
 }
 
 func handleHTTP(w http.ResponseWriter, r *http.Request) {
