@@ -31,6 +31,7 @@ func CurrentOAuth(c context.Context, scope string) (*User, error) {
 		AuthDomain: *res.AuthDomain,
 		Admin:      res.GetIsAdmin(),
 		ID:         *res.UserId,
+		ClientID:   res.GetClientId(),
 	}, nil
 }
 

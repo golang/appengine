@@ -26,6 +26,10 @@ type User struct {
 	// with a Google account, or empty otherwise.
 	ID string
 
+	// ClientID is the ID of the pre-registered client so its identity can be verified.
+	// See https://developers.google.com/console/help/#generatingoauth2 for more information.
+	ClientID string
+
 	FederatedIdentity string
 	FederatedProvider string
 }
