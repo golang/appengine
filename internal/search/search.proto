@@ -67,10 +67,16 @@ message FieldTypes {
   repeated FieldValue.ContentType type = 2;
 }
 
+message IndexShardSettings {
+  repeated int32 prev_num_shards = 1;
+  required int32 num_shards = 2 [default=1];
+  repeated int32 prev_num_shards_search_false = 3;
+  optional string local_replica = 4 [default = ""];
+}
+
 message FacetValue {
   enum ContentType {
     ATOM = 2;
-    DATE = 3;
     NUMBER = 4;
   }
 
@@ -83,6 +89,10 @@ message Facet {
   required FacetValue value = 2;
 }
 
+message DocumentMetadata  {
+  optional int64 version = 1;
+  optional int64 committed_st_version = 2;
+}
 
 message Document {
   optional string id = 1;
@@ -95,8 +105,6 @@ message Document {
   }
 
   optional Storage storage = 5 [default = DISK];
-  optional AccessControlList acl = 6;
-  optional int64 version = 7;
   repeated Facet facet = 8;
 }
 
@@ -115,6 +123,7 @@ message SearchServiceError {
 message RequestStatus {
   required SearchServiceError.ErrorCode code = 1;
   optional string error_detail = 2;
+  optional int32 canonical_code = 3;
 }
 
 message IndexSpec {
@@ -297,16 +306,18 @@ message FacetAutoDetectParam {
 
 message FacetRequest {
   required string name = 1;
-  required FacetValue.ContentType type = 2;
-  optional FacetRequestParam params = 3;
+  optional FacetRequestParam params = 2;
 }
 
-message FacetRefine {
+message FacetRefinement {
   required string name = 1;
-  required FacetValue.ContentType type = 2;
-  optional string value = 3;
-  optional string start = 4;
-  optional string end = 5;
+  optional string value = 2;
+
+  message Range {
+    optional string start = 1;
+    optional string end = 2;
+  }
+  optional Range range = 3;
 }
 
 message SearchParams {
@@ -337,8 +348,9 @@ message SearchParams {
 
   optional int32 auto_discover_facet_count = 15 [default = 0];
   repeated FacetRequest include_facet = 16;
-  repeated FacetRefine facet_refine = 17;
+  repeated FacetRefinement facet_refinement = 17;
   optional FacetAutoDetectParam facet_auto_detect_param = 18;
+  optional int32 facet_depth = 19 [default=1000];
 }
 
 message SearchRequest {
@@ -350,12 +362,12 @@ message SearchRequest {
 message FacetResultValue {
   required string name = 1;
   required int32 count = 2;
+  required FacetRefinement refinement = 3;
 }
 
 message FacetResult {
   required string name = 1;
-  required FacetValue.ContentType type = 2;
-  repeated FacetResultValue value = 3;
+  repeated FacetResultValue value = 2;
 }
 
 message SearchResult {
