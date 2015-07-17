@@ -96,6 +96,7 @@ package search // import "google.golang.org/appengine/search"
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"regexp"
 	"strconv"
@@ -120,18 +121,6 @@ var (
 	ErrNoSuchDocument = errors.New("search: no such document")
 )
 
-// ErrFieldMismatch is returned when a field is to be loaded into a different
-// than the one it was stored from, or when a field is missing or unexported in
-// the destination struct.
-type ErrFieldMismatch struct {
-	FieldName string
-	Reason    string
-}
-
-func (e *ErrFieldMismatch) Error() string {
-	return fmt.Sprintf("search: cannot load field %q: %s", e.FieldName, e.Reason)
-}
-
 // Atom is a document field whose contents are indexed as a single indivisible
 // string.
 type Atom string
@@ -155,11 +144,12 @@ func validIndexNameOrDocID(s string) bool {
 }
 
 var (
-	fieldNameRE = regexp.MustCompile(`^[A-Z][A-Za-z0-9_]*$`)
+	fieldNameRE = regexp.MustCompile(`^[A-Za-z][A-Za-z0-9_]*$`)
 	languageRE  = regexp.MustCompile(`^[a-z]{2}$`)
 )
 
-// validFieldName is the Go equivalent of Python's _CheckFieldName.
+// validFieldName is the Go equivalent of Python's _CheckFieldName. It checks
+// the validity of both field and facet names.
 func validFieldName(s string) bool {
 	return len(s) <= 500 && fieldNameRE.MatchString(s)
 }
@@ -213,21 +203,9 @@ func Open(name string) (*Index, error) {
 // src must be a non-nil struct pointer or implement the FieldLoadSaver
 // interface.
 func (x *Index) Put(c context.Context, id string, src interface{}) (string, error) {
-	fields, meta, err := saveDoc(src)
+	d, err := saveDoc(src)
 	if err != nil {
 		return "", err
-	}
-	d := &pb.Document{
-		Field:   fields,
-		OrderId: proto.Int32(int32(time.Since(orderIDEpoch).Seconds())),
-	}
-	if meta != nil {
-		if meta.Rank != 0 {
-			if !validDocRank(meta.Rank) {
-				return "", fmt.Errorf("search: invalid rank %d, must be [0, 2^31)", meta.Rank)
-			}
-			*d.OrderId = int32(meta.Rank)
-		}
 	}
 	if id != "" {
 		if !validIndexNameOrDocID(id) {
@@ -291,10 +269,7 @@ func (x *Index) Get(c context.Context, id string, dst interface{}) error {
 	if len(res.Document) != 1 || res.Document[0].GetId() != id {
 		return ErrNoSuchDocument
 	}
-	metadata := &DocumentMetadata{
-		Rank: int(res.Document[0].GetOrderId()),
-	}
-	return loadDoc(dst, res.Document[0].Field, nil, metadata)
+	return loadDoc(dst, res.Document[0], nil)
 }
 
 // Delete deletes a document from the index.
@@ -406,6 +381,8 @@ func (x *Index) Search(c context.Context, query string, opts *SearchOptions) *It
 		t.idsOnly = opts.IDsOnly
 		t.sort = opts.Sort
 		t.exprs = opts.Expressions
+		t.refinements = opts.Refinements
+		t.facetOpts = opts.Facets
 	}
 	return t
 }
@@ -432,12 +409,24 @@ func moreSearch(t *Iterator) error {
 			return err
 		}
 	}
+	if t.refinements != nil {
+		if err := refinementsToProto(t.refinements, req.Params); err != nil {
+			return err
+		}
+	}
 	for _, e := range t.exprs {
 		req.Params.FieldSpec.Expression = append(req.Params.FieldSpec.Expression, &pb.FieldSpec_Expression{
 			Name:       proto.String(e.Name),
 			Expression: proto.String(e.Expr),
 		})
 	}
+	for _, f := range t.facetOpts {
+		if err := f.setParams(req.Params); err != nil {
+			return fmt.Errorf("bad FacetSearchOption: %v", err)
+		}
+	}
+	// Don't repeat facet search.
+	t.facetOpts = nil
 
 	if t.searchCursor != nil {
 		req.Params.Cursor = t.searchCursor
@@ -450,6 +439,9 @@ func moreSearch(t *Iterator) error {
 		return fmt.Errorf("search: %s: %s", res.Status.GetCode(), res.Status.GetErrorDetail())
 	}
 	t.searchRes = res.Result
+	if len(res.FacetResult) > 0 {
+		t.facetRes = res.FacetResult
+	}
 	t.count = int(*res.MatchedCount)
 	if res.Cursor != nil {
 		t.searchCursor, t.more = res.Cursor, moreSearch
@@ -481,6 +473,15 @@ type SearchOptions struct {
 	// document.
 	Expressions []FieldExpression
 
+	// Facets controls what facet information is returned for these search results.
+	// If no options are specified, no facet results will be returned.
+	Facets []FacetSearchOption
+
+	// Refinements filters the returned documents by requiring them to contain facets
+	// with specific values. Refinements are applied in conjunction for facets with
+	// different names, and in disjunction otherwise.
+	Refinements []Facet
+
 	// TODO: cursor, offset, maybe others.
 }
 
@@ -493,6 +494,130 @@ type FieldExpression struct {
 	// See https://cloud.google.com/appengine/docs/go/search/options for
 	// the supported expression syntax.
 	Expr string
+}
+
+// FacetSearchOption controls what facet information is returned in search results.
+type FacetSearchOption interface {
+	setParams(*pb.SearchParams) error
+}
+
+// AutoFacetDiscovery returns a FacetSearchOption which enables automatic facet
+// discovery for the search. Automatic facet discovery looks for the facets
+// which appear the most often in the aggregate in the matched documents.
+//
+// The maximum number of facets returned is controlled by facetLimit, and the
+// maximum number of values per facet by facetLimit. A limit of zero indicates
+// a default limit should be used.
+func AutoFacetDiscovery(facetLimit, valueLimit int) FacetSearchOption {
+	return &autoFacetOpt{facetLimit, valueLimit}
+}
+
+type autoFacetOpt struct {
+	facetLimit, valueLimit int
+}
+
+const defaultAutoFacetLimit = 10 // As per python runtime search.py.
+
+func (o *autoFacetOpt) setParams(params *pb.SearchParams) error {
+	lim := int32(o.facetLimit)
+	if lim == 0 {
+		lim = defaultAutoFacetLimit
+	}
+	params.AutoDiscoverFacetCount = &lim
+	if o.valueLimit > 0 {
+		params.FacetAutoDetectParam = &pb.FacetAutoDetectParam{
+			ValueLimit: proto.Int32(int32(o.valueLimit)),
+		}
+	}
+	return nil
+}
+
+// FacetDiscovery returns a FacetSearchOption which selects a facet to be
+// returned with the search results. By default, the most frequently
+// occurring values for that facet will be returned. However, you can also
+// specify a list of particular Atoms or specific Ranges to return.
+func FacetDiscovery(name string, value ...interface{}) FacetSearchOption {
+	return &facetOpt{name, value}
+}
+
+type facetOpt struct {
+	name   string
+	values []interface{}
+}
+
+func (o *facetOpt) setParams(params *pb.SearchParams) error {
+	req := &pb.FacetRequest{Name: &o.name}
+	params.IncludeFacet = append(params.IncludeFacet, req)
+	if len(o.values) == 0 {
+		return nil
+	}
+	vtype := reflect.TypeOf(o.values[0])
+	reqParam := &pb.FacetRequestParam{}
+	for _, v := range o.values {
+		if reflect.TypeOf(v) != vtype {
+			return errors.New("values must all be Atom, or must all be Range")
+		}
+		switch v := v.(type) {
+		case Atom:
+			reqParam.ValueConstraint = append(reqParam.ValueConstraint, string(v))
+		case Range:
+			rng, err := rangeToProto(v)
+			if err != nil {
+				return fmt.Errorf("invalid range: %v", err)
+			}
+			reqParam.Range = append(reqParam.Range, rng)
+		default:
+			return fmt.Errorf("unsupported value type %T", v)
+		}
+	}
+	req.Params = reqParam
+	return nil
+}
+
+// FacetDocumentDepth returns a FacetSearchOption which controls the number of
+// documents to be evaluated with preparing facet results.
+func FacetDocumentDepth(depth int) FacetSearchOption {
+	return facetDepthOpt(depth)
+}
+
+type facetDepthOpt int
+
+func (o facetDepthOpt) setParams(params *pb.SearchParams) error {
+	params.FacetDepth = proto.Int32(int32(o))
+	return nil
+}
+
+// FacetResult represents the number of times a particular facet and value
+// appeared in the documents matching a search request.
+type FacetResult struct {
+	Facet
+
+	// Count is the number of times this specific facet and value appeared in the
+	// matching documents.
+	Count int
+}
+
+// Range represents a numeric range with inclusive start and exclusive end.
+// Start may be specified as math.Inf(-1) to indicate there is no minimum
+// value, and End may similarly be specified as math.Inf(1); at least one of
+// Start or End must be a finite number.
+type Range struct {
+	Start, End float64
+}
+
+var (
+	negInf = math.Inf(-1)
+	posInf = math.Inf(1)
+)
+
+// AtLeast returns a Range matching any value greater than, or equal to, min.
+func AtLeast(min float64) Range {
+	return Range{Start: min, End: posInf}
+}
+
+// LessThan returns a Range matching any value less than max.
+func LessThan(max float64) Range {
+	return Range{Start: negInf, End: max}
 }
 
 // SortOptions control the ordering and scoring of search results.
@@ -586,6 +711,59 @@ func sortToProto(sort *SortOptions, params *pb.SearchParams) error {
 	return nil
 }
 
+func refinementsToProto(refinements []Facet, params *pb.SearchParams) error {
+	for _, r := range refinements {
+		ref := &pb.FacetRefinement{
+			Name: proto.String(r.Name),
+		}
+		switch v := r.Value.(type) {
+		case Atom:
+			ref.Value = proto.String(string(v))
+		case Range:
+			rng, err := rangeToProto(v)
+			if err != nil {
+				return fmt.Errorf("search: refinement for facet %q: %v", r.Name, err)
+			}
+			// Unfortunately there are two identical messages for identify Facet ranges.
+			ref.Range = &pb.FacetRefinement_Range{Start: rng.Start, End: rng.End}
+		default:
+			return fmt.Errorf("search: unsupported refinement for facet %q of type %T", r.Name, v)
+		}
+		params.FacetRefinement = append(params.FacetRefinement, ref)
+	}
+	return nil
+}
+
+func rangeToProto(r Range) (*pb.FacetRange, error) {
+	rng := &pb.FacetRange{}
+	if r.Start != negInf {
+		if !validFloat(r.Start) {
+			return nil, errors.New("invalid value for Start")
+		}
+		rng.Start = proto.String(strconv.FormatFloat(r.Start, 'e', -1, 64))
+	} else if r.End == posInf {
+		return nil, errors.New("either Start or End must be finite")
+	}
+	if r.End != posInf {
+		if !validFloat(r.End) {
+			return nil, errors.New("invalid value for End")
+		}
+		rng.End = proto.String(strconv.FormatFloat(r.End, 'e', -1, 64))
+	}
+	return rng, nil
+}
+
+func protoToRange(rng *pb.FacetRefinement_Range) Range {
+	r := Range{Start: negInf, End: posInf}
+	if x, err := strconv.ParseFloat(rng.GetStart(), 64); err != nil {
+		r.Start = x
+	}
+	if x, err := strconv.ParseFloat(rng.GetEnd(), 64); err != nil {
+		r.End = x
+	}
+	return r
+}
+
 // Iterator is the result of searching an index for a query or listing an
 // index.
 type Iterator struct {
@@ -598,12 +776,15 @@ type Iterator struct {
 	listInclusive bool
 
 	searchRes    []*pb.SearchResult
+	facetRes     []*pb.FacetResult
 	searchQuery  string
 	searchCursor *string
 	sort         *SortOptions
 
-	fields []string
-	exprs  []FieldExpression
+	fields      []string
+	exprs       []FieldExpression
+	refinements []Facet
+	facetOpts   []FacetSearchOption
 
 	more func(*Iterator) error
 
@@ -619,6 +800,13 @@ var Done = errors.New("search: query has no more results")
 // query. It is only valid to call for iterators returned by Search.
 func (t *Iterator) Count() int { return t.count }
 
+// fetchMore retrieves more results, if there are no errors or pending results.
+func (t *Iterator) fetchMore() {
+	if t.err == nil && len(t.listRes)+len(t.searchRes) == 0 && t.more != nil {
+		t.err = t.more(t)
+	}
+}
+
 // Next returns the ID of the next result. When there are no more results,
 // Done is returned as the error.
 //
@@ -627,9 +815,7 @@ func (t *Iterator) Count() int { return t.count }
 // will be filled with the indexed fields. dst is ignored if this iterator was
 // created with an IDsOnly option.
 func (t *Iterator) Next(dst interface{}) (string, error) {
-	if t.err == nil && len(t.listRes)+len(t.searchRes) == 0 && t.more != nil {
-		t.err = t.more(t)
-	}
+	t.fetchMore()
 	if t.err != nil {
 		return "", t.err
 	}
@@ -651,10 +837,7 @@ func (t *Iterator) Next(dst interface{}) (string, error) {
 		return "", errors.New("search: internal error: no document returned")
 	}
 	if !t.idsOnly && dst != nil {
-		metadata := &DocumentMetadata{
-			Rank: int(doc.GetOrderId()),
-		}
-		if err := loadDoc(dst, doc.Field, exprs, metadata); err != nil {
+		if err := loadDoc(dst, doc, exprs); err != nil {
 			return "", err
 		}
 	}
@@ -667,8 +850,38 @@ func (t *Iterator) Next(dst interface{}) (string, error) {
 	return doc.GetId(), nil
 }
 
-// saveDoc converts from a struct pointer or FieldLoadSaver to protobufs.
-func saveDoc(src interface{}) ([]*pb.Field, *DocumentMetadata, error) {
+// Facets returns the facets found within the search results, if any facets
+// were requested in the SearchOptions.
+func (t *Iterator) Facets() ([][]FacetResult, error) {
+	t.fetchMore()
+	if t.err != nil && t.err != Done {
+		return nil, t.err
+	}
+
+	var facets [][]FacetResult
+	for _, f := range t.facetRes {
+		fres := make([]FacetResult, 0, len(f.Value))
+		for _, v := range f.Value {
+			ref := v.Refinement
+			facet := FacetResult{
+				Facet: Facet{Name: ref.GetName()},
+				Count: int(v.GetCount()),
+			}
+			if ref.Value != nil {
+				facet.Value = Atom(*ref.Value)
+			} else {
+				facet.Value = protoToRange(ref.Range)
+			}
+			fres = append(fres, facet)
+		}
+		facets = append(facets, fres)
+	}
+	return facets, nil
+}
+
+// saveDoc converts from a struct pointer or
+// FieldLoadSaver/FieldMetadataLoadSaver to the Document protobuf.
+func saveDoc(src interface{}) (*pb.Document, error) {
 	var err error
 	var fields []Field
 	var meta *DocumentMetadata
@@ -679,10 +892,33 @@ func saveDoc(src interface{}) ([]*pb.Field, *DocumentMetadata, error) {
 		fields, err = SaveStruct(src)
 	}
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	f, err := fieldsToProto(fields)
-	return f, meta, err
+
+	fieldsProto, err := fieldsToProto(fields)
+	if err != nil {
+		return nil, err
+	}
+	d := &pb.Document{
+		Field:   fieldsProto,
+		OrderId: proto.Int32(int32(time.Since(orderIDEpoch).Seconds())),
+	}
+	if meta != nil {
+		if meta.Rank != 0 {
+			if !validDocRank(meta.Rank) {
+				return nil, fmt.Errorf("search: invalid rank %d, must be [0, 2^31)", meta.Rank)
+			}
+			*d.OrderId = int32(meta.Rank)
+		}
+		if len(meta.Facets) > 0 {
+			facets, err := facetsToProto(meta.Facets)
+			if err != nil {
+				return nil, err
+			}
+			d.Facet = facets
+		}
+	}
+	return d, nil
 }
 
 func fieldsToProto(src []Field) ([]*pb.Field, error) {
@@ -757,12 +993,48 @@ func fieldsToProto(src []Field) ([]*pb.Field, error) {
 	return dst, nil
 }
 
-// loadDoc converts from protobufs and document metadata to a struct pointer or
-// FieldLoadSaver/FieldMetadataLoadSaver. Two slices of fields may be provided:
-// src represents the document's stored fields; exprs is the derived expressions
-// requested by the developer. The latter may be empty.
-func loadDoc(dst interface{}, src, exprs []*pb.Field, meta *DocumentMetadata) (err error) {
-	fields, err := protoToFields(src)
+func facetsToProto(src []Facet) ([]*pb.Facet, error) {
+	dst := make([]*pb.Facet, 0, len(src))
+	for _, f := range src {
+		if !validFieldName(f.Name) {
+			return nil, fmt.Errorf("search: invalid facet name %q", f.Name)
+		}
+		facetValue := &pb.FacetValue{}
+		switch x := f.Value.(type) {
+		case Atom:
+			if !utf8.ValidString(string(x)) {
+				return nil, fmt.Errorf("search: %q facet is invalid UTF-8: %q", f.Name, x)
+			}
+			facetValue.Type = pb.FacetValue_ATOM.Enum()
+			facetValue.StringValue = proto.String(string(x))
+		case float64:
+			if !validFloat(x) {
+				return nil, fmt.Errorf("search: numeric facet %q with invalid value %f", f.Name, x)
+			}
+			facetValue.Type = pb.FacetValue_NUMBER.Enum()
+			facetValue.StringValue = proto.String(strconv.FormatFloat(x, 'e', -1, 64))
+		default:
+			return nil, fmt.Errorf("search: unsupported facet type: %v", reflect.TypeOf(f.Value))
+		}
+		dst = append(dst, &pb.Facet{
+			Name:  proto.String(f.Name),
+			Value: facetValue,
+		})
+	}
+	return dst, nil
+}
+
+// loadDoc converts from protobufs to a struct pointer or
+// FieldLoadSaver/FieldMetadataLoadSaver. The src param provides the document's
+// stored fields and facets, and any document metadata.  An additional slice of
+// fields, exprs, may optionally be provided to contain any derived expressions
+// requested by the developer.
+func loadDoc(dst interface{}, src *pb.Document, exprs []*pb.Field) (err error) {
+	fields, err := protoToFields(src.Field)
+	if err != nil {
+		return err
+	}
+	facets, err := protoToFacets(src.Facet)
 	if err != nil {
 		return err
 	}
@@ -777,11 +1049,15 @@ func loadDoc(dst interface{}, src, exprs []*pb.Field, meta *DocumentMetadata) (e
 		}
 		fields = append(fields, exprFields...)
 	}
+	meta := &DocumentMetadata{
+		Rank:   int(src.GetOrderId()),
+		Facets: facets,
+	}
 	switch x := dst.(type) {
 	case FieldLoadSaver:
 		return x.Load(fields, meta)
 	default:
-		return LoadStruct(dst, fields)
+		return loadStructWithMeta(dst, fields, meta)
 	}
 }
 
@@ -824,6 +1100,34 @@ func protoToFields(fields []*pb.Field) ([]Field, error) {
 			f.Value = geoPoint
 		default:
 			return nil, fmt.Errorf("search: internal error: unknown data type %s", fieldValue.GetType())
+		}
+		dst = append(dst, f)
+	}
+	return dst, nil
+}
+
+func protoToFacets(facets []*pb.Facet) ([]Facet, error) {
+	if len(facets) == 0 {
+		return nil, nil
+	}
+	dst := make([]Facet, 0, len(facets))
+	for _, facet := range facets {
+		facetValue := facet.GetValue()
+		f := Facet{
+			Name: facet.GetName(),
+		}
+		switch facetValue.GetType() {
+		case pb.FacetValue_ATOM:
+			f.Value = Atom(facetValue.GetStringValue())
+		case pb.FacetValue_NUMBER:
+			sv := facetValue.GetStringValue()
+			x, err := strconv.ParseFloat(sv, 64)
+			if err != nil {
+				return nil, err
+			}
+			f.Value = x
+		default:
+			return nil, fmt.Errorf("search: internal error: unknown data type %s", facetValue.GetType())
 		}
 		dst = append(dst, f)
 	}

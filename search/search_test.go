@@ -140,7 +140,7 @@ func TestValidIndexNameOrDocID(t *testing.T) {
 
 func TestLoadDoc(t *testing.T) {
 	got, want := TestDoc{}, searchDoc
-	if err := loadDoc(&got, protoFields, nil, nil); err != nil {
+	if err := loadDoc(&got, &pb.Document{Field: protoFields}, nil); err != nil {
 		t.Fatalf("loadDoc: %v", err)
 	}
 	if got != want {
@@ -149,12 +149,12 @@ func TestLoadDoc(t *testing.T) {
 }
 
 func TestSaveDoc(t *testing.T) {
-	got, _, err := saveDoc(&searchDoc)
+	got, err := saveDoc(&searchDoc)
 	if err != nil {
 		t.Fatalf("saveDoc: %v", err)
 	}
 	want := protoFields
-	if !reflect.DeepEqual(got, want) {
+	if !reflect.DeepEqual(got.Field, want) {
 		t.Errorf("\ngot  %v\nwant %v", got, want)
 	}
 }
@@ -162,7 +162,7 @@ func TestSaveDoc(t *testing.T) {
 func TestLoadFieldList(t *testing.T) {
 	var got FieldList
 	want := searchFieldsWithLang
-	if err := loadDoc(&got, protoFields, nil, nil); err != nil {
+	if err := loadDoc(&got, &pb.Document{Field: protoFields}, nil); err != nil {
 		t.Fatalf("loadDoc: %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -176,11 +176,11 @@ func TestLangFields(t *testing.T) {
 		{Name: "Bar", Value: "私は日本人だ", Language: "jp"},
 	}
 	var got FieldList
-	protoFields, _, err := saveDoc(fl)
+	doc, err := saveDoc(fl)
 	if err != nil {
 		t.Fatalf("saveDoc: %v", err)
 	}
-	if err := loadDoc(&got, protoFields, nil, nil); err != nil {
+	if err := loadDoc(&got, doc, nil); err != nil {
 		t.Fatalf("loadDoc: %v", err)
 	}
 	if want := fl; !reflect.DeepEqual(&got, want) {
@@ -189,12 +189,12 @@ func TestLangFields(t *testing.T) {
 }
 
 func TestSaveFieldList(t *testing.T) {
-	got, _, err := saveDoc(&searchFields)
+	got, err := saveDoc(&searchFields)
 	if err != nil {
 		t.Fatalf("saveDoc: %v", err)
 	}
 	want := protoFields
-	if !reflect.DeepEqual(got, want) {
+	if !reflect.DeepEqual(got.Field, want) {
 		t.Errorf("\ngot  %v\nwant %v", got, want)
 	}
 }
@@ -205,7 +205,8 @@ func TestLoadFieldAndExprList(t *testing.T) {
 		f.Derived = (i >= 2) // First 2 elements are "fields", next are "expressions".
 		want = append(want, f)
 	}
-	if err := loadDoc(&got, protoFields[:2], protoFields[2:], nil); err != nil {
+	doc, expr := &pb.Document{Field: protoFields[:2]}, protoFields[2:]
+	if err := loadDoc(&got, doc, expr); err != nil {
 		t.Fatalf("loadDoc: %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
@@ -219,27 +220,32 @@ func TestLoadMeta(t *testing.T) {
 		Meta:   searchMeta,
 		Fields: searchFieldsWithLang,
 	}
-	if err := loadDoc(&got, protoFields, nil, searchMeta); err != nil {
+	doc := &pb.Document{
+		Field:   protoFields,
+		OrderId: proto.Int32(42),
+	}
+	if err := loadDoc(&got, doc, nil); err != nil {
 		t.Fatalf("loadDoc: %v", err)
 	}
 	if !reflect.DeepEqual(got, want) {
-		t.Errorf("got  %v\nwant %v", got, want)
+		t.Errorf("\ngot  %v\nwant %v", got, want)
 	}
 }
 
 func TestSaveMeta(t *testing.T) {
-	got, gotMeta, err := saveDoc(&FieldListWithMeta{
+	got, err := saveDoc(&FieldListWithMeta{
 		Meta:   searchMeta,
 		Fields: searchFields,
 	})
 	if err != nil {
 		t.Fatalf("saveDoc: %v", err)
 	}
-	if want := protoFields; !reflect.DeepEqual(got, want) {
-		t.Errorf("\ngot  %v\nwant %v", got, want)
+	want := &pb.Document{
+		Field:   protoFields,
+		OrderId: proto.Int32(42),
 	}
-	if want := searchMeta; !reflect.DeepEqual(gotMeta, want) {
-		t.Errorf("\ngot  %v\nwant %v", gotMeta, want)
+	if !proto.Equal(got, want) {
+		t.Errorf("\ngot  %v\nwant %v", got, want)
 	}
 }
 
@@ -251,7 +257,7 @@ func TestValidFieldNames(t *testing.T) {
 		{"Normal", true},
 		{"Also_OK_123", true},
 		{"Not so great", false},
-		{"lower_case", false},
+		{"lower_case", true},
 		{"Exclaim!", false},
 		{"Hello세상아 안녕", false},
 		{"", false},
@@ -261,7 +267,7 @@ func TestValidFieldNames(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		_, _, err := saveDoc(&FieldList{
+		_, err := saveDoc(&FieldList{
 			Field{Name: tc.name, Value: "val"},
 		})
 		if err != nil && !strings.Contains(err.Error(), "invalid field name") {
@@ -288,7 +294,7 @@ func TestValidLangs(t *testing.T) {
 	}
 
 	for _, tt := range testCases {
-		_, _, err := saveDoc(&FieldList{tt.field})
+		_, err := saveDoc(&FieldList{tt.field})
 		if err == nil != tt.valid {
 			t.Errorf("Field %v, got error %v, wanted valid %t", tt.field, err, tt.valid)
 		}
@@ -325,7 +331,7 @@ func TestDuplicateFields(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		_, _, err := saveDoc(&tc.fields)
+		_, err := saveDoc(&tc.fields)
 		if (err == nil) != (tc.errMsg == "") || (err != nil && !strings.Contains(err.Error(), tc.errMsg)) {
 			t.Errorf("%s: got err %v, wanted %q", tc.desc, err, tc.errMsg)
 		}
@@ -368,7 +374,7 @@ func TestLoadErrFieldMismatch(t *testing.T) {
 		},
 	}
 	for _, tc := range testCases {
-		err := loadDoc(tc.dst, tc.src, nil, nil)
+		err := loadDoc(tc.dst, &pb.Document{Field: tc.src}, nil)
 		if !reflect.DeepEqual(err, tc.err) {
 			t.Errorf("%s, got err %v, wanted %v", tc.desc, err, tc.err)
 		}
@@ -516,7 +522,7 @@ func TestSortOptions(t *testing.T) {
 		t.Fatalf("err from Open: %v", err)
 	}
 
-	noErr := errors.New("") // sentinel error when there isn't one…
+	noErr := errors.New("") // Sentinel err to return to prevent sending request.
 
 	testCases := []struct {
 		desc       string
@@ -645,6 +651,221 @@ func TestFieldSpec(t *testing.T) {
 		it := index.Search(c, "gopher", tt.opts)
 		if _, err := it.Next(nil); err != errFoo {
 			t.Fatalf("%s: got error %v; want %v", tt.desc, err, errFoo)
+		}
+	}
+}
+
+func TestFacetOptions(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	noErr := errors.New("") // Sentinel err to return to prevent sending request.
+
+	testCases := []struct {
+		desc    string
+		opts    []FacetSearchOption
+		want    *pb.SearchParams
+		wantErr string
+	}{
+		{
+			desc: "No options",
+			want: &pb.SearchParams{},
+		},
+		{
+			desc: "Default auto discovery",
+			opts: []FacetSearchOption{
+				AutoFacetDiscovery(0, 0),
+			},
+			want: &pb.SearchParams{
+				AutoDiscoverFacetCount: proto.Int32(10),
+			},
+		},
+		{
+			desc: "Auto discovery",
+			opts: []FacetSearchOption{
+				AutoFacetDiscovery(7, 12),
+			},
+			want: &pb.SearchParams{
+				AutoDiscoverFacetCount: proto.Int32(7),
+				FacetAutoDetectParam: &pb.FacetAutoDetectParam{
+					ValueLimit: proto.Int32(12),
+				},
+			},
+		},
+		{
+			desc: "Param Depth",
+			opts: []FacetSearchOption{
+				AutoFacetDiscovery(7, 12),
+			},
+			want: &pb.SearchParams{
+				AutoDiscoverFacetCount: proto.Int32(7),
+				FacetAutoDetectParam: &pb.FacetAutoDetectParam{
+					ValueLimit: proto.Int32(12),
+				},
+			},
+		},
+		{
+			desc: "Doc depth",
+			opts: []FacetSearchOption{
+				FacetDocumentDepth(123),
+			},
+			want: &pb.SearchParams{
+				FacetDepth: proto.Int32(123),
+			},
+		},
+		{
+			desc: "Facet discovery",
+			opts: []FacetSearchOption{
+				FacetDiscovery("colour"),
+				FacetDiscovery("size", Atom("M"), Atom("L")),
+				FacetDiscovery("price", LessThan(7), Range{7, 14}, AtLeast(14)),
+			},
+			want: &pb.SearchParams{
+				IncludeFacet: []*pb.FacetRequest{
+					{Name: proto.String("colour")},
+					{Name: proto.String("size"), Params: &pb.FacetRequestParam{
+						ValueConstraint: []string{"M", "L"},
+					}},
+					{Name: proto.String("price"), Params: &pb.FacetRequestParam{
+						Range: []*pb.FacetRange{
+							{End: proto.String("7e+00")},
+							{Start: proto.String("7e+00"), End: proto.String("1.4e+01")},
+							{Start: proto.String("1.4e+01")},
+						},
+					}},
+				},
+			},
+		},
+		{
+			desc: "Facet discovery - bad value",
+			opts: []FacetSearchOption{
+				FacetDiscovery("colour", true),
+			},
+			wantErr: "bad FacetSearchOption: unsupported value type bool",
+		},
+		{
+			desc: "Facet discovery - mix value types",
+			opts: []FacetSearchOption{
+				FacetDiscovery("colour", Atom("blue"), AtLeast(7)),
+			},
+			wantErr: "bad FacetSearchOption: values must all be Atom, or must all be Range",
+		},
+		{
+			desc: "Facet discovery - invalid range",
+			opts: []FacetSearchOption{
+				FacetDiscovery("colour", Range{negInf, posInf}),
+			},
+			wantErr: "bad FacetSearchOption: invalid range: either Start or End must be finite",
+		},
+	}
+
+	for _, tt := range testCases {
+		c := aetesting.FakeSingleContext(t, "search", "Search", func(req *pb.SearchRequest, _ *pb.SearchResponse) error {
+			if tt.want == nil {
+				t.Errorf("%s: expected call to fail", tt.desc)
+				return nil
+			}
+			// Set default fields.
+			tt.want.Query = proto.String("gopher")
+			tt.want.IndexSpec = &pb.IndexSpec{Name: proto.String("Doc")}
+			tt.want.CursorType = pb.SearchParams_SINGLE.Enum()
+			tt.want.FieldSpec = &pb.FieldSpec{}
+			if got := req.Params; !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s: params=%v; want %v", tt.desc, got, tt.want)
+			}
+			return noErr // Always return some error to prevent response parsing.
+		})
+
+		it := index.Search(c, "gopher", &SearchOptions{Facets: tt.opts})
+		_, err := it.Next(nil)
+		if err == nil {
+			t.Fatalf("%s: err==nil; should not happen", tt.desc)
+		}
+		if err.Error() != tt.wantErr {
+			t.Errorf("%s: got error %q, want %q", tt.desc, err, tt.wantErr)
+		}
+	}
+}
+
+func TestFacetRefinements(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	noErr := errors.New("") // Sentinel err to return to prevent sending request.
+
+	testCases := []struct {
+		desc    string
+		refine  []Facet
+		want    []*pb.FacetRefinement
+		wantErr string
+	}{
+		{
+			desc: "No refinements",
+		},
+		{
+			desc: "Basic",
+			refine: []Facet{
+				{Name: "fur", Value: Atom("fluffy")},
+				{Name: "age", Value: LessThan(123)},
+				{Name: "age", Value: AtLeast(0)},
+				{Name: "legs", Value: Range{Start: 3, End: 5}},
+			},
+			want: []*pb.FacetRefinement{
+				{Name: proto.String("fur"), Value: proto.String("fluffy")},
+				{Name: proto.String("age"), Range: &pb.FacetRefinement_Range{End: proto.String("1.23e+02")}},
+				{Name: proto.String("age"), Range: &pb.FacetRefinement_Range{Start: proto.String("0e+00")}},
+				{Name: proto.String("legs"), Range: &pb.FacetRefinement_Range{Start: proto.String("3e+00"), End: proto.String("5e+00")}},
+			},
+		},
+		{
+			desc: "Infinite range",
+			refine: []Facet{
+				{Name: "age", Value: Range{Start: negInf, End: posInf}},
+			},
+			wantErr: `search: refinement for facet "age": either Start or End must be finite`,
+		},
+		{
+			desc: "Bad End value in range",
+			refine: []Facet{
+				{Name: "age", Value: LessThan(2147483648)},
+			},
+			wantErr: `search: refinement for facet "age": invalid value for End`,
+		},
+		{
+			desc: "Bad Start value in range",
+			refine: []Facet{
+				{Name: "age", Value: AtLeast(-2147483649)},
+			},
+			wantErr: `search: refinement for facet "age": invalid value for Start`,
+		},
+		{
+			desc: "Unknown value type",
+			refine: []Facet{
+				{Name: "age", Value: "you can't use strings!"},
+			},
+			wantErr: `search: unsupported refinement for facet "age" of type string`,
+		},
+	}
+
+	for _, tt := range testCases {
+		c := aetesting.FakeSingleContext(t, "search", "Search", func(req *pb.SearchRequest, _ *pb.SearchResponse) error {
+			if got := req.Params.FacetRefinement; !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("%s: params.FacetRefinement=%v; want %v", tt.desc, got, tt.want)
+			}
+			return noErr // Always return some error to prevent response parsing.
+		})
+
+		it := index.Search(c, "gopher", &SearchOptions{Refinements: tt.refine})
+		_, err := it.Next(nil)
+		if err == nil {
+			t.Fatalf("%s: err==nil; should not happen", tt.desc)
+		}
+		if err.Error() != tt.wantErr {
+			t.Errorf("%s: got error %q, want %q", tt.desc, err, tt.wantErr)
 		}
 	}
 }
