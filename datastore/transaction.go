@@ -39,7 +39,8 @@ var ErrConcurrentTransaction = errors.New("datastore: concurrent transaction")
 // returning nil if it succeeds. If the commit fails due to a conflicting
 // transaction, RunInTransaction retries f, each time with a new transaction
 // context. It gives up and returns ErrConcurrentTransaction after three
-// failed attempts.
+// failed attempts. The number of attempts can be configured by specifying
+// TransactionOptions.Attempts.
 //
 // If f returns non-nil, then any datastore changes will not be applied and
 // RunInTransaction returns that same error. The function f is not retried.
@@ -57,7 +58,11 @@ func RunInTransaction(c context.Context, f func(tc context.Context) error, opts 
 	if opts != nil {
 		xg = opts.XG
 	}
-	for i := 0; i < 3; i++ {
+	attempts := 3
+	if opts != nil && opts.Attempts > 0 {
+		attempts = opts.Attempts
+	}
+	for i := 0; i < attempts; i++ {
 		if err := internal.RunTransactionOnce(c, f, xg); err != internal.ErrConcurrentTransaction {
 			return err
 		}
@@ -76,4 +81,7 @@ type TransactionOptions struct {
 	// It is valid to set XG to true even if the transaction is within a
 	// single entity group.
 	XG bool
+	// Attempts controls the number of retries to perform when commits fail
+	// due to a conflicting transaction. If omitted, it defaults to 3.
+	Attempts int
 }
