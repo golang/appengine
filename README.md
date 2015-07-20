@@ -68,4 +68,4 @@ This list summarises the differences:
 * `appengine.IsCapabilityDisabled` and `appengine/capability` are obsolete.
 * Most of `appengine/file` and parts of `appengine/blobstore` are deprecated.
   Use [Google Cloud Storage](https://godoc.org/google.golang.org/cloud/storage) instead.
-* `appengine/socket` is deprecated. Use the standard `net` package instead.
+* `appengine/socket` is not required on Managed VMs. Use the standard `net` package instead.
