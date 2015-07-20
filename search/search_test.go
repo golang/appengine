@@ -382,40 +382,49 @@ func TestLoadErrFieldMismatch(t *testing.T) {
 }
 
 func TestLimit(t *testing.T) {
-	more := func(it *Iterator) error {
-		if it.limit == 0 {
-			return errors.New("Iterator.limit should not be zero in next")
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+	c := aetesting.FakeSingleContext(t, "search", "Search", func(req *pb.SearchRequest, res *pb.SearchResponse) error {
+		limit := 20 // Default per page.
+		if req.Params.Limit != nil {
+			limit = int(*req.Params.Limit)
 		}
-		// Page up to 20 items at once.
-		ret := 20
-		if it.limit > 0 && it.limit < ret {
-			ret = it.limit
-		}
-		it.listRes = make([]*pb.Document, ret)
-		for i := range it.listRes {
-			it.listRes[i] = &pb.Document{}
+		res.Status = &pb.RequestStatus{Code: pb.SearchServiceError_OK.Enum()}
+		res.MatchedCount = proto.Int64(int64(limit))
+		for i := 0; i < limit; i++ {
+			res.Result = append(res.Result, &pb.SearchResult{Document: &pb.Document{}})
+			res.Cursor = proto.String("moreresults")
 		}
 		return nil
+	})
+
+	const maxDocs = 500 // Limit maximum number of docs.
+	testCases := []struct {
+		limit, want int
+	}{
+		{limit: 0, want: maxDocs},
+		{limit: 42, want: 42},
+		{limit: 100, want: 100},
+		{limit: 1000, want: maxDocs},
 	}
 
-	it := &Iterator{
-		more:  more,
-		limit: 42,
-	}
-
-	count := 0
-	for {
-		_, err := it.Next(nil)
-		if err == Done {
-			break
+	for _, tt := range testCases {
+		it := index.Search(c, "gopher", &SearchOptions{Limit: tt.limit, IDsOnly: true})
+		count := 0
+		for ; count < maxDocs; count++ {
+			_, err := it.Next(nil)
+			if err == Done {
+				break
+			}
+			if err != nil {
+				t.Fatalf("err after %d: %v", count, err)
+			}
 		}
-		if err != nil {
-			t.Fatalf("err after %d: %v", count, err)
+		if count != tt.want {
+			t.Errorf("got %d results, expected %d", count, tt.want)
 		}
-		count++
-	}
-	if count != 42 {
-		t.Errorf("got %d results, expected 42", count)
 	}
 }
 
@@ -655,7 +664,7 @@ func TestFieldSpec(t *testing.T) {
 	}
 }
 
-func TestFacetOptions(t *testing.T) {
+func TestBasicSearchOpts(t *testing.T) {
 	index, err := Open("Doc")
 	if err != nil {
 		t.Fatalf("err from Open: %v", err)
@@ -664,10 +673,12 @@ func TestFacetOptions(t *testing.T) {
 	noErr := errors.New("") // Sentinel err to return to prevent sending request.
 
 	testCases := []struct {
-		desc    string
-		opts    []FacetSearchOption
-		want    *pb.SearchParams
-		wantErr string
+		desc      string
+		facetOpts []FacetSearchOption
+		cursor    Cursor
+		offset    int
+		want      *pb.SearchParams
+		wantErr   string
 	}{
 		{
 			desc: "No options",
@@ -675,7 +686,7 @@ func TestFacetOptions(t *testing.T) {
 		},
 		{
 			desc: "Default auto discovery",
-			opts: []FacetSearchOption{
+			facetOpts: []FacetSearchOption{
 				AutoFacetDiscovery(0, 0),
 			},
 			want: &pb.SearchParams{
@@ -684,7 +695,7 @@ func TestFacetOptions(t *testing.T) {
 		},
 		{
 			desc: "Auto discovery",
-			opts: []FacetSearchOption{
+			facetOpts: []FacetSearchOption{
 				AutoFacetDiscovery(7, 12),
 			},
 			want: &pb.SearchParams{
@@ -696,7 +707,7 @@ func TestFacetOptions(t *testing.T) {
 		},
 		{
 			desc: "Param Depth",
-			opts: []FacetSearchOption{
+			facetOpts: []FacetSearchOption{
 				AutoFacetDiscovery(7, 12),
 			},
 			want: &pb.SearchParams{
@@ -708,7 +719,7 @@ func TestFacetOptions(t *testing.T) {
 		},
 		{
 			desc: "Doc depth",
-			opts: []FacetSearchOption{
+			facetOpts: []FacetSearchOption{
 				FacetDocumentDepth(123),
 			},
 			want: &pb.SearchParams{
@@ -717,7 +728,7 @@ func TestFacetOptions(t *testing.T) {
 		},
 		{
 			desc: "Facet discovery",
-			opts: []FacetSearchOption{
+			facetOpts: []FacetSearchOption{
 				FacetDiscovery("colour"),
 				FacetDiscovery("size", Atom("M"), Atom("L")),
 				FacetDiscovery("price", LessThan(7), Range{7, 14}, AtLeast(14)),
@@ -740,24 +751,44 @@ func TestFacetOptions(t *testing.T) {
 		},
 		{
 			desc: "Facet discovery - bad value",
-			opts: []FacetSearchOption{
+			facetOpts: []FacetSearchOption{
 				FacetDiscovery("colour", true),
 			},
 			wantErr: "bad FacetSearchOption: unsupported value type bool",
 		},
 		{
 			desc: "Facet discovery - mix value types",
-			opts: []FacetSearchOption{
+			facetOpts: []FacetSearchOption{
 				FacetDiscovery("colour", Atom("blue"), AtLeast(7)),
 			},
 			wantErr: "bad FacetSearchOption: values must all be Atom, or must all be Range",
 		},
 		{
 			desc: "Facet discovery - invalid range",
-			opts: []FacetSearchOption{
+			facetOpts: []FacetSearchOption{
 				FacetDiscovery("colour", Range{negInf, posInf}),
 			},
 			wantErr: "bad FacetSearchOption: invalid range: either Start or End must be finite",
+		},
+		{
+			desc:   "Cursor",
+			cursor: Cursor("mycursor"),
+			want: &pb.SearchParams{
+				Cursor: proto.String("mycursor"),
+			},
+		},
+		{
+			desc:   "Offset",
+			offset: 121,
+			want: &pb.SearchParams{
+				Offset: proto.Int32(121),
+			},
+		},
+		{
+			desc:    "Cursor and Offset set",
+			cursor:  Cursor("mycursor"),
+			offset:  121,
+			wantErr: "at most one of Cursor and Offset may be specified",
 		},
 	}
 
@@ -770,7 +801,7 @@ func TestFacetOptions(t *testing.T) {
 			// Set default fields.
 			tt.want.Query = proto.String("gopher")
 			tt.want.IndexSpec = &pb.IndexSpec{Name: proto.String("Doc")}
-			tt.want.CursorType = pb.SearchParams_SINGLE.Enum()
+			tt.want.CursorType = pb.SearchParams_PER_RESULT.Enum()
 			tt.want.FieldSpec = &pb.FieldSpec{}
 			if got := req.Params; !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("%s: params=%v; want %v", tt.desc, got, tt.want)
@@ -778,7 +809,11 @@ func TestFacetOptions(t *testing.T) {
 			return noErr // Always return some error to prevent response parsing.
 		})
 
-		it := index.Search(c, "gopher", &SearchOptions{Facets: tt.opts})
+		it := index.Search(c, "gopher", &SearchOptions{
+			Facets: tt.facetOpts,
+			Cursor: tt.cursor,
+			Offset: tt.offset,
+		})
 		_, err := it.Next(nil)
 		if err == nil {
 			t.Fatalf("%s: err==nil; should not happen", tt.desc)

@@ -302,13 +302,10 @@ func (x *Index) List(c context.Context, opts *ListOptions) *Iterator {
 		count:         -1,
 		listInclusive: true,
 		more:          moreList,
-		limit:         -1,
 	}
 	if opts != nil {
 		t.listStartID = opts.StartID
-		if opts.Limit > 0 {
-			t.limit = opts.Limit
-		}
+		t.limit = opts.Limit
 		t.idsOnly = opts.IDsOnly
 	}
 	return t
@@ -340,7 +337,7 @@ func moreList(t *Iterator) error {
 	}
 	t.listRes = res.Document
 	t.listStartID, t.listInclusive, t.more = "", false, nil
-	if len(res.Document) != 0 {
+	if len(res.Document) != 0 && t.limit <= 0 {
 		if id := res.Document[len(res.Document)-1].GetId(); id != "" {
 			t.listStartID, t.more = id, moreList
 		}
@@ -371,28 +368,37 @@ func (x *Index) Search(c context.Context, query string, opts *SearchOptions) *It
 		index:       x,
 		searchQuery: query,
 		more:        moreSearch,
-		limit:       -1,
 	}
 	if opts != nil {
-		if opts.Limit > 0 {
-			t.limit = opts.Limit
+		if opts.Cursor != "" {
+			if opts.Offset != 0 {
+				return errIter("at most one of Cursor and Offset may be specified")
+			}
+			t.searchCursor = proto.String(string(opts.Cursor))
 		}
+		t.limit = opts.Limit
 		t.fields = opts.Fields
 		t.idsOnly = opts.IDsOnly
 		t.sort = opts.Sort
 		t.exprs = opts.Expressions
 		t.refinements = opts.Refinements
 		t.facetOpts = opts.Facets
+		t.searchOffset = opts.Offset
 	}
 	return t
 }
 
 func moreSearch(t *Iterator) error {
+	// We use per-result (rather than single/per-page) cursors since this
+	// lets us return a Cursor for every iterator document. The two cursor
+	// types are largely interchangeable: a page cursor is the same as the
+	// last per-result cursor in a given search response.
 	req := &pb.SearchRequest{
 		Params: &pb.SearchParams{
 			IndexSpec:  &t.index.spec,
 			Query:      &t.searchQuery,
-			CursorType: pb.SearchParams_SINGLE.Enum(),
+			Cursor:     t.searchCursor,
+			CursorType: pb.SearchParams_PER_RESULT.Enum(),
 			FieldSpec: &pb.FieldSpec{
 				Name: t.fields,
 			},
@@ -400,6 +406,10 @@ func moreSearch(t *Iterator) error {
 	}
 	if t.limit > 0 {
 		req.Params.Limit = proto.Int32(int32(t.limit))
+	}
+	if t.searchOffset > 0 {
+		req.Params.Offset = proto.Int32(int32(t.searchOffset))
+		t.searchOffset = 0
 	}
 	if t.idsOnly {
 		req.Params.KeysOnly = &t.idsOnly
@@ -428,9 +438,6 @@ func moreSearch(t *Iterator) error {
 	// Don't repeat facet search.
 	t.facetOpts = nil
 
-	if t.searchCursor != nil {
-		req.Params.Cursor = t.searchCursor
-	}
 	res := &pb.SearchResponse{}
 	if err := internal.Call(t.c, "search", "Search", req, res); err != nil {
 		return err
@@ -443,10 +450,10 @@ func moreSearch(t *Iterator) error {
 		t.facetRes = res.FacetResult
 	}
 	t.count = int(*res.MatchedCount)
-	if res.Cursor != nil {
-		t.searchCursor, t.more = res.Cursor, moreSearch
+	if t.limit > 0 {
+		t.more = nil
 	} else {
-		t.searchCursor, t.more = nil, nil
+		t.more = moreSearch
 	}
 	return nil
 }
@@ -482,8 +489,20 @@ type SearchOptions struct {
 	// different names, and in disjunction otherwise.
 	Refinements []Facet
 
-	// TODO: cursor, offset, maybe others.
+	// Cursor causes the results to commence with the first document after
+	// the document associated with the cursor.
+	Cursor Cursor
+
+	// Offset specifies the number of documents to skip over before returning results.
+	// When specified, Cursor must be nil.
+	Offset int
 }
+
+// Cursor represents an iterator's position.
+//
+// The string value of a cursor is web-safe. It can be saved and restored
+// for later use.
+type Cursor string
 
 // FieldExpression defines a custom expression to evaluate for each result.
 type FieldExpression struct {
@@ -779,6 +798,7 @@ type Iterator struct {
 	facetRes     []*pb.FacetResult
 	searchQuery  string
 	searchCursor *string
+	searchOffset int
 	sort         *SortOptions
 
 	fields      []string
@@ -789,8 +809,15 @@ type Iterator struct {
 	more func(*Iterator) error
 
 	count   int
-	limit   int // items left to return; -1 for unlimited.
+	limit   int // items left to return; 0 for unlimited.
 	idsOnly bool
+}
+
+// errIter returns an iterator that only returns the given error.
+func errIter(err string) *Iterator {
+	return &Iterator{
+		err: errors.New(err),
+	}
 }
 
 // Done is returned when a query iteration has completed.
@@ -829,6 +856,7 @@ func (t *Iterator) Next(dst interface{}) (string, error) {
 	case len(t.searchRes) != 0:
 		doc = t.searchRes[0].Document
 		exprs = t.searchRes[0].Expression
+		t.searchCursor = t.searchRes[0].Cursor
 		t.searchRes = t.searchRes[1:]
 	default:
 		return "", Done
@@ -841,13 +869,19 @@ func (t *Iterator) Next(dst interface{}) (string, error) {
 			return "", err
 		}
 	}
-	if t.limit > 0 {
-		t.limit--
-		if t.limit == 0 {
-			t.more = nil // prevent further fetches
-		}
-	}
 	return doc.GetId(), nil
+}
+
+// Cursor returns the cursor associated with the current document (that is,
+// the document most recently returned by a call to Next).
+//
+// Passing this cursor in a future call to Search will cause those results
+// to commence with the first document after the current document.
+func (t *Iterator) Cursor() Cursor {
+	if t.searchCursor == nil {
+		return ""
+	}
+	return Cursor(*t.searchCursor)
 }
 
 // Facets returns the facets found within the search results, if any facets
