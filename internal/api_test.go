@@ -219,7 +219,10 @@ func TestAPICallDialFailure(t *testing.T) {
 
 	start := time.Now()
 	err := Call(toContext(c), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{})
-	const max = 1 * time.Second
+	// Since https://github.com/golang/go/commit/0d8366e,
+	// the permissible minimum dial timeout is 2s.
+	// This might be a bug (https://golang.org/issue/11796).
+	const max = 3 * time.Second
 	if taken := time.Since(start); taken > max {
 		t.Errorf("Dial hang took too long: %v > %v", taken, max)
 	}
