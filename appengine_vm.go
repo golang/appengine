@@ -6,7 +6,11 @@
 
 package appengine
 
-import "google.golang.org/appengine/internal"
+import (
+	"golang.org/x/net/context"
+
+	"google.golang.org/appengine/internal"
+)
 
 // The comment below must not be changed.
 // It is used by go-app-builder to recognise that this package has
@@ -18,4 +22,11 @@ import "google.golang.org/appengine/internal"
 // It uses the default http handler and never returns.
 func Main() {
 	internal.Main()
+}
+
+// BackgroundContext returns a context not associated with a request.
+// This should only be used when not servicing a request.
+// This only works on Managed VMs.
+func BackgroundContext() context.Context {
+	return internal.BackgroundContext()
 }

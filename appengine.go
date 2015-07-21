@@ -37,8 +37,6 @@ func WithContext(parent context.Context, req *http.Request) context.Context {
 
 // TODO(dsymonds): Add a Call function here? Otherwise other packages can't access internal.Call.
 
-// TODO(dsymonds): Add BackgroundContext function?
-
 // BlobKey is a key for a blobstore blob.
 //
 // Conceptually, this type belongs in the blobstore package, but it lives in
