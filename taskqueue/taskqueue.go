@@ -152,6 +152,10 @@ var (
 	defaultNamespace = http.CanonicalHeaderKey("X-AppEngine-Default-Namespace")
 )
 
+func getDefaultNamespace(ctx context.Context) string {
+	return internal.IncomingHeaders(ctx).Get(defaultNamespace)
+}
+
 func newAddReq(c context.Context, task *Task, queueName string) (*pb.TaskQueueAddRequest, error) {
 	if queueName == "" {
 		queueName = "default"

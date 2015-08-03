@@ -106,13 +106,11 @@ func TestAddMulti(t *testing.T) {
 func TestAddWithEmptyPath(t *testing.T) {
 	c := aetesting.FakeSingleContext(t, "taskqueue", "Add", func(req *pb.TaskQueueAddRequest, res *pb.TaskQueueAddResponse) error {
 		if got, want := string(req.Url), "/_ah/queue/a-queue"; got != want {
-			return fmt.Errorf("unexpected Url, got %q want %q", got, want)
+			return fmt.Errorf("req.Url = %q; want %q", got, want)
 		}
 		return nil
 	})
-	task := &Task{}
-	_, err := Add(c, task, "a-queue")
-	if err != nil {
+	if _, err := Add(c, &Task{}, "a-queue"); err != nil {
 		t.Fatalf("Add: %v", err)
 	}
 }
