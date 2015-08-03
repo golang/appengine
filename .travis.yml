@@ -1,4 +1,5 @@
 language: go
+sudo: false
 
 go:
   - 1.4
@@ -13,6 +14,7 @@ install:
   - unzip sdk.zip -d sdk
 
 script:
+  - go version
   - go test -v google.golang.org/appengine/...
   - go test -v -race google.golang.org/appengine/...
   - sdk/go_appengine/goapp test -v google.golang.org/appengine/...
