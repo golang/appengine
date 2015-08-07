@@ -60,9 +60,10 @@ This list summarises the differences:
 * `search.FieldLoadSaver` now handles document metadata.
 * `urlfetch.Transport` no longer has a Deadline field; set a deadline on the
   `context.Context` instead.
+* `appengine.aetest` no longer declares its own Context type, and uses the standard one instead.
 * `taskqueue.QueueStats` no longer takes a maxTasks argument. That argument has been
   deprecated and unused for a long time.
-* `appengine/aetest`, `appengine/cloudsql` and `appengine/runtime` have not been ported yet.
+* `appengine/cloudsql` and `appengine/runtime` have not been ported yet.
 * `appengine.BackendHostname` and `appengine.BackendInstance` were for the deprecated backends feature.
   Use `appengine.ModuleHostname`and `appengine.ModuleName` instead.
 * `appengine.IsCapabilityDisabled` and `appengine/capability` are obsolete.
