@@ -1,3 +1,7 @@
+// Copyright 2015 Google Inc. All rights reserved.
+// Use of this source code is governed by the Apache 2.0
+// license that can be found in the LICENSE file.
+
 // Program aebundler turns a Go app into a fully self-contained tar file.
 // The app and its subdirectories (if any) are placed under "."
 // and the dependencies from $GOPATH are placed under ./_gopath/src.

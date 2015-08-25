@@ -1,3 +1,7 @@
+// Copyright 2015 Google Inc. All rights reserved.
+// Use of this source code is governed by the Apache 2.0
+// license that can be found in the LICENSE file.
+
 // Program aedeploy assists with deploying Go Managed VM apps to production.
 // A temporary directory is created; the app, its subdirectories, and all its
 // dependencies from $GOPATH are copied into the directory; then the app
