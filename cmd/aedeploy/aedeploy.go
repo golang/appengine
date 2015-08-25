@@ -7,11 +7,7 @@
 //
 // This command must be issued from within the root directory of the app
 // (where the app.yaml file is located).
-//
-// A sample Dockerfile to be used with this tool could look like this:
-//     FROM gcr.io/google_appengine/go-compat
-//     ADD . /app
-//     RUN GOPATH=/app/_gopath go build -tags appenginevm -o /app/_ah/exe
+
 package main
 
 import (
