@@ -11,7 +11,6 @@
 //
 // This command must be issued from within the root directory of the app
 // (where the app.yaml file is located).
-
 package main
 
 import (
