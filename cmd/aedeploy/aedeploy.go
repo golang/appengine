@@ -121,7 +121,7 @@ func buildContext(tags []string) *build.Context {
 
 // bundle bundles the app into a temporary directory.
 func (s *app) bundle() (tmpdir string, err error) {
-	workDir, err := ioutil.TempDir("", os.Args[0])
+	workDir, err := ioutil.TempDir("", "aedeploy")
 	if err != nil {
 		return "", fmt.Errorf("unable to create tmpdir: %v", err)
 	}
