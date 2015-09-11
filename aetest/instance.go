@@ -21,6 +21,9 @@ type Options struct {
 	// AppID specifies the App ID to use during tests.
 	// By default, "testapp".
 	AppID string
+	// StronglyConsistentDatastore is whether the local datastore should be
+	// strongly consistent. This will diverge from production behaviour.
+	StronglyConsistentDatastore bool
 }
 
 // NewContext starts an instance of the development API server, and returns

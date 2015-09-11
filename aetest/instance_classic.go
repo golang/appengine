@@ -14,6 +14,7 @@ func NewInstance(opts *Options) (Instance, error) {
 	if opts != nil {
 		aeOpts = &aetest.Options{
 			AppID: opts.AppID,
+			StronglyConsistentDatastore: opts.StronglyConsistentDatastore,
 		}
 	}
 	return aetest.NewInstance(aeOpts)

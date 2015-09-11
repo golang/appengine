@@ -190,6 +190,9 @@ func (i *instance) startChild() (err error) {
 		"--clear_search_indexes=true",
 		"--datastore_path", filepath.Join(i.appDir, "datastore"),
 	}
+	if i.opts != nil && i.opts.StronglyConsistentDatastore {
+		appserverArgs = append(appserverArgs, "--datastore_consistency_policy=consistent")
+	}
 	appserverArgs = append(appserverArgs, filepath.Join(i.appDir, "app"))
 
 	i.child = exec.Command(python,
