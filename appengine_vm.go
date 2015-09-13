@@ -17,9 +17,33 @@ import (
 // the Main function to use in the synthetic main.
 //   The gophers party all night; the rabbits provide the beats.
 
-// Main installs the health checker and creates a server listening on port
-// "PORT" if set in the environment or on port 8080.
-// It uses the default http handler and never returns.
+// Main is the principal entry point for a Managed VMs app.
+// It installs a trivial health checker if one isn't already registered,
+// and starts listening on port 8080 (overridden by the $PORT environment
+// variable).
+//
+// See https://cloud.google.com/appengine/docs/managed-vms/custom-runtimes#health_check_requests
+// for details on how to do your own health checking.
+//
+// Main never returns.
+//
+// Main is designed so that the app's main package looks like this:
+//
+//      package main
+//
+//      import (
+//              "google.golang.org/appengine"
+//
+//              _ "myapp/package0"
+//              _ "myapp/package1"
+//      )
+//
+//      func main() {
+//              appengine.Main()
+//      }
+//
+// The "myapp/packageX" packages are expected to register HTTP handlers
+// in their init functions.
 func Main() {
 	internal.Main()
 }

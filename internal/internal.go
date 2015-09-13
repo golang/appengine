@@ -109,23 +109,6 @@ func (e *CallError) IsTimeout() bool {
 	return e.Timeout
 }
 
-// Main is designed so that the complete generated main package is:
-//
-//      package main
-//
-//      import (
-//              "google.golang.org/appengine/internal"
-//
-//              _ "myapp/package0"
-//              _ "myapp/package1"
-//      )
-//
-//      func main() {
-//              internal.Main()
-//      }
-//
-// The "myapp/packageX" packages are expected to register HTTP handlers
-// in their init functions.
 func Main() {
 	installHealthChecker(http.DefaultServeMux)
 
