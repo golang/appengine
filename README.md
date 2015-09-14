@@ -9,6 +9,9 @@ Its canonical import path is `google.golang.org/appengine`.
 See https://cloud.google.com/appengine/docs/go/managed-vms/
 for more information.
 
+File issue reports and feature requests on the [Google App Engine issue
+tracker](https://code.google.com/p/googleappengine/issues/entry?template=Go%20defect).
+
 ## Directory structure
 The top level directory of this repository is the `appengine` package. It
 contains the
