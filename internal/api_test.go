@@ -213,7 +213,7 @@ func TestAPICallDialFailure(t *testing.T) {
 	_, c, cleanup := setup()
 	defer cleanup()
 	// Reset the URL to the production address so that dialing fails.
-	c.apiURL = &url.URL{Scheme: "http", Host: apiHost(), Path: apiPath}
+	c.apiURL = apiURL()
 
 	start := time.Now()
 	err := Call(toContext(c), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{})
@@ -456,4 +456,11 @@ func TestBackgroundContext(t *testing.T) {
 	if g, w := ctx.req.Header.Get(key), "my-app-id/default.20150612t184001.0"; g != w {
 		t.Errorf("%v = %q, want %q", key, g, w)
 	}
+
+	// Check that using the background context doesn't panic.
+	req := &basepb.StringProto{
+		Value: proto.String("Doctor Who"),
+	}
+	res := &basepb.StringProto{}
+	Call(BackgroundContext(), "actordb", "LookupActor", req, res) // expected to fail
 }

@@ -61,7 +61,7 @@ var (
 	}
 )
 
-func apiHost() string {
+func apiURL() *url.URL {
 	host, port := "appengine.googleapis.com", "10001"
 	if h := os.Getenv("API_HOST"); h != "" {
 		host = h
@@ -69,18 +69,18 @@ func apiHost() string {
 	if p := os.Getenv("API_PORT"); p != "" {
 		port = p
 	}
-	return host + ":" + port
+	return &url.URL{
+		Scheme: "http",
+		Host:   host + ":" + port,
+		Path:   apiPath,
+	}
 }
 
 func handleHTTP(w http.ResponseWriter, r *http.Request) {
 	c := &context{
 		req:       r,
 		outHeader: w.Header(),
-		apiURL: &url.URL{
-			Scheme: "http",
-			Host:   apiHost(),
-			Path:   apiPath,
-		},
+		apiURL:    apiURL(),
 	}
 	stopFlushing := make(chan int)
 
@@ -288,6 +288,7 @@ func BackgroundContext() netcontext.Context {
 				ticketHeader: []string{ticket},
 			},
 		},
+		apiURL: apiURL(),
 	}
 
 	// TODO(dsymonds): Wire up the shutdown handler to do a final flush.
