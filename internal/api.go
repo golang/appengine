@@ -62,7 +62,7 @@ var (
 )
 
 func apiURL() *url.URL {
-	host, port := "appengine.googleapis.com", "10001"
+	host, port := "appengine.googleapis.internal", "10001"
 	if h := os.Getenv("API_HOST"); h != "" {
 		host = h
 	}
