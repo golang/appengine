@@ -11,6 +11,7 @@ package appengine // import "google.golang.org/appengine"
 import (
 	"net/http"
 
+	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
@@ -52,4 +53,24 @@ type GeoPoint struct {
 // Valid returns whether a GeoPoint is within [-90, 90] latitude and [-180, 180] longitude.
 func (g GeoPoint) Valid() bool {
 	return -90 <= g.Lat && g.Lat <= 90 && -180 <= g.Lng && g.Lng <= 180
+}
+
+// APICallFunc defines a function type for handling an API call.
+// See WithCallOverride.
+type APICallFunc func(ctx context.Context, service, method string, in, out proto.Message) error
+
+// WithCallOverride returns a copy of the parent context
+// that will cause API calls to invoke f instead of their normal operation.
+//
+// This is intended for advanced users only.
+func WithAPICallFunc(ctx context.Context, f APICallFunc) context.Context {
+	return internal.WithCallOverride(ctx, internal.CallOverrideFunc(f))
+}
+
+// APICall performs an API call.
+//
+// This is not intended for general use; it is exported for use in conjunction
+// with WithAPICallFunc.
+func APICall(ctx context.Context, service, method string, in, out proto.Message) error {
+	return internal.Call(ctx, service, method, in, out)
 }
