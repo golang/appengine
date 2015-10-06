@@ -82,9 +82,9 @@ func (m *MailServiceError) String() string { return proto.CompactTextString(m) }
 func (*MailServiceError) ProtoMessage()    {}
 
 type MailAttachment struct {
-	FileName         *string `protobuf:"bytes,1,req" json:"FileName,omitempty"`
-	Data             []byte  `protobuf:"bytes,2,req" json:"Data,omitempty"`
-	ContentID        *string `protobuf:"bytes,3,opt" json:"ContentID,omitempty"`
+	FileName         *string `protobuf:"bytes,1,req,name=FileName" json:"FileName,omitempty"`
+	Data             []byte  `protobuf:"bytes,2,req,name=Data" json:"Data,omitempty"`
+	ContentID        *string `protobuf:"bytes,3,opt,name=ContentID" json:"ContentID,omitempty"`
 	XXX_unrecognized []byte  `json:"-"`
 }
 
@@ -138,16 +138,16 @@ func (m *MailHeader) GetValue() string {
 }
 
 type MailMessage struct {
-	Sender           *string           `protobuf:"bytes,1,req" json:"Sender,omitempty"`
-	ReplyTo          *string           `protobuf:"bytes,2,opt" json:"ReplyTo,omitempty"`
-	To               []string          `protobuf:"bytes,3,rep" json:"To,omitempty"`
-	Cc               []string          `protobuf:"bytes,4,rep" json:"Cc,omitempty"`
-	Bcc              []string          `protobuf:"bytes,5,rep" json:"Bcc,omitempty"`
-	Subject          *string           `protobuf:"bytes,6,req" json:"Subject,omitempty"`
-	TextBody         *string           `protobuf:"bytes,7,opt" json:"TextBody,omitempty"`
-	HtmlBody         *string           `protobuf:"bytes,8,opt" json:"HtmlBody,omitempty"`
-	Attachment       []*MailAttachment `protobuf:"bytes,9,rep" json:"Attachment,omitempty"`
-	Header           []*MailHeader     `protobuf:"bytes,10,rep" json:"Header,omitempty"`
+	Sender           *string           `protobuf:"bytes,1,req,name=Sender" json:"Sender,omitempty"`
+	ReplyTo          *string           `protobuf:"bytes,2,opt,name=ReplyTo" json:"ReplyTo,omitempty"`
+	To               []string          `protobuf:"bytes,3,rep,name=To" json:"To,omitempty"`
+	Cc               []string          `protobuf:"bytes,4,rep,name=Cc" json:"Cc,omitempty"`
+	Bcc              []string          `protobuf:"bytes,5,rep,name=Bcc" json:"Bcc,omitempty"`
+	Subject          *string           `protobuf:"bytes,6,req,name=Subject" json:"Subject,omitempty"`
+	TextBody         *string           `protobuf:"bytes,7,opt,name=TextBody" json:"TextBody,omitempty"`
+	HtmlBody         *string           `protobuf:"bytes,8,opt,name=HtmlBody" json:"HtmlBody,omitempty"`
+	Attachment       []*MailAttachment `protobuf:"bytes,9,rep,name=Attachment" json:"Attachment,omitempty"`
+	Header           []*MailHeader     `protobuf:"bytes,10,rep,name=Header" json:"Header,omitempty"`
 	XXX_unrecognized []byte            `json:"-"`
 }
 

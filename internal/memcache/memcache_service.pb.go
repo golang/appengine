@@ -359,7 +359,7 @@ func (m *MemcacheGetRequest) GetOverride() *AppOverride {
 }
 
 type MemcacheGetResponse struct {
-	Item             []*MemcacheGetResponse_Item `protobuf:"group,1,rep" json:"item,omitempty"`
+	Item             []*MemcacheGetResponse_Item `protobuf:"group,1,rep,name=Item" json:"item,omitempty"`
 	XXX_unrecognized []byte                      `json:"-"`
 }
 
@@ -423,7 +423,7 @@ func (m *MemcacheGetResponse_Item) GetExpiresInSeconds() int32 {
 }
 
 type MemcacheSetRequest struct {
-	Item             []*MemcacheSetRequest_Item `protobuf:"group,1,rep" json:"item,omitempty"`
+	Item             []*MemcacheSetRequest_Item `protobuf:"group,1,rep,name=Item" json:"item,omitempty"`
 	NameSpace        *string                    `protobuf:"bytes,7,opt,name=name_space,def=" json:"name_space,omitempty"`
 	Override         *AppOverride               `protobuf:"bytes,10,opt,name=override" json:"override,omitempty"`
 	XXX_unrecognized []byte                     `json:"-"`
@@ -538,7 +538,7 @@ func (m *MemcacheSetResponse) GetSetStatus() []MemcacheSetResponse_SetStatusCode
 }
 
 type MemcacheDeleteRequest struct {
-	Item             []*MemcacheDeleteRequest_Item `protobuf:"group,1,rep" json:"item,omitempty"`
+	Item             []*MemcacheDeleteRequest_Item `protobuf:"group,1,rep,name=Item" json:"item,omitempty"`
 	NameSpace        *string                       `protobuf:"bytes,4,opt,name=name_space,def=" json:"name_space,omitempty"`
 	Override         *AppOverride                  `protobuf:"bytes,5,opt,name=override" json:"override,omitempty"`
 	XXX_unrecognized []byte                        `json:"-"`
@@ -895,7 +895,7 @@ func (m *MemcacheGrabTailRequest) GetOverride() *AppOverride {
 }
 
 type MemcacheGrabTailResponse struct {
-	Item             []*MemcacheGrabTailResponse_Item `protobuf:"group,1,rep" json:"item,omitempty"`
+	Item             []*MemcacheGrabTailResponse_Item `protobuf:"group,1,rep,name=Item" json:"item,omitempty"`
 	XXX_unrecognized []byte                           `json:"-"`
 }
 

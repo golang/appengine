@@ -626,7 +626,7 @@ type FieldValue struct {
 	Type             *FieldValue_ContentType `protobuf:"varint,1,opt,name=type,enum=search.FieldValue_ContentType,def=0" json:"type,omitempty"`
 	Language         *string                 `protobuf:"bytes,2,opt,name=language,def=en" json:"language,omitempty"`
 	StringValue      *string                 `protobuf:"bytes,3,opt,name=string_value" json:"string_value,omitempty"`
-	Geo              *FieldValue_Geo         `protobuf:"group,4,opt" json:"geo,omitempty"`
+	Geo              *FieldValue_Geo         `protobuf:"group,4,opt,name=Geo" json:"geo,omitempty"`
 	XXX_unrecognized []byte                  `json:"-"`
 }
 
@@ -1582,7 +1582,7 @@ func (m *ScorerSpec) GetMatchScorerParameters() string {
 
 type FieldSpec struct {
 	Name             []string                `protobuf:"bytes,1,rep,name=name" json:"name,omitempty"`
-	Expression       []*FieldSpec_Expression `protobuf:"group,2,rep" json:"expression,omitempty"`
+	Expression       []*FieldSpec_Expression `protobuf:"group,2,rep,name=Expression" json:"expression,omitempty"`
 	XXX_unrecognized []byte                  `json:"-"`
 }
 
