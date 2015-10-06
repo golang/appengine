@@ -33,7 +33,10 @@ func handle(w http.ResponseWriter, req *http.Request) {
 
 	u := user.Current(c)
 	if u == nil {
-		u, _ = user.CurrentOAuth(c, "")
+		u, _ = user.CurrentOAuth(c,
+			"https://www.googleapis.com/auth/cloud-platform",
+			"https://www.googleapis.com/auth/appengine.apis",
+		)
 	}
 
 	if u == nil || !u.Admin {

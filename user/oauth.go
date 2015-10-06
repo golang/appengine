@@ -13,13 +13,16 @@ import (
 
 // CurrentOAuth returns the user associated with the OAuth consumer making this
 // request. If the OAuth consumer did not make a valid OAuth request, or the
-// scope is non-empty and the current user does not have this scope, this method
-// will return an error.
-func CurrentOAuth(c context.Context, scope string) (*User, error) {
+// scopes is non-empty and the current user does not have at least one of the
+// scopes, this method will return an error.
+func CurrentOAuth(c context.Context, scopes ...string) (*User, error) {
 	req := &pb.GetOAuthUserRequest{}
-	if scope != "" {
-		req.Scope = &scope
+	if len(scopes) != 1 || scopes[0] != "" {
+		// The signature for this function used to be CurrentOAuth(Context, string).
+		// Ignore the singular "" scope to preserve existing behavior.
+		req.Scopes = scopes
 	}
+
 	res := &pb.GetOAuthUserResponse{}
 
 	err := internal.Call(c, "user", "GetOAuthUser", req, res)
