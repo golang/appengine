@@ -258,6 +258,7 @@ application: %s
 version: 1
 runtime: go
 api_version: go1
+vm: true
 
 handlers:
 - url: /.*
@@ -265,7 +266,7 @@ handlers:
 `
 
 const appSource = `
-package nihilist
-
-func init() {}
+package main
+import "google.golang.org/appengine"
+func main() { appengine.Main() }
 `
