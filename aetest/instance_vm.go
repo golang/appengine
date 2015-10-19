@@ -185,6 +185,7 @@ func (i *instance) startChild() (err error) {
 		"--port=0",
 		"--api_port=0",
 		"--admin_port=0",
+		"--automatic_restart=false",
 		"--skip_sdk_update_check=true",
 		"--clear_datastore=true",
 		"--clear_search_indexes=true",
