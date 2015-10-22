@@ -204,7 +204,7 @@ func copyTree(dstRoot, dstDir, srcDir string) error {
 		}
 		s := filepath.Join(srcDir, n)
 		d := filepath.Join(dstDir, n)
-		if entry.IsDir() {
+		if entry.IsDir() || entry.Mode()&os.ModeSymlink == os.ModeSymlink {
 			if err := copyTree(dstRoot, d, s); err != nil {
 				return fmt.Errorf("unable to copy dir %v to %v: %v", s, d, err)
 			}
