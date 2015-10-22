@@ -203,6 +203,11 @@ func copyTree(dstRoot, dstDir, srcDir string) error {
 			continue
 		}
 		s := filepath.Join(srcDir, n)
+		if entry.Mode()&os.ModeSymlink == os.ModeSymlink {
+			if entry, err = os.Stat(s); err != nil {
+				return fmt.Errorf("unable to stat %v: %v", s, err)
+			}
+		}
 		d := filepath.Join(dstDir, n)
 		if entry.IsDir() {
 			if err := copyTree(dstRoot, d, s); err != nil {
