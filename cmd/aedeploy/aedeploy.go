@@ -149,12 +149,12 @@ func imports(ctxt *build.Context, srcDir string, gopath []string) (map[string]st
 	// Resolve all non-standard-library imports
 	result := make(map[string]string)
 	for _, v := range pkg.Imports {
-		if !strings.Contains(v, ".") {
-			continue
-		}
 		src, err := findInGopath(v, gopath)
 		if err != nil {
-			return nil, fmt.Errorf("unable to find import %v in gopath %v: %v", v, gopath, err)
+			// If we cannot find the import, assume that it's part of the
+			// Go standard library, and carry on.  (If it's not, the user
+			// will discover the problem when they try to build the app.)
+			continue
 		}
 		if _, ok := result[src]; ok { // Already processed
 			continue
