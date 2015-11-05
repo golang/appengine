@@ -1,12 +1,13 @@
-# Go App Engine for Managed VMs
+# Go App Engine packages
 
 [![Build Status](https://travis-ci.org/golang/appengine.svg)](https://travis-ci.org/golang/appengine)
 
-This repository supports the Go runtime for Managed VMs on App Engine.
+This repository supports the Go runtime on App Engine,
+including both classic App Engine and Managed VMs.
 It provides APIs for interacting with App Engine services.
 Its canonical import path is `google.golang.org/appengine`.
 
-See https://cloud.google.com/appengine/docs/go/managed-vms/
+See https://cloud.google.com/appengine/docs/go/
 for more information.
 
 File issue reports and feature requests on the [Google App Engine issue
@@ -24,9 +25,10 @@ should not directly import any package under `internal`.
 
 ## Updating a Go App Engine app
 
-This section describes how to update a traditional Go App Engine app to run on Managed VMs.
+This section describes how to update a traditional Go App Engine app to use
+these packages.
 
-### 1. Update YAML files
+### 1. Update YAML files (Managed VMs only)
 
 The `app.yaml` file (and YAML files for modules) should have these new lines added:
 ```
