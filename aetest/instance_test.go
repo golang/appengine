@@ -1,12 +1,14 @@
 package aetest
 
 import (
+	"net/url"
 	"os"
 	"testing"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/memcache"
+	"google.golang.org/appengine/taskqueue"
 	"google.golang.org/appengine/user"
 )
 
@@ -57,6 +59,20 @@ func TestBasicAPICalls(t *testing.T) {
 	}
 	if g, w := e.Value, "foo"; g != w {
 		t.Errorf("retrieved Entity.Value = %q, want %q", g, w)
+	}
+
+	_, err = taskqueue.Add(ctx, taskqueue.NewPOSTTask("/worker", url.Values{
+		"key": {"value"},
+	}), "")
+	if err != nil {
+		t.Errorf("Unable to add task to queue - %v", err)
+	}
+	if stats, err := taskqueue.QueueStats(ctx, []string{"default"}); err != nil {
+		t.Errorf("Unable to fetch queue statistics - %v", err)
+	} else if len(stats) == 0 {
+		t.Errorf("No stats found for the default taskqueue!")
+	} else if stats[0].Tasks != 1 {
+		t.Errorf("Wrong number of tasks found in queue, wanted 1, got %d", stats[0].Tasks)
 	}
 }
 
