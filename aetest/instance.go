@@ -24,13 +24,18 @@ type Options struct {
 	// StronglyConsistentDatastore is whether the local datastore should be
 	// strongly consistent. This will diverge from production behaviour.
 	StronglyConsistentDatastore bool
+	TaskQueues                  []string
 }
 
 // NewContext starts an instance of the development API server, and returns
 // a context that will route all API calls to that server, as well as a
 // closure that must be called when the Context is no longer required.
 func NewContext() (context.Context, func(), error) {
-	inst, err := NewInstance(nil)
+	return NewContextOptions(nil)
+}
+
+func NewContextOptions(opts *Options) (context.Context, func(), error) {
+	inst, err := NewInstance(opts)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -4,9 +4,11 @@ package aetest
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -175,6 +177,12 @@ func (i *instance) startChild() (err error) {
 	if err != nil {
 		return err
 	}
+	if i.opts != nil && len(i.opts.TaskQueues) > 0 {
+		err = ioutil.WriteFile(filepath.Join(i.appDir, "app", "queue.yaml"), i.queueYAML(), 0644)
+		if err != nil {
+			return err
+		}
+	}
 	err = ioutil.WriteFile(filepath.Join(i.appDir, "app", "stubapp.go"), []byte(appSource), 0644)
 	if err != nil {
 		return err
@@ -189,6 +197,7 @@ func (i *instance) startChild() (err error) {
 		"--skip_sdk_update_check=true",
 		"--clear_datastore=true",
 		"--clear_search_indexes=true",
+		"--enable_task_running=false",
 		"--datastore_path", filepath.Join(i.appDir, "datastore"),
 	}
 	if i.opts != nil && i.opts.StronglyConsistentDatastore {
@@ -271,3 +280,18 @@ package main
 import "google.golang.org/appengine"
 func main() { appengine.Main() }
 `
+
+func (i *instance) queueYAML() []byte {
+	queueBuf := bytes.Buffer{}
+	if i.opts != nil && len(i.opts.TaskQueues) > 0 {
+		queueTempl.ExecuteTemplate(&queueBuf, "queue.yaml", i.opts.TaskQueues)
+	}
+	return queueBuf.Bytes()
+}
+
+var queueTempl = template.Must(template.New("queue.yaml").Parse(`
+total_storage_limit: 120M
+queue:{{range .}}
+- name: {{.}}
+  rate: 35/s{{end}}
+`))
