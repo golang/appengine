@@ -210,10 +210,8 @@ func (i *instance) startChild() (err error) {
 		return err
 	}
 
-	// Wait until we have read the URLs of the API server and admin interface.
+	// Read stderr until we have read the URLs of the API server and admin interface.
 	errc := make(chan error, 1)
-	apic := make(chan *url.URL)
-	adminc := make(chan string)
 	go func() {
 		s := bufio.NewScanner(stderr)
 		for s.Scan() {
@@ -223,31 +221,30 @@ func (i *instance) startChild() (err error) {
 					errc <- fmt.Errorf("failed to parse API URL %q: %v", match[1], err)
 					return
 				}
-				apic <- u
+				i.apiURL = u
 			}
 			if match := adminServerAddrRE.FindSubmatch(s.Bytes()); match != nil {
-				adminc <- string(match[1])
+				i.adminURL = string(match[1])
+			}
+			if i.adminURL != "" && i.apiURL != nil {
+				break
 			}
 		}
-		if err = s.Err(); err != nil {
-			errc <- err
-		}
+		errc <- s.Err()
 	}()
 
-	for i.apiURL == nil || i.adminURL == "" {
-		select {
-		case i.apiURL = <-apic:
-		case i.adminURL = <-adminc:
-		case <-time.After(15 * time.Second):
-			if p := i.child.Process; p != nil {
-				p.Kill()
-			}
-			return errors.New("timeout starting child process")
-		case err := <-errc:
+	select {
+	case <-time.After(15 * time.Second):
+		if p := i.child.Process; p != nil {
+			p.Kill()
+		}
+		return errors.New("timeout starting child process")
+	case err := <-errc:
+		if err != nil {
 			return fmt.Errorf("error reading child process stderr: %v", err)
 		}
+		return nil
 	}
-	return nil
 }
 
 func (i *instance) appYAML() string {
