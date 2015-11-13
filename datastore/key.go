@@ -307,3 +307,80 @@ func AllocateIDs(c context.Context, kind string, parent *Key, n int) (low, high 
 	}
 	return low, high, nil
 }
+
+type KeyRangeState int
+
+const (
+	//	Indicates that an error occurred while determining the KeyRangeState for [start, end] and
+	// the returned KeyRangeState should not be trusted. Does not affect high, low
+	KeyRangeError KeyRangeState = iota
+	// Indicates that entities with keys inside [start, end] already exist and writing to this range
+	// will overwrite those entities. Additionally the implications of CONTENTION apply.
+	// If overwriting entities that exist in this range is acceptable it is safe to use the given range.
+	// The datastore's automatic ID allocator will never assign a key to a new entity that will overwrite an existing entity,
+	// so entities written by the user to this range will never be overwritten by an entity with an automatically assigned key.
+	KeyRangeCollision
+	// Indicates [start, end] is empty but the datastore's automatic ID allocator may assign new entities keys in this range. However it is safe to manually assign Keys in this range if either of the following is true:
+	// - No other request will insert entities with the same kind and parent as the given KeyRange until all entities with manually assigned keys from this range have been written.
+	// - Overwriting entities written by other requests with the same kind and parent as the given KeyRange is acceptable.
+	//
+	// The datastore's automatic ID allocator will not assign a key to a new entity that will overwrite an existing entity, so once the range is populated there will no longer be any contention.
+	KeyRangeContention
+	// Indicates [start, end] is empty and the datastore's automatic ID allocator will not assign keys in this range to new entities.
+	KeyRangeEmpty
+)
+
+// AllocateIDRange returns a range of integer IDs below end with the given kind and parent
+// combination. kind cannot be empty; parent may be nil, start has to be greater than 0,
+// end has to be greater or equal to start.
+// The IDs in the range [low,high[ returned will not be used by the datastore's automatic ID sequence generator
+// and may be used with NewKey without conflict.
+//
+// The range is inclusive at the low end and exclusive at the high end. In
+// other words, valid intIDs x satisfy low <= x && x < high.
+//
+// Additionally the keyRangeState will indicate the state of IDs in the range of [start, end].
+// Possible values are KeyRangeError, KeyRangeCollision, KeyRangeContention and KeyRangeEmpty.
+//
+// If no error is returned, keyRangeState can be trusted. In any case the IDs in range [low, high[ are safe to use.
+func AllocateIDRange(c context.Context, kind string, parent *Key, start int64, end int64) (keyRangeState KeyRangeState, low, high int64, err error) {
+	if kind == "" {
+		return KeyRangeError, 0, 0, errors.New("datastore: AllocateIdRange given an empty kind")
+	}
+	if start < 1 {
+		return KeyRangeError, 0, 0, fmt.Errorf("datastore: AllocateIdRange Illegal start %d: less than 1", start)
+	}
+	if end < start {
+		return KeyRangeError, 0, 0, fmt.Errorf("datastore: AllocateIdRange Illegal end %d: less than start %d", end, start)
+	}
+	if parent != nil && parent.Incomplete() {
+		return KeyRangeError, 0, 0, errors.New("datastore: AllocateIdRange parent must be complete")
+	}
+	req := &pb.AllocateIdsRequest{
+		ModelKey: keyToProto("", NewIncompleteKey(c, kind, parent)),
+		Max:      proto.Int64(end),
+	}
+	res := &pb.AllocateIdsResponse{}
+	if err := internal.Call(c, "datastore_v3", "AllocateIds", req, res); err != nil {
+		return KeyRangeError, 0, 0, err
+	}
+	// The protobuf is inclusive at both ends. Idiomatic Go (e.g. slices, for loops)
+	// is inclusive at the low end and exclusive at the high end, so we add 1.
+	low = res.GetStart()
+	high = res.GetEnd() + 1
+	q := NewQuery(kind).KeysOnly().Limit(1)
+	q = q.Filter("__key__ >=", NewKey(c, kind, "", start, parent))
+	q = q.Filter("__key__ <=", NewKey(c, kind, "", end, parent))
+	t := q.Run(c)
+	if _, err := t.Next(nil); err == nil {
+		return KeyRangeCollision, low, high, nil
+	} else if err != Done {
+		return KeyRangeError, low, high, err
+	}
+	// check for race condition
+	if start < low {
+		return KeyRangeContention, low, high, nil
+	} else {
+		return KeyRangeEmpty, low, high, nil
+	}
+}
