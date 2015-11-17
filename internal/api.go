@@ -39,6 +39,7 @@ var (
 	// Incoming headers.
 	ticketHeader       = http.CanonicalHeaderKey("X-AppEngine-API-Ticket")
 	dapperHeader       = http.CanonicalHeaderKey("X-Google-DapperTraceInfo")
+	traceHeader        = http.CanonicalHeaderKey("X-Cloud-Trace-Context")
 	curNamespaceHeader = http.CanonicalHeaderKey("X-AppEngine-Current-Namespace")
 	userIPHeader       = http.CanonicalHeaderKey("X-AppEngine-User-IP")
 	remoteAddrHeader   = http.CanonicalHeaderKey("X-AppEngine-Remote-Addr")
@@ -386,6 +387,9 @@ func (c *context) post(body []byte, timeout time.Duration) (b []byte, err error)
 	}
 	if info := c.req.Header.Get(dapperHeader); info != "" {
 		hreq.Header.Set(dapperHeader, info)
+	}
+	if info := c.req.Header.Get(traceHeader); info != "" {
+		hreq.Header.Set(traceHeader, info)
 	}
 
 	tr := apiHTTPClient.Transport.(*http.Transport)
