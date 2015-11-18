@@ -436,6 +436,13 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message)
 		return f(ctx, service, method, in, out)
 	}
 
+	// Handle already-done contexts quickly.
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+	}
+
 	c := fromContext(ctx)
 	if c == nil {
 		// Give a good error message rather than a panic lower down.
