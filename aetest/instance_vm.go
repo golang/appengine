@@ -223,8 +223,8 @@ func (i *instance) startChild() (err error) {
 				}
 				i.apiURL = u
 			}
-			if match := adminServerAddrRE.FindSubmatch(s.Bytes()); match != nil {
-				i.adminURL = string(match[1])
+			if match := adminServerAddrRE.FindStringSubmatch(s.Text()); match != nil {
+				i.adminURL = match[1]
 			}
 			if i.adminURL != "" && i.apiURL != nil {
 				break
@@ -243,8 +243,14 @@ func (i *instance) startChild() (err error) {
 		if err != nil {
 			return fmt.Errorf("error reading child process stderr: %v", err)
 		}
-		return nil
 	}
+	if i.adminURL == "" {
+		return errors.New("unable to find admin server URL")
+	}
+	if i.apiURL == nil {
+		return errors.New("unable to find API server URL")
+	}
+	return nil
 }
 
 func (i *instance) appYAML() string {
