@@ -49,11 +49,11 @@ Example code:
 	}
 
 	func handle(w http.ResponseWriter, r *http.Request) {
-		c := appengine.NewContext(r)
+		ctx := appengine.NewContext(r)
 
-		k := datastore.NewKey(c, "Entity", "stringID", 0, nil)
+		k := datastore.NewKey(ctx, "Entity", "stringID", 0, nil)
 		e := new(Entity)
-		if err := datastore.Get(c, k, e); err != nil {
+		if err := datastore.Get(ctx, k, e); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
@@ -61,7 +61,7 @@ Example code:
 		old := e.Value
 		e.Value = r.URL.Path
 
-		if _, err := datastore.Put(c, k, e); err != nil {
+		if _, err := datastore.Put(ctx, k, e); err != nil {
 			http.Error(w, err.Error(), 500)
 			return
 		}
@@ -253,19 +253,19 @@ Example code:
 	}
 
 	func handle(w http.ResponseWriter, r *http.Request) {
-		c := appengine.NewContext(r)
+		ctx := appengine.NewContext(r)
 		q := datastore.NewQuery("Widget").
 			Filter("Price <", 1000).
 			Order("-Price")
 		b := new(bytes.Buffer)
-		for t := q.Run(c); ; {
+		for t := q.Run(ctx); ; {
 			var x Widget
 			key, err := t.Next(&x)
 			if err == datastore.Done {
 				break
 			}
 			if err != nil {
-				serveError(c, w, err)
+				serveError(ctx, w, err)
 				return
 			}
 			fmt.Fprintf(b, "Key=%v\nWidget=%#v\n\n", key, x)
@@ -285,28 +285,28 @@ Example code:
 		Count int
 	}
 
-	func inc(c appengine.Context, key *datastore.Key) (int, error) {
+	func inc(ctx context.Context, key *datastore.Key) (int, error) {
 		var x Counter
-		if err := datastore.Get(c, key, &x); err != nil && err != datastore.ErrNoSuchEntity {
+		if err := datastore.Get(ctx, key, &x); err != nil && err != datastore.ErrNoSuchEntity {
 			return 0, err
 		}
 		x.Count++
-		if _, err := datastore.Put(c, key, &x); err != nil {
+		if _, err := datastore.Put(ctx, key, &x); err != nil {
 			return 0, err
 		}
 		return x.Count, nil
 	}
 
 	func handle(w http.ResponseWriter, r *http.Request) {
-		c := appengine.NewContext(r)
+		ctx := appengine.NewContext(r)
 		var count int
-		err := datastore.RunInTransaction(c, func(c appengine.Context) error {
+		err := datastore.RunInTransaction(ctx, func(ctx context.Context) error {
 			var err1 error
-			count, err1 = inc(c, datastore.NewKey(c, "Counter", "singleton", 0, nil))
+			count, err1 = inc(ctx, datastore.NewKey(ctx, "Counter", "singleton", 0, nil))
 			return err1
 		}, nil)
 		if err != nil {
-			serveError(c, w, err)
+			serveError(ctx, w, err)
 			return
 		}
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
