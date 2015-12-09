@@ -13,7 +13,7 @@ An example test file:
 	)
 
 	func TestFoo(t *testing.T) {
-		ctx, done, err := aetest.NewContext(nil)
+		ctx, done, err := aetest.NewContext()
 		if err != nil {
 			t.Fatal(err)
 		}
