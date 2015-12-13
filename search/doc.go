@@ -194,7 +194,7 @@ Example code:
 		fields := []search.Field{
 			{Name: "title", Value: x.Title, Language: x.Lang},
 		}
-		meta := &search.DocumentMetdata{
+		meta := &search.DocumentMetadata{
 			Facets: {
 				{Name: "mass", Value: float64(x.Mass)},
 			},
