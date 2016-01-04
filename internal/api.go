@@ -231,7 +231,7 @@ func fromContext(ctx netcontext.Context) *context {
 func withContext(parent netcontext.Context, c *context) netcontext.Context {
 	ctx := netcontext.WithValue(parent, &contextKey, c)
 	if ns := c.req.Header.Get(curNamespaceHeader); ns != "" {
-		ctx = WithNamespace(ctx, ns)
+		ctx = withNamespace(ctx, ns)
 	}
 	return ctx
 }

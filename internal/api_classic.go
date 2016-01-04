@@ -37,7 +37,7 @@ func withContext(parent netcontext.Context, c appengine.Context) netcontext.Cont
 	s := &basepb.StringProto{}
 	c.Call("__go__", "GetNamespace", &basepb.VoidProto{}, s, nil)
 	if ns := s.GetValue(); ns != "" {
-		ctx = WithNamespace(ctx, ns)
+		ctx = NamespacedContext(ctx, ns)
 	}
 
 	return ctx
