@@ -312,5 +312,40 @@ Example code:
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		fmt.Fprintf(w, "Count=%d", count)
 	}
+
+
+Metadata
+
+The datastore package provides access to some of App Engine's datastore
+metadata. This metadata includes information about the entity groups,
+namespaces, entity kinds, and properties in the datastore, as well as the
+property representations for each property.
+
+Example code:
+
+	func handle(w http.ResponseWriter, r *http.Request) {
+		// Print all the kinds in the datastore, with all the indexed
+		// properties (and their representations) for each.
+		ctx := appengine.NewContext(r)
+
+		kinds, err := datastore.Kinds(ctx)
+		if err != nil {
+			serveError(ctx, w, err)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		for _, kind := range kinds {
+			fmt.Fprintf(w, "%s:\n", kind)
+			props, err := datastore.KindProperties(ctx, kind)
+			if err != nil {
+				fmt.Fprintln(w, "\t(unable to retrieve properties)")
+				continue
+			}
+			for p, rep := range props {
+				fmt.Fprintf(w, "\t-%s (%s)\n", p, strings.Join(", ", rep))
+			}
+		}
+	}
 */
 package datastore // import "google.golang.org/appengine/datastore"
