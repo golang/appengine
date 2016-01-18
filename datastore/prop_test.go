@@ -76,6 +76,9 @@ func TestStructCodec(t *testing.T) {
 		U int
 		v int
 	}
+	type vStruct struct {
+		V string `datastore:",noindex"`
+	}
 	oStructCodec := &structCodec{
 		byIndex: []structTag{
 			{name: "O"},
@@ -120,6 +123,15 @@ func TestStructCodec(t *testing.T) {
 		byName: map[string]fieldCodec{
 			"U": {index: 0},
 			"v": {index: 1},
+		},
+		complete: true,
+	}
+	vStructCodec := &structCodec{
+		byIndex: []structTag{
+			{name: "V", noIndex: true},
+		},
+		byName: map[string]fieldCodec{
+			"V": {index: 0},
 		},
 		complete: true,
 	}
@@ -334,6 +346,39 @@ func TestStructCodec(t *testing.T) {
 				complete: true,
 			},
 		},
+		{
+			"noindex slice",
+			struct {
+				A []string `datastore:",noindex"`
+			}{},
+			&structCodec{
+				byIndex: []structTag{
+					{name: "A", noIndex: true},
+				},
+				byName: map[string]fieldCodec{
+					"A": {index: 0},
+				},
+				hasSlice: true,
+				complete: true,
+			},
+		},
+		{
+			"noindex embedded struct slice",
+			struct {
+				// vStruct has a single field, V, also with noindex.
+				A []vStruct `datastore:",noindex"`
+			}{},
+			&structCodec{
+				byIndex: []structTag{
+					{name: "A.", noIndex: true},
+				},
+				byName: map[string]fieldCodec{
+					"A.V": {index: 0, substructCodec: vStructCodec},
+				},
+				hasSlice: true,
+				complete: true,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -343,7 +388,7 @@ func TestStructCodec(t *testing.T) {
 			continue
 		}
 		if !reflect.DeepEqual(got, tc.want) {
-			t.Errorf("%s\ngot  %v\nwant %v\n", tc.desc, got, tc.want)
+			t.Errorf("%s\ngot  %+v\nwant %+v\n", tc.desc, got, tc.want)
 			continue
 		}
 	}
