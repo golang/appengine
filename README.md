@@ -3,7 +3,8 @@
 [![Build Status](https://travis-ci.org/golang/appengine.svg)](https://travis-ci.org/golang/appengine)
 
 This repository supports the Go runtime on App Engine,
-including both classic App Engine and Managed VMs.
+including both the standard App Engine and the
+"App Engine flexible environment" (formerly known as "Managed VMs").
 It provides APIs for interacting with App Engine services.
 Its canonical import path is `google.golang.org/appengine`.
 
@@ -28,7 +29,7 @@ should not directly import any package under `internal`.
 This section describes how to update a traditional Go App Engine app to use
 these packages.
 
-### 1. Update YAML files (Managed VMs only)
+### 1. Update YAML files (App Engine flexible environment / Managed VMs only)
 
 The `app.yaml` file (and YAML files for modules) should have these new lines added:
 ```
@@ -70,4 +71,5 @@ This list summarises the differences:
   Use `appengine.ModuleHostname`and `appengine.ModuleName` instead.
 * Most of `appengine/file` and parts of `appengine/blobstore` are deprecated.
   Use [Google Cloud Storage](https://godoc.org/google.golang.org/cloud/storage) instead.
-* `appengine/socket` is not required on Managed VMs. Use the standard `net` package instead.
+* `appengine/socket` is not required on App Engine flexible environment / Managed VMs.
+  Use the standard `net` package instead.
