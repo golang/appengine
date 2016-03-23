@@ -2,7 +2,7 @@
 // Use of this source code is governed by the Apache 2.0
 // license that can be found in the LICENSE file.
 
-// Program aedeploy assists with deploying Go Managed VM apps to production.
+// Program aedeploy assists with deploying App Engine "flexible environment" Go apps to production.
 // A temporary directory is created; the app, its subdirectories, and all its
 // dependencies from $GOPATH are copied into the directory; then the app
 // is deployed to production with the provided command.
@@ -253,7 +253,7 @@ func appFiles(ctxt *build.Context) ([]string, error) {
 		return nil, err
 	}
 	if !pkg.IsCommand() {
-		return nil, fmt.Errorf(`the root of your app needs to be package "main" (currently %q). Please see https://cloud.google.com/appengine/docs/go/managed-vms for more details on structuring your app.`, pkg.Name)
+		return nil, fmt.Errorf(`the root of your app needs to be package "main" (currently %q). Please see https://cloud.google.com/appengine/docs/flexible/go/ for more details on structuring your app.`, pkg.Name)
 	}
 	var appFiles []string
 	for _, f := range pkg.GoFiles {

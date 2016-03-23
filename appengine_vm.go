@@ -17,12 +17,12 @@ import (
 // the Main function to use in the synthetic main.
 //   The gophers party all night; the rabbits provide the beats.
 
-// Main is the principal entry point for a Managed VMs app.
+// Main is the principal entry point for an app running in App Engine "flexible environment".
 // It installs a trivial health checker if one isn't already registered,
 // and starts listening on port 8080 (overridden by the $PORT environment
 // variable).
 //
-// See https://cloud.google.com/appengine/docs/managed-vms/custom-runtimes#health_check_requests
+// See https://cloud.google.com/appengine/docs/flexible/custom-runtimes#health_check_requests
 // for details on how to do your own health checking.
 //
 // Main never returns.
@@ -50,7 +50,7 @@ func Main() {
 
 // BackgroundContext returns a context not associated with a request.
 // This should only be used when not servicing a request.
-// This only works on Managed VMs.
+// This only works in App Engine "flexible environment".
 func BackgroundContext() context.Context {
 	return internal.BackgroundContext()
 }

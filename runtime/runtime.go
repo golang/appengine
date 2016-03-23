@@ -6,7 +6,7 @@
 Package runtime exposes information about the resource usage of the application.
 It also provides a way to run code in a new background context of a module.
 
-This package does not work on Managed VMs.
+This package does not work on App Engine "flexible environment".
 */
 package runtime // import "google.golang.org/appengine/runtime"
 
