@@ -115,6 +115,16 @@ func newStringValueField(name, value string, valueType pb.FieldValue_ContentType
 	}
 }
 
+func newFacet(name, value string, valueType pb.FacetValue_ContentType) *pb.Facet {
+	return &pb.Facet{
+		Name: proto.String(name),
+		Value: &pb.FacetValue{
+			StringValue: proto.String(value),
+			Type:        valueType.Enum(),
+		},
+	}
+}
+
 func TestValidIndexNameOrDocID(t *testing.T) {
 	testCases := []struct {
 		s    string
@@ -246,6 +256,44 @@ func TestSaveMeta(t *testing.T) {
 	}
 	if !proto.Equal(got, want) {
 		t.Errorf("\ngot  %v\nwant %v", got, want)
+	}
+}
+
+func TestLoadSaveWithStruct(t *testing.T) {
+	type gopher struct {
+		Name string
+		Info string  `search:"about"`
+		Legs float64 `search:",facet"`
+		Fuzz Atom    `search:"Fur,facet"`
+	}
+
+	doc := gopher{"Gopher", "Likes slide rules.", 4, Atom("furry")}
+	pb := &pb.Document{
+		Field: []*pb.Field{
+			newStringValueField("Name", "Gopher", pb.FieldValue_TEXT),
+			newStringValueField("about", "Likes slide rules.", pb.FieldValue_TEXT),
+		},
+		Facet: []*pb.Facet{
+			newFacet("Legs", "4e+00", pb.FacetValue_NUMBER),
+			newFacet("Fur", "furry", pb.FacetValue_ATOM),
+		},
+	}
+
+	var gotDoc gopher
+	if err := loadDoc(&gotDoc, pb, nil); err != nil {
+		t.Fatalf("loadDoc: %v", err)
+	}
+	if !reflect.DeepEqual(gotDoc, doc) {
+		t.Errorf("loading doc\ngot  %v\nwant %v", gotDoc, doc)
+	}
+
+	gotPB, err := saveDoc(&doc)
+	if err != nil {
+		t.Fatalf("saveDoc: %v", err)
+	}
+	gotPB.OrderId = nil // Don't test: it's time dependent.
+	if !proto.Equal(gotPB, pb) {
+		t.Errorf("saving doc\ngot  %v\nwant %v", gotPB, pb)
 	}
 }
 

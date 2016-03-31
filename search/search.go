@@ -840,7 +840,7 @@ func saveDoc(src interface{}) (*pb.Document, error) {
 	case FieldLoadSaver:
 		fields, meta, err = x.Save()
 	default:
-		fields, err = SaveStruct(src)
+		fields, meta, err = saveStructWithMeta(src)
 	}
 	if err != nil {
 		return nil, err
