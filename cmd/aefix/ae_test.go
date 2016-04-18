@@ -84,4 +84,33 @@ func LogSomething(c2 context.Context) {
 }
 `,
 	},
+
+	// Less widely used API changes:
+	//	- drop maxTasks arg to taskqueue.QueueStats
+	{
+		Name: "ae.2",
+		In: `package foo
+
+import (
+	"appengine"
+	"appengine/taskqueue"
+)
+
+func f(ctx appengine.Context) {
+	stats, err := taskqueue.QueueStats(ctx, []string{"one", "two"}, 0)
+}
+`,
+		Out: `package foo
+
+import (
+	"golang.org/x/net/context"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/taskqueue"
+)
+
+func f(ctx context.Context) {
+	stats, err := taskqueue.QueueStats(ctx, []string{"one", "two"})
+}
+`,
+	},
 }

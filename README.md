@@ -44,12 +44,6 @@ See https://cloud.google.com/appengine/docs/go/modules/#Go_Instance_scaling_and_
 The import paths for App Engine packages are now fully qualified, based at `google.golang.org/appengine`.
 You will need to update your code to use import paths starting with that; for instance,
 code importing `appengine/datastore` will now need to import `google.golang.org/appengine/datastore`.
-You can do that manually, or by running this command to recursively update all Go source files in the current directory:
-(may require GNU sed)
-```
-sed -i '/"appengine/{s,"appengine,"google.golang.org/appengine,;s,appengine_,appengine/,}' \
-  $(find . -name '*.go')
-```
 
 ### 3. Update code using deprecated, removed or modified APIs
 

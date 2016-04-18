@@ -116,6 +116,11 @@ func aeFn(f *ast.File) bool {
 				fixed = true
 				return
 			}
+			if isPkgDot(call.Fun, "taskqueue", "QueueStats") && len(call.Args) == 3 {
+				call.Args = call.Args[:2] // drop last arg
+				fixed = true
+				return
+			}
 
 			sel, ok := call.Fun.(*ast.SelectorExpr)
 			if !ok {
