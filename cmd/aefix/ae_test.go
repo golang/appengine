@@ -57,4 +57,31 @@ func f(w http.ResponseWriter, r *http.Request) {
 }
 `,
 	},
+
+	// Updating a function that takes an appengine.Context arg.
+	{
+		Name: "ae.1",
+		In: `package foo
+
+import (
+	"appengine"
+)
+
+func LogSomething(c2 appengine.Context) {
+	c2.Warningf("Stand back! I'm going to try science!")
+}
+`,
+		Out: `package foo
+
+import (
+	"golang.org/x/net/context"
+	"google.golang.org/appengine"
+	"google.golang.org/appengine/log"
+)
+
+func LogSomething(c2 context.Context) {
+	log.Warningf(c2, "Stand back! I'm going to try science!")
+}
+`,
+	},
 }

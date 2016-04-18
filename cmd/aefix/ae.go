@@ -62,13 +62,28 @@ func aeFn(f *ast.File) bool {
 
 	// Update any API changes.
 	walk(f, func(n interface{}) {
+		if ft, ok := n.(*ast.FuncType); ok && ft.Params != nil {
+			// See if this func has an `appengine.Context arg`.
+			// If so, remember its identifier.
+			for _, param := range ft.Params.List {
+				if !isPkgDot(param.Type, "appengine", "Context") {
+					continue
+				}
+				if len(param.Names) == 1 {
+					lastContext = param.Names[0]
+					break
+				}
+			}
+			return
+		}
+
 		if as, ok := n.(*ast.AssignStmt); ok {
 			if len(as.Lhs) == 1 && len(as.Rhs) == 1 {
 				// If this node is an assignment from an appengine.NewContext invocation,
 				// remember the identifier on the LHS.
 				if isCall(as.Rhs[0], "appengine", "NewContext") {
 					if ident, ok := as.Lhs[0].(*ast.Ident); ok {
-						lastContext = ast.NewIdent(ident.Name)
+						lastContext = ident
 						return
 					}
 				}
@@ -106,8 +121,7 @@ func aeFn(f *ast.File) bool {
 			if !ok {
 				return
 			}
-			// refersTo(sel.X, lastContext) doesn't work.
-			if lastContext != nil && isName(sel.X, lastContext.String()) && logMethod[sel.Sel.Name] {
+			if lastContext != nil && refersTo(sel.X, lastContext) && logMethod[sel.Sel.Name] {
 				// c.Errorf(...)
 				//   should become
 				// log.Errorf(c, ...)
@@ -122,6 +136,23 @@ func aeFn(f *ast.File) bool {
 			}
 		}
 	})
+
+	// Change any `appengine.Context` to `context.Context`.
+	// Do this in a separate walk because the previous walk
+	// wants to identify "appengine.Context".
+	//
+	// TODO(dsymonds): Drop the "appengine" import if it is now orphaned.
+	walk(f, func(n interface{}) {
+		expr, ok := n.(ast.Expr)
+		if ok && isPkgDot(expr, "appengine", "Context") {
+			addImport(f, ctxPackage)
+			// isPkgDot did the type checking.
+			n.(*ast.SelectorExpr).X.(*ast.Ident).Name = "context"
+			fixed = true
+			return
+		}
+	})
+
 	return fixed
 }
 
@@ -130,6 +161,9 @@ func insertContext(f *ast.File, call *ast.CallExpr, ctx *ast.Ident) {
 	if ctx == nil {
 		// context is unknown, so use a plain "ctx".
 		ctx = ast.NewIdent("ctx")
+	} else {
+		// Create a fresh *ast.Ident so we drop the position information.
+		ctx = ast.NewIdent(ctx.Name)
 	}
 
 	call.Args = append([]ast.Expr{ctx}, call.Args...)
