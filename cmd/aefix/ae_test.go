@@ -75,7 +75,6 @@ func LogSomething(c2 appengine.Context) {
 
 import (
 	"golang.org/x/net/context"
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
 )
 
@@ -104,12 +103,41 @@ func f(ctx appengine.Context) {
 
 import (
 	"golang.org/x/net/context"
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/taskqueue"
 )
 
 func f(ctx context.Context) {
 	stats, err := taskqueue.QueueStats(ctx, []string{"one", "two"})
+}
+`,
+	},
+
+	// Check that the main "appengine" import will not be dropped
+	// if an appengine.Context -> context.Context change happens
+	// but the appengine package is still referenced.
+	{
+		Name: "ae.3",
+		In: `package foo
+
+import (
+	"appengine"
+	"io"
+)
+
+func f(ctx appengine.Context, w io.Writer) {
+	_ = appengine.IsDevAppServer()
+}
+`,
+		Out: `package foo
+
+import (
+	"golang.org/x/net/context"
+	"google.golang.org/appengine"
+	"io"
+)
+
+func f(ctx context.Context, w io.Writer) {
+	_ = appengine.IsDevAppServer()
 }
 `,
 	},

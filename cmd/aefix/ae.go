@@ -52,11 +52,17 @@ func aeFn(f *ast.File) bool {
 	fixed := false
 
 	// Update imports.
+	mainImp := "appengine"
 	for _, imp := range f.Imports {
 		pth, _ := strconv.Unquote(imp.Path.Value)
 		if pth == "appengine" || strings.HasPrefix(pth, "appengine/") {
-			imp.Path.Value = strconv.Quote(mapPackage(pth))
+			newPth := mapPackage(pth)
+			imp.Path.Value = strconv.Quote(newPth)
 			fixed = true
+
+			if pth == "appengine" {
+				mainImp = newPth
+			}
 		}
 	}
 
@@ -145,8 +151,6 @@ func aeFn(f *ast.File) bool {
 	// Change any `appengine.Context` to `context.Context`.
 	// Do this in a separate walk because the previous walk
 	// wants to identify "appengine.Context".
-	//
-	// TODO(dsymonds): Drop the "appengine" import if it is now orphaned.
 	walk(f, func(n interface{}) {
 		expr, ok := n.(ast.Expr)
 		if ok && isPkgDot(expr, "appengine", "Context") {
@@ -157,6 +161,12 @@ func aeFn(f *ast.File) bool {
 			return
 		}
 	})
+
+	// The changes above might remove the need to import "appengine".
+	// Check if it's used, and drop it if it isn't.
+	if fixed && !usesImport(f, mainImp) {
+		deleteImport(f, mainImp)
+	}
 
 	return fixed
 }
