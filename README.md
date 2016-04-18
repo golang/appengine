@@ -26,8 +26,10 @@ should not directly import any package under `internal`.
 
 ## Updating a Go App Engine app
 
-This section describes how to update a traditional Go App Engine app to use
-these packages.
+This section describes how to update an older Go App Engine app to use
+these packages. A provided tool, `aefix`, can help automate steps 2 and 3
+(run `go get google.golang.org/appengine/cmd/aefix` to install it), but
+read the details below since `aefix` can't perform all the changes.
 
 ### 1. Update YAML files (App Engine flexible environment / Managed VMs only)
 
