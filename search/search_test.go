@@ -952,3 +952,40 @@ func TestFacetRefinements(t *testing.T) {
 		}
 	}
 }
+
+func TestNamespaceResetting(t *testing.T) {
+	namec := make(chan *string, 1)
+	c0 := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(req *pb.IndexDocumentRequest, res *pb.IndexDocumentResponse) error {
+		namec <- req.Params.IndexSpec.Namespace
+		return fmt.Errorf("RPC error")
+	})
+
+	// Check that wrapping c0 in a namespace twice works correctly.
+	c1, err := appengine.Namespace(c0, "A")
+	if err != nil {
+		t.Fatalf("appengine.Namespace: %v", err)
+	}
+	c2, err := appengine.Namespace(c1, "") // should act as the original context
+	if err != nil {
+		t.Fatalf("appengine.Namespace: %v", err)
+	}
+
+	i := (&Index{})
+
+	i.Put(c0, "something", &searchDoc)
+	if ns := <-namec; ns != nil {
+		t.Errorf(`Put with c0: ns = %q, want nil`, *ns)
+	}
+
+	i.Put(c1, "something", &searchDoc)
+	if ns := <-namec; ns == nil {
+		t.Error(`Put with c1: ns = nil, want "A"`)
+	} else if *ns != "A" {
+		t.Errorf(`Put with c1: ns = %q, want "A"`, *ns)
+	}
+
+	i.Put(c2, "something", &searchDoc)
+	if ns := <-namec; ns != nil {
+		t.Errorf(`Put with c2: ns = %q, want nil`, *ns)
+	}
+}

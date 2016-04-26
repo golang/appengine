@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"google.golang.org/appengine"
+	"google.golang.org/appengine/internal/aetesting"
 	pb "google.golang.org/appengine/internal/datastore"
 )
 
@@ -1495,5 +1496,42 @@ func TestStringMeaning(t *testing.T) {
 			t.Errorf("i=%d: meaning: got %v, want %v", i, got, want[i])
 			continue
 		}
+	}
+}
+
+func TestNamespaceResetting(t *testing.T) {
+	namec := make(chan *string, 1)
+	c0 := aetesting.FakeSingleContext(t, "datastore_v3", "RunQuery", func(req *pb.Query, res *pb.QueryResult) error {
+		namec <- req.NameSpace
+		return fmt.Errorf("RPC error")
+	})
+
+	// Check that wrapping c0 in a namespace twice works correctly.
+	c1, err := appengine.Namespace(c0, "A")
+	if err != nil {
+		t.Fatalf("appengine.Namespace: %v", err)
+	}
+	c2, err := appengine.Namespace(c1, "") // should act as the original context
+	if err != nil {
+		t.Fatalf("appengine.Namespace: %v", err)
+	}
+
+	q := NewQuery("SomeKind")
+
+	q.Run(c0)
+	if ns := <-namec; ns != nil {
+		t.Errorf(`RunQuery with c0: ns = %q, want nil`, *ns)
+	}
+
+	q.Run(c1)
+	if ns := <-namec; ns == nil {
+		t.Error(`RunQuery with c1: ns = nil, want "A"`)
+	} else if *ns != "A" {
+		t.Errorf(`RunQuery with c1: ns = %q, want "A"`, *ns)
+	}
+
+	q.Run(c2)
+	if ns := <-namec; ns != nil {
+		t.Errorf(`RunQuery with c2: ns = %q, want nil`, *ns)
 	}
 }

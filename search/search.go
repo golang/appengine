@@ -130,10 +130,13 @@ func (x *Index) Put(c context.Context, id string, src interface{}) (string, erro
 		}
 		d.Id = proto.String(id)
 	}
+	// spec is modified by Call when applying the current Namespace, so copy it to
+	// avoid retaining the namespace beyond the scope of the Call.
+	spec := x.spec
 	req := &pb.IndexDocumentRequest{
 		Params: &pb.IndexDocumentParams{
 			Document:  []*pb.Document{d},
-			IndexSpec: &x.spec,
+			IndexSpec: &spec,
 		},
 	}
 	res := &pb.IndexDocumentResponse{}
