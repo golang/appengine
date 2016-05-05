@@ -43,6 +43,7 @@ var (
 	curNamespaceHeader = http.CanonicalHeaderKey("X-AppEngine-Current-Namespace")
 	userIPHeader       = http.CanonicalHeaderKey("X-AppEngine-User-IP")
 	remoteAddrHeader   = http.CanonicalHeaderKey("X-AppEngine-Remote-Addr")
+	devRequestIDHeader = http.CanonicalHeaderKey("X-Appengine-Dev-Request-Id")
 
 	// Outgoing headers.
 	apiEndpointHeader      = http.CanonicalHeaderKey("X-Google-RPC-Service-Endpoint")
@@ -93,6 +94,11 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 		delete(ctxs.m, r)
 		ctxs.Unlock()
 	}()
+
+	// Copy the Request ID into the expected header on the development server
+	if IsDevAppServer() && r.Header.Get(ticketHeader) == "" {
+		r.Header.Set(ticketHeader, r.Header.Get(devRequestIDHeader))
+	}
 
 	// Patch up RemoteAddr so it looks reasonable.
 	if addr := r.Header.Get(userIPHeader); addr != "" {
