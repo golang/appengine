@@ -498,6 +498,6 @@ func (c *context) Request() *http.Request {
 func ContextForTesting(req *http.Request) netcontext.Context {
 	return toContext(&context{
 		req:    req,
-		logger: discardLogger,
+		logger: testLogger,
 	})
 }

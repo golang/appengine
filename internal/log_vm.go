@@ -13,7 +13,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -39,11 +38,12 @@ type logTimestamp struct {
 }
 
 var (
-	logger        *jsonLogger
-	discardLogger = newJSONLogger(ioutil.Discard)
-
+	logger     *jsonLogger
 	loggerOnce sync.Once
-	logDir     = "/var/log/app_engine"
+
+	logPath      = "/var/log/app_engine/app.json"
+	stdoutLogger = newJSONLogger(os.Stdout)
+	testLogger   = newJSONLogger(ioutil.Discard)
 
 	levels = map[int64]string{
 		0: "DEBUG",
@@ -56,15 +56,10 @@ var (
 
 func globalLogger() *jsonLogger {
 	loggerOnce.Do(func() {
-		if _, err := os.Stat(logDir); os.IsNotExist(err) {
-			logger = discardLogger
-			return
-		}
-
-		f, err := os.Create(filepath.Join(logDir, "app.json"))
+		f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
-			log.Printf("failed to create log file, discarding logs: %v", err)
-			logger = discardLogger
+			log.Printf("failed to open/create log file, logging to stdout: %v", err)
+			logger = stdoutLogger
 			return
 		}
 
