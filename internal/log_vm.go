@@ -42,7 +42,7 @@ var (
 	loggerOnce sync.Once
 
 	logPath      = "/var/log/app_engine/app.json"
-	stdoutLogger = newJSONLogger(os.Stdout)
+	stderrLogger = newJSONLogger(os.Stderr)
 	testLogger   = newJSONLogger(ioutil.Discard)
 
 	levels = map[int64]string{
@@ -58,8 +58,8 @@ func globalLogger() *jsonLogger {
 	loggerOnce.Do(func() {
 		f, err := os.OpenFile(logPath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
-			log.Printf("failed to open/create log file, logging to stdout: %v", err)
-			logger = stdoutLogger
+			log.Printf("failed to open/create log file, logging to stderr: %v", err)
+			logger = stderrLogger
 			return
 		}
 
