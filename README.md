@@ -69,3 +69,7 @@ This list summarises the differences:
   Use [Google Cloud Storage](https://godoc.org/google.golang.org/cloud/storage) instead.
 * `appengine/socket` is not required on App Engine flexible environment / Managed VMs.
   Use the standard `net` package instead.
+
+### 4. Contributing
+
+We don't accept pull requests (at least not yet) instead we want you to...
