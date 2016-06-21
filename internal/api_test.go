@@ -9,7 +9,6 @@ package internal
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -19,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -37,6 +37,8 @@ func init() {
 
 type fakeAPIHandler struct {
 	hang chan int // used for RunSlowly RPC
+
+	LogFlushes int32 // atomic
 }
 
 func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -121,6 +123,12 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			<-f.hang
 			resOut = &basepb.VoidProto{}
 		}
+	}
+	if service == "logservice" && method == "Flush" {
+		// Pretend log flushing is slow.
+		time.Sleep(50 * time.Millisecond)
+		atomic.AddInt32(&f.LogFlushes, 1)
+		resOut = &basepb.VoidProto{}
 	}
 
 	encOut, err := proto.Marshal(resOut)
@@ -218,6 +226,50 @@ func TestAPICallDialFailure(t *testing.T) {
 	}
 }
 
+func TestDelayedLogFlushing(t *testing.T) {
+	f, c, cleanup := setup()
+	defer cleanup()
+
+	http.HandleFunc("/quick_log", func(w http.ResponseWriter, r *http.Request) {
+		logC := WithContext(netcontext.Background(), r)
+		fromContext(logC).apiURL = c.apiURL // Otherwise it will try to use the default URL.
+		Logf(logC, 1, "It's a lovely day.")
+		w.WriteHeader(200)
+		w.Write(make([]byte, 100<<10)) // write 100 KB to force HTTP flush
+	})
+
+	r := &http.Request{
+		Method: "GET",
+		URL: &url.URL{
+			Scheme: "http",
+			Path:   "/quick_log",
+		},
+		Header: c.req.Header,
+		Body:   ioutil.NopCloser(bytes.NewReader(nil)),
+	}
+	w := httptest.NewRecorder()
+
+	// Check that log flushing does not hold up the HTTP response.
+	start := time.Now()
+	handleHTTP(w, r)
+	if d := time.Since(start); d > 10*time.Millisecond {
+		t.Errorf("handleHTTP took %v, want under 10ms", d)
+	}
+	const hdr = "X-AppEngine-Log-Flush-Count"
+	if h := w.HeaderMap.Get(hdr); h != "1" {
+		t.Errorf("%s header = %q, want %q", hdr, h, "1")
+	}
+	if f := atomic.LoadInt32(&f.LogFlushes); f != 0 {
+		t.Errorf("After HTTP response: f.LogFlushes = %d, want 0", f)
+	}
+
+	// Check that the log flush eventually comes in.
+	time.Sleep(100 * time.Millisecond)
+	if f := atomic.LoadInt32(&f.LogFlushes); f != 1 {
+		t.Errorf("After 100ms: f.LogFlushes = %d, want 1", f)
+	}
+}
+
 func TestRemoteAddr(t *testing.T) {
 	var addr string
 	http.HandleFunc("/remote_addr", func(w http.ResponseWriter, r *http.Request) {
@@ -269,50 +321,6 @@ func TestPanickingHandler(t *testing.T) {
 	handleHTTP(rec, r)
 	if rec.Code != 500 {
 		t.Errorf("Panicking handler returned HTTP %d, want HTTP %d", rec.Code, 500)
-	}
-}
-
-func TestDelayedLogging(t *testing.T) {
-	_, c, cleanup := setup()
-	defer cleanup()
-
-	buf := bytes.NewBuffer(nil)
-	donec := make(chan bool, 1)
-
-	http.HandleFunc("/logging", func(w http.ResponseWriter, r *http.Request) {
-		logC := WithContext(netcontext.Background(), r)
-		fromContext(logC).logger = newJSONLogger(buf)
-
-		time.AfterFunc(200*time.Millisecond, func() {
-			Logf(logC, 1, "It's a lovely day.")
-			donec <- true
-		})
-
-		w.WriteHeader(200)
-	})
-
-	r := &http.Request{
-		Method: "GET",
-		URL: &url.URL{
-			Scheme: "http",
-			Path:   "/logging",
-		},
-		Header: c.req.Header,
-		Body:   ioutil.NopCloser(bytes.NewReader(nil)),
-	}
-	w := httptest.NewRecorder()
-
-	handleHTTP(w, r)
-
-	<-donec
-
-	var line logLine
-	if err := json.NewDecoder(buf).Decode(&line); err != nil {
-		t.Fatalf("Failed to unmarshal log line: %v", err)
-	}
-
-	if got, want := line.Message, "It's a lovely day."; got != want {
-		t.Errorf("line.Message = %s, want %s", got, want)
 	}
 }
 
