@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -1500,6 +1501,30 @@ func TestStringMeaning(t *testing.T) {
 }
 
 func TestNamespaceResetting(t *testing.T) {
+	// These environment variables are necessary because *Query.Run will
+	// call internal.FullyQualifiedAppID which checks these variables or falls
+	// back to the Metadata service that is not available in tests.
+	environ := []struct {
+		key, value string
+	}{
+		{"GAE_LONG_APP_ID", "my-app-id"},
+		{"GAE_PARTITION", "1"},
+	}
+	for _, v := range environ {
+		old := os.Getenv(v.key)
+		os.Setenv(v.key, v.value)
+		v.value = old
+	}
+	defer func() { // Restore old environment after the test completes.
+		for _, v := range environ {
+			if v.value == "" {
+				os.Unsetenv(v.key)
+				continue
+			}
+			os.Setenv(v.key, v.value)
+		}
+	}()
+
 	namec := make(chan *string, 1)
 	c0 := aetesting.FakeSingleContext(t, "datastore_v3", "RunQuery", func(req *pb.Query, res *pb.QueryResult) error {
 		namec <- req.NameSpace
