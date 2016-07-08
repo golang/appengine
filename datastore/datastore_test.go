@@ -525,7 +525,7 @@ var testCases = []testCase{
 		"time as props",
 		&T{T: time.Unix(1e9, 0)},
 		&PropertyList{
-			Property{Name: "T", Value: time.Unix(1e9, 0), NoIndex: false, Multiple: false},
+			Property{Name: "T", Value: time.Unix(1e9, 0).UTC(), NoIndex: false, Multiple: false},
 		},
 		"",
 		"",
