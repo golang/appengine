@@ -721,12 +721,13 @@ func TestBasicSearchOpts(t *testing.T) {
 	noErr := errors.New("") // Sentinel err to return to prevent sending request.
 
 	testCases := []struct {
-		desc      string
-		facetOpts []FacetSearchOption
-		cursor    Cursor
-		offset    int
-		want      *pb.SearchParams
-		wantErr   string
+		desc          string
+		facetOpts     []FacetSearchOption
+		cursor        Cursor
+		offset        int
+		countAccuracy int
+		want          *pb.SearchParams
+		wantErr       string
 	}{
 		{
 			desc: "No options",
@@ -838,6 +839,13 @@ func TestBasicSearchOpts(t *testing.T) {
 			offset:  121,
 			wantErr: "at most one of Cursor and Offset may be specified",
 		},
+		{
+			desc:          "Count accuracy",
+			countAccuracy: 100,
+			want: &pb.SearchParams{
+				MatchedCountAccuracy: proto.Int32(100),
+			},
+		},
 	}
 
 	for _, tt := range testCases {
@@ -858,9 +866,10 @@ func TestBasicSearchOpts(t *testing.T) {
 		})
 
 		it := index.Search(c, "gopher", &SearchOptions{
-			Facets: tt.facetOpts,
-			Cursor: tt.cursor,
-			Offset: tt.offset,
+			Facets:        tt.facetOpts,
+			Cursor:        tt.cursor,
+			Offset:        tt.offset,
+			CountAccuracy: tt.countAccuracy,
 		})
 		_, err := it.Next(nil)
 		if err == nil {
