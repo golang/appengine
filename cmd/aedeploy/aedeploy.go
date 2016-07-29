@@ -25,6 +25,13 @@ import (
 	"strings"
 )
 
+// vendored corresponds to srcDir depending on a vendored version of dir.
+// I.e. `import "dir"` from inside srcDir resolves to `.../some/ancestor/vendor/dir`.
+type vendored struct {
+	srcDir string
+	dir    string
+}
+
 var (
 	skipFiles = map[string]bool{
 		".git":        true,
@@ -33,7 +40,8 @@ var (
 		".travis.yml": true,
 	}
 
-	gopathCache = map[string]string{}
+	gopathCache   = map[string]string{}
+	vendoredCache = map[vendored]string{}
 )
 
 func usage() {
@@ -146,16 +154,24 @@ func imports(ctxt *build.Context, srcDir string, gopath []string) (map[string]st
 		return nil, err
 	}
 
-	// Resolve all non-standard-library imports
+	// Resolve imports, preferring vendored packages, then packages in the GOPATH.
+	// Any package that could not be resolved and does not contain a "."
+	// is assumed to be part of the standard libarry and therefore ignored.
+	// Otherwise, unresolved packages will return an error.
 	result := make(map[string]string)
 	for _, v := range pkg.Imports {
-		if !strings.Contains(v, ".") {
-			continue
+		src, verr := findVendored(srcDir, v, gopath)
+		if verr != nil {
+			var perr error
+			src, perr = findInGopath(v, gopath)
+			if perr != nil {
+				if !strings.Contains(v, ".") {
+					continue
+				}
+				return nil, fmt.Errorf("unable to find import %v: %v, %v", v, perr, verr)
+			}
 		}
-		src, err := findInGopath(v, gopath)
-		if err != nil {
-			return nil, fmt.Errorf("unable to find import %v in gopath %v: %v", v, gopath, err)
-		}
+
 		if _, ok := result[src]; ok { // Already processed
 			continue
 		}
@@ -169,6 +185,58 @@ func imports(ctxt *build.Context, srcDir string, gopath []string) (map[string]st
 		}
 	}
 	return result, nil
+}
+
+// findVendored searches up the tree for vendor directories containing the named import directory.
+func findVendored(srcDir, dir string, gopath []string) (string, error) {
+	if os.Getenv("GO15VENDOREXPERIMENT") != "0" {
+		if v, ok := vendoredCache[vendored{srcDir, dir}]; ok {
+			return v, nil
+		}
+
+		srcDir, err := filepath.Abs(srcDir)
+		if err != nil {
+			return "", fmt.Errorf("unable to search vendor directories: %v", err)
+		}
+
+		// srcDirs collects the directories we see as we walk up the tree.
+		// All of these directories, if they depend on a vendored version of dir,
+		// will depend on the same one.
+		var srcDirs []string
+
+		// Walk up the directory tree, looking for the vendored dir.
+		for s := srcDir; ; s = filepath.Dir(s) {
+			// Don't look in vendor directories outside of the GOPATH.
+			var inGopath bool
+			for _, p := range gopath {
+				if strings.HasPrefix(s, p) {
+					inGopath = true
+					break
+				}
+			}
+			if !inGopath {
+				break
+			}
+
+			srcDirs = append(srcDirs, s)
+			dst := filepath.Join(s, "vendor", dir)
+			if _, err := os.Stat(dst); err == nil {
+				for _, sd := range srcDirs {
+					vendoredCache[vendored{sd, dir}] = dst
+				}
+				return dst, nil
+			}
+
+			// We got to the root directory, but haven't found the vendored dir.
+			// This check isn't used as the loop conditional
+			// because we want the loop to run at least once.
+			if s == filepath.Dir(s) {
+				break
+			}
+		}
+		return "", fmt.Errorf("unable to find package %v in vendor directories at or above %v", dir, srcDir)
+	}
+	return "", fmt.Errorf("vendoring is disabled")
 }
 
 // findInGopath searches the gopath for the named import directory.
