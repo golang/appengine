@@ -190,13 +190,13 @@ func imports(ctxt *build.Context, srcDir string, gopath []string) (map[string]st
 // findVendored searches up the tree for vendor directories containing the named import directory.
 func findVendored(srcDir, dir string, gopath []string) (string, error) {
 	if os.Getenv("GO15VENDOREXPERIMENT") != "0" {
-		if v, ok := vendoredCache[vendored{srcDir, dir}]; ok {
-			return v, nil
-		}
-
 		srcDir, err := filepath.Abs(srcDir)
 		if err != nil {
 			return "", fmt.Errorf("unable to search vendor directories: %v", err)
+		}
+
+		if v, ok := vendoredCache[vendored{srcDir, dir}]; ok {
+			return v, nil
 		}
 
 		// srcDirs collects the directories we see as we walk up the tree.
