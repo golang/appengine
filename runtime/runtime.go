@@ -132,7 +132,7 @@ func handleBackground(w http.ResponseWriter, req *http.Request) {
 
 // RunInBackground runs f in a background goroutine in this process.
 // f is provided a context that may outlast the context provided to RunInBackground.
-// This is only valid to invoke from a manually scaled module.
+// This is only valid to invoke from a service set to basic or manual scaling.
 func RunInBackground(c context.Context, f func(c context.Context)) error {
 	req := &pb.StartBackgroundRequestRequest{}
 	res := &pb.StartBackgroundRequestResponse{}
