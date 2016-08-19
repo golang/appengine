@@ -115,9 +115,13 @@ func buildContext(tags []string) *build.Context {
 		GOROOT:    build.Default.GOROOT,
 		GOPATH:    build.Default.GOPATH,
 		Compiler:  build.Default.Compiler,
-		BuildTags: append(build.Default.BuildTags, tags...),
+		BuildTags: append(defaultBuildTags, tags...),
 	}
 }
+
+// All build tags except go1.7, since Go 1.6 is the runtime version.
+var defaultBuildTags = []string{
+	"go1.1", "go1.2", "go1.3", "go1.4", "go1.5", "go1.6"}
 
 // bundle bundles the app into a temporary directory.
 func (s *app) bundle() (tmpdir string, err error) {
