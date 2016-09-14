@@ -218,6 +218,9 @@ type Tagged struct {
 	C int   `datastore:",noindex"`
 	D int   `datastore:""`
 	E int
+	// The "flatten" option is parsed but ignored for now.
+	F int `datastore:",noindex,flatten"`
+	G int `datastore:",flatten"`
 	I int `datastore:"-"`
 	J int `datastore:",noindex" json:"j"`
 
@@ -719,7 +722,7 @@ var testCases = []testCase{
 	},
 	{
 		"save tagged load props",
-		&Tagged{A: 1, B: []int{21, 22, 23}, C: 3, D: 4, E: 5, I: 6, J: 7},
+		&Tagged{A: 1, B: []int{21, 22, 23}, C: 3, D: 4, E: 5, F: 6, G: 7, I: 8, J: 9},
 		&PropertyList{
 			// A and B are renamed to a and b; A and C are noindex, I is ignored.
 			// Indexed properties are loaded before raw properties. Thus, the
@@ -729,9 +732,11 @@ var testCases = []testCase{
 			Property{Name: "b", Value: int64(23), NoIndex: false, Multiple: true},
 			Property{Name: "D", Value: int64(4), NoIndex: false, Multiple: false},
 			Property{Name: "E", Value: int64(5), NoIndex: false, Multiple: false},
+			Property{Name: "G", Value: int64(7), NoIndex: false, Multiple: false},
 			Property{Name: "a", Value: int64(1), NoIndex: true, Multiple: false},
 			Property{Name: "C", Value: int64(3), NoIndex: true, Multiple: false},
-			Property{Name: "J", Value: int64(7), NoIndex: true, Multiple: false},
+			Property{Name: "F", Value: int64(6), NoIndex: true, Multiple: false},
+			Property{Name: "J", Value: int64(9), NoIndex: true, Multiple: false},
 		},
 		"",
 		"",
