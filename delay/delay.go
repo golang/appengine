@@ -124,6 +124,9 @@ func Func(key string, i interface{}) *Function {
 		gob.Register(reflect.Zero(t.In(i)).Interface())
 	}
 
+	if old := funcs[f.key]; old != nil {
+		old.err = fmt.Errorf("multiple functions registered for %s in %s", key, file)
+	}
 	funcs[f.key] = f
 	return f
 }
