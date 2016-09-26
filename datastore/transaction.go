@@ -70,7 +70,7 @@ func RunInTransaction(c context.Context, f func(tc context.Context) error, opts 
 	return ErrConcurrentTransaction
 }
 
-// IsInTransaction indicates whether the current context is a transaction context or not
+// IsInTransaction indicates whether the current context is a transaction context or not.
 func IsInTransaction(c context.Context) bool {
 	if internal.transactionFromContext(c) != nil {
 		return true
