@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -727,16 +728,16 @@ var testCases = []testCase{
 			// A and B are renamed to a and b; A and C are noindex, I is ignored.
 			// Indexed properties are loaded before raw properties. Thus, the
 			// result is: b, b, b, D, E, a, c.
+			Property{Name: "C", Value: int64(3), NoIndex: true, Multiple: false},
+			Property{Name: "D", Value: int64(4), NoIndex: false, Multiple: false},
+			Property{Name: "E", Value: int64(5), NoIndex: false, Multiple: false},
+			Property{Name: "F", Value: int64(6), NoIndex: true, Multiple: false},
+			Property{Name: "G", Value: int64(7), NoIndex: false, Multiple: false},
+			Property{Name: "J", Value: int64(9), NoIndex: true, Multiple: false},
+			Property{Name: "a", Value: int64(1), NoIndex: true, Multiple: false},
 			Property{Name: "b", Value: int64(21), NoIndex: false, Multiple: true},
 			Property{Name: "b", Value: int64(22), NoIndex: false, Multiple: true},
 			Property{Name: "b", Value: int64(23), NoIndex: false, Multiple: true},
-			Property{Name: "D", Value: int64(4), NoIndex: false, Multiple: false},
-			Property{Name: "E", Value: int64(5), NoIndex: false, Multiple: false},
-			Property{Name: "G", Value: int64(7), NoIndex: false, Multiple: false},
-			Property{Name: "a", Value: int64(1), NoIndex: true, Multiple: false},
-			Property{Name: "C", Value: int64(3), NoIndex: true, Multiple: false},
-			Property{Name: "F", Value: int64(6), NoIndex: true, Multiple: false},
-			Property{Name: "J", Value: int64(9), NoIndex: true, Multiple: false},
 		},
 		"",
 		"",
@@ -783,8 +784,8 @@ var testCases = []testCase{
 		"save struct load props",
 		&X0{S: "s", I: 1},
 		&PropertyList{
-			Property{Name: "S", Value: "s", NoIndex: false, Multiple: false},
 			Property{Name: "I", Value: int64(1), NoIndex: false, Multiple: false},
+			Property{Name: "S", Value: "s", NoIndex: false, Multiple: false},
 		},
 		"",
 		"",
@@ -845,10 +846,10 @@ var testCases = []testCase{
 		&PropertyList{
 			Property{Name: "A", Value: int64(1), NoIndex: false, Multiple: false},
 			Property{Name: "I.W", Value: int64(10), NoIndex: false, Multiple: true},
-			Property{Name: "I.X", Value: "ten", NoIndex: false, Multiple: true},
 			Property{Name: "I.W", Value: int64(20), NoIndex: false, Multiple: true},
-			Property{Name: "I.X", Value: "twenty", NoIndex: false, Multiple: true},
 			Property{Name: "I.W", Value: int64(30), NoIndex: false, Multiple: true},
+			Property{Name: "I.X", Value: "ten", NoIndex: false, Multiple: true},
+			Property{Name: "I.X", Value: "twenty", NoIndex: false, Multiple: true},
 			Property{Name: "I.X", Value: "thirty", NoIndex: false, Multiple: true},
 			Property{Name: "J.Y", Value: float64(3.14), NoIndex: false, Multiple: false},
 			Property{Name: "Z", Value: true, NoIndex: false, Multiple: false},
@@ -1115,33 +1116,33 @@ var testCases = []testCase{
 			},
 		},
 		&PropertyList{
-			Property{Name: "red.S", Value: "rouge", NoIndex: false, Multiple: false},
-			Property{Name: "red.I", Value: int64(0), NoIndex: false, Multiple: false},
-			Property{Name: "red.Nonymous.S", Value: "rosso0", NoIndex: false, Multiple: true},
-			Property{Name: "red.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
-			Property{Name: "red.Nonymous.S", Value: "rosso1", NoIndex: false, Multiple: true},
-			Property{Name: "red.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
-			Property{Name: "red.Other", Value: "", NoIndex: false, Multiple: false},
-			Property{Name: "green.S", Value: "vert", NoIndex: false, Multiple: false},
-			Property{Name: "green.I", Value: int64(0), NoIndex: false, Multiple: false},
-			Property{Name: "green.Nonymous.S", Value: "verde0", NoIndex: false, Multiple: true},
-			Property{Name: "green.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
-			Property{Name: "green.Nonymous.S", Value: "verde1", NoIndex: false, Multiple: true},
-			Property{Name: "green.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
-			Property{Name: "green.Nonymous.S", Value: "verde2", NoIndex: false, Multiple: true},
-			Property{Name: "green.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
-			Property{Name: "green.Other", Value: "", NoIndex: false, Multiple: false},
-			Property{Name: "Blue.S", Value: "bleu", NoIndex: false, Multiple: false},
 			Property{Name: "Blue.I", Value: int64(0), NoIndex: false, Multiple: false},
+			Property{Name: "Blue.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
+			Property{Name: "Blue.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
+			Property{Name: "Blue.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
+			Property{Name: "Blue.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
 			Property{Name: "Blue.Nonymous.S", Value: "blu0", NoIndex: false, Multiple: true},
-			Property{Name: "Blue.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
 			Property{Name: "Blue.Nonymous.S", Value: "blu1", NoIndex: false, Multiple: true},
-			Property{Name: "Blue.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
 			Property{Name: "Blue.Nonymous.S", Value: "blu2", NoIndex: false, Multiple: true},
-			Property{Name: "Blue.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
 			Property{Name: "Blue.Nonymous.S", Value: "blu3", NoIndex: false, Multiple: true},
-			Property{Name: "Blue.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
 			Property{Name: "Blue.Other", Value: "", NoIndex: false, Multiple: false},
+			Property{Name: "Blue.S", Value: "bleu", NoIndex: false, Multiple: false},
+			Property{Name: "green.I", Value: int64(0), NoIndex: false, Multiple: false},
+			Property{Name: "green.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
+			Property{Name: "green.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
+			Property{Name: "green.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
+			Property{Name: "green.Nonymous.S", Value: "verde0", NoIndex: false, Multiple: true},
+			Property{Name: "green.Nonymous.S", Value: "verde1", NoIndex: false, Multiple: true},
+			Property{Name: "green.Nonymous.S", Value: "verde2", NoIndex: false, Multiple: true},
+			Property{Name: "green.Other", Value: "", NoIndex: false, Multiple: false},
+			Property{Name: "green.S", Value: "vert", NoIndex: false, Multiple: false},
+			Property{Name: "red.I", Value: int64(0), NoIndex: false, Multiple: false},
+			Property{Name: "red.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
+			Property{Name: "red.Nonymous.I", Value: int64(0), NoIndex: false, Multiple: true},
+			Property{Name: "red.Nonymous.S", Value: "rosso0", NoIndex: false, Multiple: true},
+			Property{Name: "red.Nonymous.S", Value: "rosso1", NoIndex: false, Multiple: true},
+			Property{Name: "red.Other", Value: "", NoIndex: false, Multiple: false},
+			Property{Name: "red.S", Value: "rouge", NoIndex: false, Multiple: false},
 		},
 		"",
 		"",
@@ -1196,10 +1197,10 @@ var testCases = []testCase{
 			}
 		}{},
 		&PropertyList{
-			Property{Name: "B.Y", Value: "", NoIndex: false, Multiple: false},
 			Property{Name: "A.X", Value: "", NoIndex: true, Multiple: false},
 			Property{Name: "A.Y", Value: "", NoIndex: true, Multiple: false},
 			Property{Name: "B.X", Value: "", NoIndex: true, Multiple: false},
+			Property{Name: "B.Y", Value: "", NoIndex: false, Multiple: false},
 		},
 		"",
 		"",
@@ -1309,6 +1310,10 @@ func TestRoundTrip(t *testing.T) {
 			t.Errorf("%s: load: %s", tc.desc, s)
 			continue
 		}
+		if pl, ok := got.(*PropertyList); ok {
+			// Sort by name to make sure we have a deterministic order.
+			sort.Stable(byName(*pl))
+		}
 		equal := false
 		if gotT, ok := got.(*T); ok {
 			// Round tripping a time.Time can result in a different time.Location: Local instead of UTC.
@@ -1323,6 +1328,12 @@ func TestRoundTrip(t *testing.T) {
 		}
 	}
 }
+
+type byName PropertyList
+
+func (s byName) Len() int           { return len(s) }
+func (s byName) Less(i, j int) bool { return s[i].Name < s[j].Name }
+func (s byName) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 
 func TestQueryConstruction(t *testing.T) {
 	tests := []struct {
