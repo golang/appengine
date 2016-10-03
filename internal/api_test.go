@@ -41,33 +41,6 @@ type fakeAPIHandler struct {
 	LogFlushes int32 // atomic
 }
 
-func setEnv() func() {
-	var environ = []struct {
-		key, value string
-	}{
-		{"GAE_LONG_APP_ID", "my-app-id"},
-		{"GAE_MINOR_VERSION", "067924799508853122"},
-		{"GAE_MODULE_INSTANCE", "0"},
-		{"GAE_MODULE_NAME", "default"},
-		{"GAE_MODULE_VERSION", "20150612t184001"},
-	}
-
-	for _, v := range environ {
-		old := os.Getenv(v.key)
-		os.Setenv(v.key, v.value)
-		v.value = old
-	}
-	return func() { // Restore old environment after the test completes.
-		for _, v := range environ {
-			if v.value == "" {
-				os.Unsetenv(v.key)
-				continue
-			}
-			os.Setenv(v.key, v.value)
-		}
-	}
-}
-
 func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	writeResponse := func(res *remotepb.Response) {
 		hresBody, err := proto.Marshal(res)
@@ -204,7 +177,7 @@ func TestAPICall(t *testing.T) {
 }
 
 func TestAPICallTicketUnavailable(t *testing.T) {
-	resetEnv := setEnv()
+	resetEnv := SetTestEnv()
 	defer resetEnv()
 	_, c, cleanup := setup()
 	defer cleanup()
@@ -476,7 +449,7 @@ func TestHelperProcess(*testing.T) {
 }
 
 func TestBackgroundContext(t *testing.T) {
-	resetEnv := setEnv()
+	resetEnv := SetTestEnv()
 	defer resetEnv()
 
 	ctx, key := fromContext(BackgroundContext()), "X-Magic-Ticket-Header"
