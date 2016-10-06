@@ -25,9 +25,9 @@ var (
 
 // typeMismatchReason returns a string explaining why the property p could not
 // be stored in an entity field of type v.Type().
-func typeMismatchReason(p Property, v reflect.Value) string {
+func typeMismatchReason(pValue interface{}, v reflect.Value) string {
 	entityType := "empty"
-	switch p.Value.(type) {
+	switch pValue.(type) {
 	case int64:
 		entityType = "int"
 	case bool:
@@ -154,7 +154,7 @@ func (l *propertyLoader) load(codec *structCodec, structValue reflect.Value, p P
 		}
 	}
 
-	if errReason := setVal(p, v); errReason != "" {
+	if errReason := setVal(pValue, v); errReason != "" {
 		// Set the slice back to its zero value.
 		if slice.IsValid() {
 			slice.Set(reflect.Zero(slice.Type()))
@@ -170,13 +170,12 @@ func (l *propertyLoader) load(codec *structCodec, structValue reflect.Value, p P
 }
 
 // setVal sets v to the value of Property p.
-func setVal(p Property, v reflect.Value) string {
-	pValue := p.Value
+func setVal(pValue interface{}, v reflect.Value) string {
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		x, ok := pValue.(int64)
 		if !ok && pValue != nil {
-			return typeMismatchReason(p, v)
+			return typeMismatchReason(pValue, v)
 		}
 		if v.OverflowInt(x) {
 			return fmt.Sprintf("value %v overflows struct field of type %v", x, v.Type())
@@ -185,7 +184,7 @@ func setVal(p Property, v reflect.Value) string {
 	case reflect.Bool:
 		x, ok := pValue.(bool)
 		if !ok && pValue != nil {
-			return typeMismatchReason(p, v)
+			return typeMismatchReason(pValue, v)
 		}
 		v.SetBool(x)
 	case reflect.String:
@@ -198,13 +197,13 @@ func setVal(p Property, v reflect.Value) string {
 			v.SetString(x)
 		default:
 			if pValue != nil {
-				return typeMismatchReason(p, v)
+				return typeMismatchReason(pValue, v)
 			}
 		}
 	case reflect.Float32, reflect.Float64:
 		x, ok := pValue.(float64)
 		if !ok && pValue != nil {
-			return typeMismatchReason(p, v)
+			return typeMismatchReason(pValue, v)
 		}
 		if v.OverflowFloat(x) {
 			return fmt.Sprintf("value %v overflows struct field of type %v", x, v.Type())
@@ -213,10 +212,10 @@ func setVal(p Property, v reflect.Value) string {
 	case reflect.Ptr:
 		x, ok := pValue.(*Key)
 		if !ok && pValue != nil {
-			return typeMismatchReason(p, v)
+			return typeMismatchReason(pValue, v)
 		}
 		if _, ok := v.Interface().(*Key); !ok {
-			return typeMismatchReason(p, v)
+			return typeMismatchReason(pValue, v)
 		}
 		v.Set(reflect.ValueOf(x))
 	case reflect.Struct:
@@ -224,17 +223,17 @@ func setVal(p Property, v reflect.Value) string {
 		case typeOfTime:
 			x, ok := pValue.(time.Time)
 			if !ok && pValue != nil {
-				return typeMismatchReason(p, v)
+				return typeMismatchReason(pValue, v)
 			}
 			v.Set(reflect.ValueOf(x))
 		case typeOfGeoPoint:
 			x, ok := pValue.(appengine.GeoPoint)
 			if !ok && pValue != nil {
-				return typeMismatchReason(p, v)
+				return typeMismatchReason(pValue, v)
 			}
 			v.Set(reflect.ValueOf(x))
 		default:
-			return typeMismatchReason(p, v)
+			return typeMismatchReason(pValue, v)
 		}
 	case reflect.Slice:
 		x, ok := pValue.([]byte)
@@ -244,14 +243,14 @@ func setVal(p Property, v reflect.Value) string {
 			}
 		}
 		if !ok && pValue != nil {
-			return typeMismatchReason(p, v)
+			return typeMismatchReason(pValue, v)
 		}
 		if v.Type().Elem().Kind() != reflect.Uint8 {
-			return typeMismatchReason(p, v)
+			return typeMismatchReason(pValue, v)
 		}
 		v.SetBytes(x)
 	default:
-		return typeMismatchReason(p, v)
+		return typeMismatchReason(pValue, v)
 	}
 	return ""
 }
