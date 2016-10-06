@@ -36,6 +36,7 @@ type Property struct {
 	//	- appengine.BlobKey
 	//	- appengine.GeoPoint
 	//	- []byte (up to 1 megabyte in length)
+	//	- *Entity (representing a nested struct)
 	// This set is smaller than the set of valid struct field types that the
 	// datastore can load and save. A Property Value cannot be a slice (apart
 	// from []byte); use multiple Properties instead. Also, a Value's type
@@ -61,6 +62,13 @@ type Property struct {
 	// a certain name, Multiple should be true if a struct would best represent
 	// it as a field of type []T instead of type T.
 	Multiple bool
+}
+
+// An Entity is the value type for a nested struct.
+// This type is only used for a Property's Value.
+type Entity struct {
+	Key        *Key
+	Properties []Property
 }
 
 // ByteString is a short byte slice (up to 1500 bytes) that can be indexed.
@@ -127,6 +135,10 @@ type structCodec struct {
 	// hasSlice is whether a struct or any of its nested or embedded structs
 	// has a slice-typed field (other than []byte).
 	hasSlice bool
+	// keyField is the index of a *Key field with structTag __key__.
+	// This field is not relevant for the top level struct, only for
+	// nested structs.
+	keyField int
 	// complete is whether the structCodec is complete. An incomplete
 	// structCodec may be encountered when walking a recursive struct.
 	complete bool
@@ -165,6 +177,9 @@ func getStructCodecLocked(t reflect.Type) (ret *structCodec, retErr error) {
 	}
 	c = &structCodec{
 		fields: make(map[string]fieldCodec),
+		// We initialize keyField to -1 so that the zero-value is not
+		// misinterpreted as index 0.
+		keyField: -1,
 	}
 
 	// Add c to the structCodecs map before we are sure it is good. If t is
@@ -192,13 +207,19 @@ func getStructCodecLocked(t reflect.Type) (ret *structCodec, retErr error) {
 		for _, t := range tags[1:] {
 			opts[t] = true
 		}
-		if name == "" {
+		switch {
+		case name == "":
 			if !f.Anonymous {
 				name = f.Name
 			}
-		} else if name == "-" {
+		case name == "-":
 			continue
-		} else if !validPropertyName(name) {
+		case name == "__key__":
+			if f.Type != typeOfKeyPtr {
+				return nil, fmt.Errorf("datastore: __key__ field on struct %v is not a *datastore.Key", t)
+			}
+			c.keyField = i
+		case !validPropertyName(name):
 			return nil, fmt.Errorf("datastore: struct tag has invalid property name: %q", name)
 		}
 
@@ -266,8 +287,9 @@ type structPLS struct {
 	codec *structCodec
 }
 
-// newStructPLS returns a PropertyLoadSaver for the struct pointer p.
-func newStructPLS(p interface{}) (PropertyLoadSaver, error) {
+// newStructPLS returns a structPLS, which implements the
+// PropertyLoadSaver interface, for the struct pointer p.
+func newStructPLS(p interface{}) (*structPLS, error) {
 	v := reflect.ValueOf(p)
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
 		return nil, ErrInvalidEntityType
@@ -277,7 +299,7 @@ func newStructPLS(p interface{}) (PropertyLoadSaver, error) {
 	if err != nil {
 		return nil, err
 	}
-	return structPLS{v, codec}, nil
+	return &structPLS{v, codec}, nil
 }
 
 // LoadStruct loads the properties from p to dst.

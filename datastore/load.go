@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang/protobuf/proto"
 	"google.golang.org/appengine"
 	pb "google.golang.org/appengine/internal/datastore"
 )
@@ -21,6 +22,7 @@ var (
 	typeOfGeoPoint   = reflect.TypeOf(appengine.GeoPoint{})
 	typeOfTime       = reflect.TypeOf(time.Time{})
 	typeOfKeyPtr     = reflect.TypeOf(&Key{})
+	typeOfEntityPtr  = reflect.TypeOf(&Entity{})
 )
 
 // typeMismatchReason returns a string explaining why the property p could not
@@ -146,6 +148,8 @@ func (l *propertyLoader) load(codec *structCodec, structValue reflect.Value, p P
 			meaning = pb.Property_GEORSS_POINT
 		case typeOfTime:
 			meaning = pb.Property_GD_WHEN
+		case typeOfEntityPtr:
+			meaning = pb.Property_ENTITY_PROTO
 		}
 		var err error
 		pValue, err = propValue(iv.value, meaning)
@@ -154,7 +158,7 @@ func (l *propertyLoader) load(codec *structCodec, structValue reflect.Value, p P
 		}
 	}
 
-	if errReason := setVal(pValue, v); errReason != "" {
+	if errReason := setVal(v, pValue); errReason != "" {
 		// Set the slice back to its zero value.
 		if slice.IsValid() {
 			slice.Set(reflect.Zero(slice.Type()))
@@ -169,8 +173,8 @@ func (l *propertyLoader) load(codec *structCodec, structValue reflect.Value, p P
 	return ""
 }
 
-// setVal sets v to the value of Property p.
-func setVal(pValue interface{}, v reflect.Value) string {
+// setVal sets v to the value pValue.
+func setVal(v reflect.Value, pValue interface{}) string {
 	switch v.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		x, ok := pValue.(int64)
@@ -233,7 +237,28 @@ func setVal(pValue interface{}, v reflect.Value) string {
 			}
 			v.Set(reflect.ValueOf(x))
 		default:
-			return typeMismatchReason(pValue, v)
+			ent, ok := pValue.(*Entity)
+			if !ok {
+				return typeMismatchReason(pValue, v)
+			}
+
+			// Recursively load nested struct
+			pls, err := newStructPLS(v.Addr().Interface())
+			if err != nil {
+				return err.Error()
+			}
+
+			// if ent has a Key value and our struct has a Key field,
+			// load the Entity's Key value into the Key field on the struct.
+			if ent.Key != nil && pls.codec.keyField != -1 {
+
+				pls.v.Field(pls.codec.keyField).Set(reflect.ValueOf(ent.Key))
+			}
+
+			err = pls.Load(ent.Properties)
+			if err != nil {
+				return err.Error()
+			}
 		}
 	case reflect.Slice:
 		x, ok := pValue.([]byte)
@@ -255,7 +280,8 @@ func setVal(pValue interface{}, v reflect.Value) string {
 	return ""
 }
 
-// initField is similar to reflect's Value.FieldByIndex, but
+// initField is similar to reflect's Value.FieldByIndex, in that it
+// returns the nested struct field corresponding to index, but it
 // initialises any nil pointers encountered when traversing the structure.
 func initField(val reflect.Value, index []int) reflect.Value {
 	for _, i := range index[:len(index)-1] {
@@ -272,14 +298,14 @@ func initField(val reflect.Value, index []int) reflect.Value {
 
 // loadEntity loads an EntityProto into PropertyLoadSaver or struct pointer.
 func loadEntity(dst interface{}, src *pb.EntityProto) (err error) {
-	props, err := protoToProperties(src)
+	ent, err := protoToEntity(src)
 	if err != nil {
 		return err
 	}
 	if e, ok := dst.(PropertyLoadSaver); ok {
-		return e.Load(props)
+		return e.Load(ent.Properties)
 	}
-	return LoadStruct(dst, props)
+	return LoadStruct(dst, ent.Properties)
 }
 
 func (s structPLS) Load(props []Property) error {
@@ -303,9 +329,9 @@ func (s structPLS) Load(props []Property) error {
 	return nil
 }
 
-func protoToProperties(src *pb.EntityProto) ([]Property, error) {
+func protoToEntity(src *pb.EntityProto) (*Entity, error) {
 	props, rawProps := src.Property, src.RawProperty
-	out := make([]Property, 0, len(props)+len(rawProps))
+	outProps := make([]Property, 0, len(props)+len(rawProps))
 	for {
 		var (
 			x       *pb.Property
@@ -330,14 +356,21 @@ func protoToProperties(src *pb.EntityProto) ([]Property, error) {
 				return nil, err
 			}
 		}
-		out = append(out, Property{
+		outProps = append(outProps, Property{
 			Name:     x.GetName(),
 			Value:    value,
 			NoIndex:  noIndex,
 			Multiple: x.GetMultiple(),
 		})
 	}
-	return out, nil
+
+	var key *Key
+	if src.Key != nil {
+		// Ignore any error, since nested entity values
+		// are allowed to have an invalid key.
+		key, _ = protoToKey(src.Key)
+	}
+	return &Entity{key, outProps}, nil
 }
 
 // propValue returns a Go value that combines the raw PropertyValue with a
@@ -359,6 +392,13 @@ func propValue(v *pb.PropertyValue, m pb.Property_Meaning) (interface{}, error) 
 			return appengine.BlobKey(*v.StringValue), nil
 		} else if m == pb.Property_BYTESTRING {
 			return ByteString(*v.StringValue), nil
+		} else if m == pb.Property_ENTITY_PROTO {
+			var ent pb.EntityProto
+			err := proto.Unmarshal([]byte(*v.StringValue), &ent)
+			if err != nil {
+				return nil, err
+			}
+			return protoToEntity(&ent)
 		} else {
 			return *v.StringValue, nil
 		}
