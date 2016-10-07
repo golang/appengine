@@ -92,7 +92,7 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Bad encoded API request: %v", err), 500)
 		return
 	}
-	if *apiReq.RequestId != "s3cr3t" && *apiReq.RequestId != getDefaultTicket() {
+	if *apiReq.RequestId != "s3cr3t" && *apiReq.RequestId != DefaultTicket() {
 		writeResponse(&remotepb.Response{
 			RpcError: &remotepb.RpcError{
 				Code:   proto.Int32(int32(remotepb.RpcError_SECURITY_VIOLATION)),
