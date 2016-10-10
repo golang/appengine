@@ -72,10 +72,7 @@ func RunInTransaction(c context.Context, f func(tc context.Context) error, opts 
 
 // IsInTransaction indicates whether the current context is a transaction context or not.
 func IsInTransaction(c context.Context) bool {
-	if internal.transactionFromContext(c) != nil {
-		return true
-	}
-	return false
+	return internal.transactionFromContext(c) != nil
 }
 
 // TransactionOptions are the options for running a transaction.
