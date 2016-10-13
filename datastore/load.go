@@ -110,7 +110,7 @@ func (l *propertyLoader) load(codec *structCodec, structValue reflect.Value, p P
 			structValue = v
 		}
 
-		if v.Kind() == reflect.Slice {
+		if v.Kind() == reflect.Slice && v.Type() != typeOfByteSlice {
 			if l.m == nil {
 				l.m = make(map[string]int)
 			}
