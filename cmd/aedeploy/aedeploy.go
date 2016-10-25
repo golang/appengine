@@ -32,8 +32,6 @@ var (
 		".hg":         true,
 		".travis.yml": true,
 	}
-
-	gopathCache = map[string]string{}
 )
 
 func usage() {
@@ -99,8 +97,7 @@ func analyze(tags []string) (*app, error) {
 	if err != nil {
 		return nil, err
 	}
-	gopath := filepath.SplitList(ctxt.GOPATH)
-	im, err := imports(ctxt, ".", gopath)
+	im, err := imports(ctxt, ".")
 	return &app{
 		appFiles: appFiles,
 		imports:  im,
@@ -142,52 +139,63 @@ func (s *app) bundle() (tmpdir string, err error) {
 	return workDir, nil
 }
 
-// imports returns a map of all import directories (recursively) used by the app.
+// imports returns a map of all import directories used by the app.
 // The return value maps full directory names to original import names.
-func imports(ctxt *build.Context, srcDir string, gopath []string) (map[string]string, error) {
+func imports(ctxt *build.Context, srcDir string) (map[string]string, error) {
+	result := make(map[string]string)
+
+	type importFrom struct {
+		path, fromDir string
+	}
+	var imports []importFrom
+
 	pkg, err := ctxt.ImportDir(srcDir, 0)
 	if err != nil {
 		return nil, err
 	}
+	for _, v := range pkg.Imports {
+		imports = append(imports, importFrom{
+			path:    v,
+			fromDir: srcDir,
+		})
+	}
 
 	// Resolve all non-standard-library imports
-	result := make(map[string]string)
-	for _, v := range pkg.Imports {
-		if !strings.Contains(v, ".") {
-			continue
-		}
-		src, err := findInGopath(v, gopath)
-		if err != nil {
-			return nil, fmt.Errorf("unable to find import %v in gopath %v: %v", v, gopath, err)
-		}
-		if _, ok := result[src]; ok { // Already processed
-			continue
-		}
-		result[src] = v
-		im, err := imports(ctxt, src, gopath)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse package %v: %v", src, err)
-		}
-		for k, v := range im {
-			result[k] = v
-		}
-	}
-	return result, nil
-}
+	for len(imports) != 0 {
+		i := imports[0]
+		imports = imports[1:] // shift
 
-// findInGopath searches the gopath for the named import directory.
-func findInGopath(dir string, gopath []string) (string, error) {
-	if v, ok := gopathCache[dir]; ok {
-		return v, nil
-	}
-	for _, v := range gopath {
-		dst := filepath.Join(v, "src", dir)
-		if _, err := os.Stat(dst); err == nil {
-			gopathCache[dir] = dst
-			return dst, nil
+		if i.path == "C" {
+			// ignore cgo
+			continue
+		}
+		abs, err := filepath.Abs(i.fromDir)
+		if err != nil {
+			return nil, fmt.Errorf("unable to get absolute directory of %q: %v", i.fromDir, err)
+		}
+		pkg, err := ctxt.Import(i.path, abs, 0)
+		if err != nil {
+			return nil, fmt.Errorf("unable to find import %s, imported from %q: %v", i.path, i.fromDir, err)
+		}
+
+		// TODO(cbro): handle packages that are vendored by multiple imports correctly.
+
+		if pkg.Goroot {
+			// ignore standard library imports
+			continue
+		}
+
+		result[pkg.Dir] = i.path
+
+		for _, v := range pkg.Imports {
+			imports = append(imports, importFrom{
+				path:    v,
+				fromDir: pkg.Dir,
+			})
 		}
 	}
-	return "", fmt.Errorf("unable to find package %v in gopath %v", dir, gopath)
+
+	return result, nil
 }
 
 // copyTree copies srcDir to dstDir relative to dstRoot, ignoring skipFiles.
