@@ -92,8 +92,9 @@ func (i *instance) Close() (err error) {
 
 	if p := i.child.Process; p != nil {
 		errc := make(chan error, 1)
+		child := i.child // copy to avoid race with deferred func assigning nil
 		go func() {
-			errc <- i.child.Wait()
+			errc <- child.Wait()
 		}()
 
 		// Call the quit handler on the admin server.
