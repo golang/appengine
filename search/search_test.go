@@ -174,8 +174,9 @@ func TestSaveDocUsesDefaultedRankIfNotSpecified(t *testing.T) {
 	if err != nil {
 		t.Fatalf("saveDoc: %v", err)
 	}
-	if got.OrderIdSource != pb.Document_SUPPLIED.Enum() {
-		t.Errorf("OrderIdSource: want default value SUPPLIED")
+	orderIdSource := got.GetOrderIdSource()
+	if orderIdSource != pb.Document_DEFAULTED {
+		t.Errorf("OrderIdSource: got %v, wanted DEFAULTED", orderIdSource)
 	}
 }
 
@@ -262,8 +263,9 @@ func TestSaveMeta(t *testing.T) {
 		t.Fatalf("saveDoc: %v", err)
 	}
 	want := &pb.Document{
-		Field:   protoFields,
-		OrderId: proto.Int32(42),
+		Field:         protoFields,
+		OrderId:       proto.Int32(42),
+		OrderIdSource: pb.Document_SUPPLIED.Enum(),
 	}
 	if !proto.Equal(got, want) {
 		t.Errorf("\ngot  %v\nwant %v", got, want)
@@ -340,7 +342,8 @@ func TestLoadSaveWithStruct(t *testing.T) {
 	if err != nil {
 		t.Fatalf("saveDoc: %v", err)
 	}
-	gotPB.OrderId = nil // Don't test: it's time dependent.
+	gotPB.OrderId = nil       // Don't test: it's time dependent.
+	gotPB.OrderIdSource = nil // Don't test because it's contingent on OrderId.
 	if !proto.Equal(gotPB, pb) {
 		t.Errorf("saving doc\ngot  %v\nwant %v", gotPB, pb)
 	}
@@ -535,7 +538,7 @@ func TestPut(t *testing.T) {
 		expectedIn := &pb.IndexDocumentRequest{
 			Params: &pb.IndexDocumentParams{
 				Document: []*pb.Document{
-					{Field: protoFields, OrderId: proto.Int32(42)},
+					{Field: protoFields, OrderId: proto.Int32(42), OrderIdSource: pb.Document_SUPPLIED.Enum()},
 				},
 				IndexSpec: &pb.IndexSpec{
 					Name: proto.String("Doc"),
