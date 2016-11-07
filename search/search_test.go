@@ -241,9 +241,9 @@ func TestLoadMeta(t *testing.T) {
 		Fields: searchFieldsWithLang,
 	}
 	doc := &pb.Document{
-		Field:   protoFields,
-		OrderId: proto.Int32(42),
-		OrderIdSource: pb.Document_SUPPLIED.Enum()
+		Field:         protoFields,
+		OrderId:       proto.Int32(42),
+		OrderIdSource: pb.Document_SUPPLIED.Enum(),
 	}
 	if err := loadDoc(&got, doc, nil); err != nil {
 		t.Fatalf("loadDoc: %v", err)
