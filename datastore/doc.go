@@ -200,7 +200,7 @@ Example code:
 	func (x *CustomPropsExample) Save() ([]datastore.Property, error) {
 		// Validate the Sum field.
 		if x.Sum != x.I + x.J {
-			return errors.New("CustomPropsExample has inconsistent sum")
+			return nil, errors.New("CustomPropsExample has inconsistent sum")
 		}
 		// Save I and J as usual. The code below is equivalent to calling
 		// "return datastore.SaveStruct(x)", but is done manually for
@@ -214,7 +214,7 @@ Example code:
 				Name:  "J",
 				Value: int64(x.J),
 			},
-		}
+		}, nil
 	}
 
 The *PropertyList type implements PropertyLoadSaver, and can therefore hold an
@@ -343,7 +343,7 @@ Example code:
 				continue
 			}
 			for p, rep := range props {
-				fmt.Fprintf(w, "\t-%s (%s)\n", p, strings.Join(", ", rep))
+				fmt.Fprintf(w, "\t-%s (%s)\n", p, strings.Join(rep, ", "))
 			}
 		}
 	}
