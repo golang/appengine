@@ -162,6 +162,7 @@ func imports(ctxt *build.Context, srcDir string) (map[string]string, error) {
 		path, fromDir string
 	}
 	var imports []importFrom
+	visited := make(map[importFrom]bool)
 
 	pkg, err := ctxt.ImportDir(srcDir, 0)
 	if err != nil {
@@ -178,11 +179,16 @@ func imports(ctxt *build.Context, srcDir string) (map[string]string, error) {
 	for len(imports) != 0 {
 		i := imports[0]
 		imports = imports[1:] // shift
-
 		if i.path == "C" {
 			// ignore cgo
 			continue
 		}
+		if _, ok := visited[i]; ok {
+			// already scanned
+			continue
+		}
+		visited[i] = true
+
 		abs, err := filepath.Abs(i.fromDir)
 		if err != nil {
 			return nil, fmt.Errorf("unable to get absolute directory of %q: %v", i.fromDir, err)
