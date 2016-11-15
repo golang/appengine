@@ -19,6 +19,7 @@ import (
 	"go/build"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -39,7 +40,18 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "\t%s gcloud --verbosity debug app deploy --version myversion ./app.yaml\tDeploy app to production\n", os.Args[0])
 }
 
+var verbose bool
+
+// vlogf logs to stderr if the "-v" flag is provided.
+func vlogf(f string, v ...interface{}) {
+	if !verbose {
+		return
+	}
+	log.Printf("[aedeploy] "+f, v...)
+}
+
 func main() {
+	flag.BoolVar(&verbose, "v", false, "Verbose logging.")
 	flag.Usage = usage
 	flag.Parse()
 	if flag.NArg() < 1 {
@@ -76,6 +88,7 @@ func aedeploy() error {
 
 // deploy calls the provided command to deploy the app from the temporary directory.
 func deploy() error {
+	vlogf("Running command %v", flag.Args())
 	cmd := exec.Command(flag.Arg(0), flag.Args()[1:]...)
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -93,6 +106,7 @@ type app struct {
 // app files, and a map of full directory import names to original import names.
 func analyze(tags []string) (*app, error) {
 	ctxt := buildContext(tags)
+	vlogf("Using build context %#v", ctxt)
 	appFiles, err := appFiles(ctxt)
 	if err != nil {
 		return nil, err
@@ -185,6 +199,7 @@ func imports(ctxt *build.Context, srcDir string) (map[string]string, error) {
 			continue
 		}
 
+		vlogf("Located %q (imported from %q) -> %q", i.path, i.fromDir, pkg.Dir)
 		result[pkg.Dir] = i.path
 
 		for _, v := range pkg.Imports {
@@ -200,6 +215,7 @@ func imports(ctxt *build.Context, srcDir string) (map[string]string, error) {
 
 // copyTree copies srcDir to dstDir relative to dstRoot, ignoring skipFiles.
 func copyTree(dstRoot, dstDir, srcDir string) error {
+	vlogf("Copying %q to %q", srcDir, dstDir)
 	d := filepath.Join(dstRoot, dstDir)
 	if err := os.MkdirAll(d, 0755); err != nil {
 		return fmt.Errorf("unable to create directory %q: %v", d, err)
@@ -272,5 +288,6 @@ func appFiles(ctxt *build.Context) ([]string, error) {
 		n := filepath.Join(".", f)
 		appFiles = append(appFiles, n)
 	}
+	vlogf("Found application files %v", appFiles)
 	return appFiles, nil
 }
