@@ -625,6 +625,71 @@ func TestPutBadStatus(t *testing.T) {
 	}
 }
 
+func TestPutMultiNilIDSlice(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(in *pb.IndexDocumentRequest, out *pb.IndexDocumentResponse) error {
+		if len(in.Params.GetDocument()) < 1 {
+			return fmt.Errorf("expected at least one Document, got %v", in)
+		}
+		got, want := in.Params.Document[0].GetOrderId(), int32(time.Since(orderIDEpoch).Seconds())
+		if d := got - want; -5 > d || d > 5 {
+			return fmt.Errorf("got OrderId %d, want near %d", got, want)
+		}
+		*out = pb.IndexDocumentResponse{
+			Status: []*pb.RequestStatus{
+				{Code: pb.SearchServiceError_OK.Enum()},
+			},
+			DocId: []string{
+				"doc_id",
+			},
+		}
+		return nil
+	})
+
+	if _, err := index.PutMulti(c, nil, []interface{}{&searchFields}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPutMultiWrongNumberOfIDs(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(in *pb.IndexDocumentRequest, out *pb.IndexDocumentResponse) error {
+		return nil
+	})
+
+	if _, err := index.PutMulti(c, []string{"a"}, []interface{}{&searchFields, &searchFields}); err == nil {
+		t.Fatal("expected error, got success")
+	}
+}
+
+func TestPutMultiTooManyDocs(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(in *pb.IndexDocumentRequest, out *pb.IndexDocumentResponse) error {
+		return nil
+	})
+
+	srcs := make([]interface{}, 201)
+	for i, _ := range srcs {
+		srcs[i] = &searchFields
+	}
+
+	if _, err := index.PutMulti(c, nil, srcs); err != ErrTooManyDocuments {
+		t.Fatalf("expected ErrTooManyDocuments, got %v", err)
+	}
+}
+
 func TestSortOptions(t *testing.T) {
 	index, err := Open("Doc")
 	if err != nil {

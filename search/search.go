@@ -29,6 +29,10 @@ import (
 	pb "google.golang.org/appengine/internal/search"
 )
 
+const (
+	maxDocumentsPerPutDelete = 200
+)
+
 var (
 	// ErrInvalidDocumentType is returned when methods like Put, Get or Next
 	// are passed a dst or src argument of invalid type.
@@ -36,6 +40,12 @@ var (
 
 	// ErrNoSuchDocument is returned when no document was found for a given ID.
 	ErrNoSuchDocument = errors.New("search: no such document")
+
+	// ErrTooManyDocuments is returned when the user passes too many documents to
+	// PutMulti or DeleteMulti.
+	ErrTooManyDocuments = fmt.Errorf(
+		"search: too many documents given to put or delete (max is %d)",
+		maxDocumentsPerPutDelete)
 )
 
 // Atom is a document field whose contents are indexed as a single indivisible
@@ -120,39 +130,68 @@ func Open(name string) (*Index, error) {
 // src must be a non-nil struct pointer or implement the FieldLoadSaver
 // interface.
 func (x *Index) Put(c context.Context, id string, src interface{}) (string, error) {
-	d, err := saveDoc(src)
+	ids, err := x.PutMulti(c, []string{id}, []interface{}{src})
 	if err != nil {
 		return "", err
 	}
-	if id != "" {
-		if !validIndexNameOrDocID(id) {
-			return "", fmt.Errorf("search: invalid ID %q", id)
-		}
-		d.Id = proto.String(id)
+	return ids[0], nil
+}
+
+// PutMulti is like Put, but is more efficient for adding multiple documents to
+// the index at once.
+//
+// Up to 200 documents can be added at once. ErrTooManyDocuments is returned if
+// you try to add more.
+//
+// ids can either be an empty slice (which means new IDs will be allocated for
+// each of the documents added) or a slice the same size as srcs.
+func (x *Index) PutMulti(c context.Context, ids []string, srcs []interface{}) ([]string, error) {
+	if len(ids) != 0 && len(srcs) != len(ids) {
+		return nil, fmt.Errorf("search: PutMulti expects ids and srcs slices of the same length")
 	}
+	if len(srcs) > maxDocumentsPerPutDelete {
+		return nil, ErrTooManyDocuments
+	}
+
+	docs := make([]*pb.Document, len(srcs))
+	for i, s := range srcs {
+		var err error
+		docs[i], err = saveDoc(s)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(ids) != 0 && ids[i] != "" {
+			if !validIndexNameOrDocID(ids[i]) {
+				return nil, fmt.Errorf("search: invalid ID %q", ids[i])
+			}
+			docs[i].Id = proto.String(ids[i])
+		}
+	}
+
 	// spec is modified by Call when applying the current Namespace, so copy it to
 	// avoid retaining the namespace beyond the scope of the Call.
 	spec := x.spec
 	req := &pb.IndexDocumentRequest{
 		Params: &pb.IndexDocumentParams{
-			Document:  []*pb.Document{d},
+			Document:  docs,
 			IndexSpec: &spec,
 		},
 	}
 	res := &pb.IndexDocumentResponse{}
 	if err := internal.Call(c, "search", "IndexDocument", req, res); err != nil {
-		return "", err
+		return nil, err
 	}
-	if len(res.Status) > 0 {
-		if s := res.Status[0]; s.GetCode() != pb.SearchServiceError_OK {
-			return "", fmt.Errorf("search: %s: %s", s.GetCode(), s.GetErrorDetail())
+	for _, s := range res.Status {
+		if s.GetCode() != pb.SearchServiceError_OK {
+			return nil, fmt.Errorf("search: %s: %s", s.GetCode(), s.GetErrorDetail())
 		}
 	}
-	if len(res.Status) != 1 || len(res.DocId) != 1 {
-		return "", fmt.Errorf("search: internal error: wrong number of results (%d Statuses, %d DocIDs)",
-			len(res.Status), len(res.DocId))
+	if len(res.Status) != len(docs) || len(res.DocId) != len(docs) {
+		return nil, fmt.Errorf("search: internal error: wrong number of results (%d Statuses, %d DocIDs, expected %d)",
+			len(res.Status), len(res.DocId), len(docs))
 	}
-	return res.DocId[0], nil
+	return res.DocId, nil
 }
 
 // Get loads the document with the given ID into dst.
@@ -194,9 +233,18 @@ func (x *Index) Get(c context.Context, id string, dst interface{}) error {
 
 // Delete deletes a document from the index.
 func (x *Index) Delete(c context.Context, id string) error {
+	return x.DeleteMulti(c, []string{id})
+}
+
+// DeleteMulti deletes multiple documents from the index.
+func (x *Index) DeleteMulti(c context.Context, ids []string) error {
+	if len(ids) > maxDocumentsPerPutDelete {
+		return ErrTooManyDocuments
+	}
+
 	req := &pb.DeleteDocumentRequest{
 		Params: &pb.DeleteDocumentParams{
-			DocId:     []string{id},
+			DocId:     ids,
 			IndexSpec: &x.spec,
 		},
 	}
@@ -204,11 +252,14 @@ func (x *Index) Delete(c context.Context, id string) error {
 	if err := internal.Call(c, "search", "DeleteDocument", req, res); err != nil {
 		return err
 	}
-	if len(res.Status) != 1 {
-		return fmt.Errorf("search: internal error: wrong number of results (%d)", len(res.Status))
+	if len(res.Status) != len(ids) {
+		return fmt.Errorf("search: internal error: wrong number of results (%d, expected %d)",
+			len(res.Status), len(ids))
 	}
-	if s := res.Status[0]; s.GetCode() != pb.SearchServiceError_OK {
-		return fmt.Errorf("search: %s: %s", s.GetCode(), s.GetErrorDetail())
+	for _, s := range res.Status {
+		if s.GetCode() != pb.SearchServiceError_OK {
+			return fmt.Errorf("search: %s: %s", s.GetCode(), s.GetErrorDetail())
+		}
 	}
 	return nil
 }
