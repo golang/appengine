@@ -29,9 +29,7 @@ import (
 	pb "google.golang.org/appengine/internal/search"
 )
 
-const (
-	maxDocumentsPerPutDelete = 200
-)
+const maxDocumentsPerPutDelete = 200
 
 var (
 	// ErrInvalidDocumentType is returned when methods like Put, Get or Next
@@ -43,9 +41,7 @@ var (
 
 	// ErrTooManyDocuments is returned when the user passes too many documents to
 	// PutMulti or DeleteMulti.
-	ErrTooManyDocuments = fmt.Errorf(
-		"search: too many documents given to put or delete (max is %d)",
-		maxDocumentsPerPutDelete)
+	ErrTooManyDocuments = fmt.Errorf("search: too many documents given to put or delete (max is %d)", maxDocumentsPerPutDelete)
 )
 
 // Atom is a document field whose contents are indexed as a single indivisible
@@ -145,6 +141,10 @@ func (x *Index) Put(c context.Context, id string, src interface{}) (string, erro
 //
 // ids can either be an empty slice (which means new IDs will be allocated for
 // each of the documents added) or a slice the same size as srcs.
+//
+// The error may be an instance of appengine.MultiError, in which case it will
+// be the same size as srcs and the individual errors inside will correspond
+// with the items in srcs.
 func (x *Index) PutMulti(c context.Context, ids []string, srcs []interface{}) ([]string, error) {
 	if len(ids) != 0 && len(srcs) != len(ids) {
 		return nil, fmt.Errorf("search: PutMulti expects ids and srcs slices of the same length")
@@ -182,11 +182,17 @@ func (x *Index) PutMulti(c context.Context, ids []string, srcs []interface{}) ([
 	if err := internal.Call(c, "search", "IndexDocument", req, res); err != nil {
 		return nil, err
 	}
-	for _, s := range res.Status {
+	multiErr, any := make(appengine.MultiError, len(res.Status)), false
+	for i, s := range res.Status {
 		if s.GetCode() != pb.SearchServiceError_OK {
-			return nil, fmt.Errorf("search: %s: %s", s.GetCode(), s.GetErrorDetail())
+			multiErr[i] = fmt.Errorf("search: %s: %s", s.GetCode(), s.GetErrorDetail())
+			any = true
 		}
 	}
+	if any {
+		return res.DocId, multiErr
+	}
+
 	if len(res.Status) != len(docs) || len(res.DocId) != len(docs) {
 		return nil, fmt.Errorf("search: internal error: wrong number of results (%d Statuses, %d DocIDs, expected %d)",
 			len(res.Status), len(res.DocId), len(docs))
@@ -237,6 +243,10 @@ func (x *Index) Delete(c context.Context, id string) error {
 }
 
 // DeleteMulti deletes multiple documents from the index.
+//
+// The returned error may be an instance of appengine.MultiError, in which case
+// it will be the same size as srcs and the individual errors inside will
+// correspond with the items in srcs.
 func (x *Index) DeleteMulti(c context.Context, ids []string) error {
 	if len(ids) > maxDocumentsPerPutDelete {
 		return ErrTooManyDocuments
@@ -256,10 +266,15 @@ func (x *Index) DeleteMulti(c context.Context, ids []string) error {
 		return fmt.Errorf("search: internal error: wrong number of results (%d, expected %d)",
 			len(res.Status), len(ids))
 	}
-	for _, s := range res.Status {
+	multiErr, any := make(appengine.MultiError, len(ids)), false
+	for i, s := range res.Status {
 		if s.GetCode() != pb.SearchServiceError_OK {
-			return fmt.Errorf("search: %s: %s", s.GetCode(), s.GetErrorDetail())
+			multiErr[i] = fmt.Errorf("search: %s: %s", s.GetCode(), s.GetErrorDetail())
+			any = true
 		}
+	}
+	if any {
+		return multiErr
 	}
 	return nil
 }
