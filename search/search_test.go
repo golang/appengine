@@ -633,7 +633,7 @@ func TestPutMultiNilIDSlice(t *testing.T) {
 
 	c := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(in *pb.IndexDocumentRequest, out *pb.IndexDocumentResponse) error {
 		if len(in.Params.GetDocument()) < 1 {
-			return fmt.Errorf("expected at least one Document, got %v", in)
+			return fmt.Errorf("got %v, want at least 1 document", in)
 		}
 		got, want := in.Params.Document[0].GetOrderId(), int32(time.Since(orderIDEpoch).Seconds())
 		if d := got - want; -5 > d || d > 5 {
@@ -677,13 +677,13 @@ func TestPutMultiError(t *testing.T) {
 
 	switch _, err := index.PutMulti(c, nil, []interface{}{&searchFields, &searchFields}); {
 	case err == nil:
-		t.Fatalf("expected error, got nil")
+		t.Fatalf("got nil, want error")
 	case err.Error() != "search: PERMISSION_DENIED: foo":
-		t.Fatalf("expected error text, got %s", err.Error())
+		t.Fatalf("got %s, want correct error text", err.Error())
 	case err.(appengine.MultiError)[0] != nil:
-		t.Fatalf("expected nil MultiError[0], got %v", err.(appengine.MultiError)[0])
+		t.Fatalf("got %v, want nil MultiError[0]", err.(appengine.MultiError)[0])
 	case err.(appengine.MultiError)[1] == nil:
-		t.Fatalf("expected MultiError[1], got nil")
+		t.Fatalf("got nil, want not-nill MultiError[1]")
 	}
 }
 
@@ -698,7 +698,7 @@ func TestPutMultiWrongNumberOfIDs(t *testing.T) {
 	})
 
 	if _, err := index.PutMulti(c, []string{"a"}, []interface{}{&searchFields, &searchFields}); err == nil {
-		t.Fatal("expected error, got success")
+		t.Fatal("got success, want error")
 	}
 }
 
@@ -718,7 +718,7 @@ func TestPutMultiTooManyDocs(t *testing.T) {
 	}
 
 	if _, err := index.PutMulti(c, nil, srcs); err != ErrTooManyDocuments {
-		t.Fatalf("expected ErrTooManyDocuments, got %v", err)
+		t.Fatalf("got %v, want ErrTooManyDocuments", err)
 	}
 }
 
@@ -1233,9 +1233,9 @@ func TestDeleteWrongNumberOfResults(t *testing.T) {
 
 	switch err := index.DeleteMulti(c, []string{"id1", "id2"}); {
 	case err == nil:
-		t.Fatalf("expected error, got nil")
+		t.Fatalf("got nil, want error")
 	case err.Error() != "search: internal error: wrong number of results (1, expected 2)":
-		t.Fatalf("expected error text, got %s", err.Error())
+		t.Fatalf("got %s, want correct error text", err.Error())
 	}
 }
 
@@ -1266,12 +1266,12 @@ func TestDeleteMultiError(t *testing.T) {
 
 	switch err := index.DeleteMulti(c, []string{"id1", "id2"}); {
 	case err == nil:
-		t.Fatalf("expected error, got nil")
+		t.Fatalf("got nil, want error")
 	case err.Error() != "search: PERMISSION_DENIED: foo":
-		t.Fatalf("expected error text, got %s", err.Error())
+		t.Fatalf("got %s, want correct error text", err.Error())
 	case err.(appengine.MultiError)[0] != nil:
-		t.Fatalf("expected nil MultiError[0], got %v", err.(appengine.MultiError)[0])
+		t.Fatalf("got %v, want nil MultiError[0]", err.(appengine.MultiError)[0])
 	case err.(appengine.MultiError)[1] == nil:
-		t.Fatalf("expected MultiError[1], got nil")
+		t.Fatalf("got nil, want not-nill MultiError[1]")
 	}
 }
