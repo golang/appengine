@@ -678,8 +678,6 @@ func TestPutMultiError(t *testing.T) {
 	switch _, err := index.PutMulti(c, nil, []interface{}{&searchFields, &searchFields}); {
 	case err == nil:
 		t.Fatalf("got nil, want error")
-	case err.Error() != "search: PERMISSION_DENIED: foo":
-		t.Fatalf("got %s, want correct error text", err.Error())
 	case err.(appengine.MultiError)[0] != nil:
 		t.Fatalf("got %v, want nil MultiError[0]", err.(appengine.MultiError)[0])
 	case err.(appengine.MultiError)[1] == nil:
@@ -1231,11 +1229,8 @@ func TestDeleteWrongNumberOfResults(t *testing.T) {
 		return nil
 	})
 
-	switch err := index.DeleteMulti(c, []string{"id1", "id2"}); {
-	case err == nil:
+	if err := index.DeleteMulti(c, []string{"id1", "id2"}); err == nil {
 		t.Fatalf("got nil, want error")
-	case err.Error() != "search: internal error: wrong number of results (1, expected 2)":
-		t.Fatalf("got %s, want correct error text", err.Error())
 	}
 }
 
@@ -1267,8 +1262,6 @@ func TestDeleteMultiError(t *testing.T) {
 	switch err := index.DeleteMulti(c, []string{"id1", "id2"}); {
 	case err == nil:
 		t.Fatalf("got nil, want error")
-	case err.Error() != "search: PERMISSION_DENIED: foo":
-		t.Fatalf("got %s, want correct error text", err.Error())
 	case err.(appengine.MultiError)[0] != nil:
 		t.Fatalf("got %v, want nil MultiError[0]", err.(appengine.MultiError)[0])
 	case err.(appengine.MultiError)[1] == nil:

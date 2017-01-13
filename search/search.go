@@ -182,14 +182,14 @@ func (x *Index) PutMulti(c context.Context, ids []string, srcs []interface{}) ([
 	if err := internal.Call(c, "search", "IndexDocument", req, res); err != nil {
 		return nil, err
 	}
-	multiErr, any := make(appengine.MultiError, len(res.Status)), false
+	multiErr, hasErr := make(appengine.MultiError, len(res.Status)), false
 	for i, s := range res.Status {
 		if s.GetCode() != pb.SearchServiceError_OK {
 			multiErr[i] = fmt.Errorf("search: %s: %s", s.GetCode(), s.GetErrorDetail())
-			any = true
+			hasErr = true
 		}
 	}
-	if any {
+	if hasErr {
 		return res.DocId, multiErr
 	}
 
