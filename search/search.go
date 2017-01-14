@@ -266,14 +266,14 @@ func (x *Index) DeleteMulti(c context.Context, ids []string) error {
 		return fmt.Errorf("search: internal error: wrong number of results (%d, expected %d)",
 			len(res.Status), len(ids))
 	}
-	multiErr, any := make(appengine.MultiError, len(ids)), false
+	multiErr, hasErr := make(appengine.MultiError, len(ids)), false
 	for i, s := range res.Status {
 		if s.GetCode() != pb.SearchServiceError_OK {
 			multiErr[i] = fmt.Errorf("search: %s: %s", s.GetCode(), s.GetErrorDetail())
-			any = true
+			hasErr = true
 		}
 	}
-	if any {
+	if hasErr {
 		return multiErr
 	}
 	return nil
