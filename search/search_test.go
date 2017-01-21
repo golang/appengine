@@ -625,6 +625,101 @@ func TestPutBadStatus(t *testing.T) {
 	}
 }
 
+func TestPutMultiNilIDSlice(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(in *pb.IndexDocumentRequest, out *pb.IndexDocumentResponse) error {
+		if len(in.Params.GetDocument()) < 1 {
+			return fmt.Errorf("got %v, want at least 1 document", in)
+		}
+		got, want := in.Params.Document[0].GetOrderId(), int32(time.Since(orderIDEpoch).Seconds())
+		if d := got - want; -5 > d || d > 5 {
+			return fmt.Errorf("got OrderId %d, want near %d", got, want)
+		}
+		*out = pb.IndexDocumentResponse{
+			Status: []*pb.RequestStatus{
+				{Code: pb.SearchServiceError_OK.Enum()},
+			},
+			DocId: []string{
+				"doc_id",
+			},
+		}
+		return nil
+	})
+
+	if _, err := index.PutMulti(c, nil, []interface{}{&searchFields}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestPutMultiError(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(in *pb.IndexDocumentRequest, out *pb.IndexDocumentResponse) error {
+		*out = pb.IndexDocumentResponse{
+			Status: []*pb.RequestStatus{
+				{Code: pb.SearchServiceError_OK.Enum()},
+				{Code: pb.SearchServiceError_PERMISSION_DENIED.Enum(), ErrorDetail: proto.String("foo")},
+			},
+			DocId: []string{
+				"id1",
+				"",
+			},
+		}
+		return nil
+	})
+
+	switch _, err := index.PutMulti(c, nil, []interface{}{&searchFields, &searchFields}); {
+	case err == nil:
+		t.Fatalf("got nil, want error")
+	case err.(appengine.MultiError)[0] != nil:
+		t.Fatalf("got %v, want nil MultiError[0]", err.(appengine.MultiError)[0])
+	case err.(appengine.MultiError)[1] == nil:
+		t.Fatalf("got nil, want not-nill MultiError[1]")
+	}
+}
+
+func TestPutMultiWrongNumberOfIDs(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(in *pb.IndexDocumentRequest, out *pb.IndexDocumentResponse) error {
+		return nil
+	})
+
+	if _, err := index.PutMulti(c, []string{"a"}, []interface{}{&searchFields, &searchFields}); err == nil {
+		t.Fatal("got success, want error")
+	}
+}
+
+func TestPutMultiTooManyDocs(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(in *pb.IndexDocumentRequest, out *pb.IndexDocumentResponse) error {
+		return nil
+	})
+
+	srcs := make([]interface{}, 201)
+	for i, _ := range srcs {
+		srcs[i] = &searchFields
+	}
+
+	if _, err := index.PutMulti(c, nil, srcs); err != ErrTooManyDocuments {
+		t.Fatalf("got %v, want ErrTooManyDocuments", err)
+	}
+}
+
 func TestSortOptions(t *testing.T) {
 	index, err := Open("Doc")
 	if err != nil {
@@ -1048,5 +1143,128 @@ func TestNamespaceResetting(t *testing.T) {
 	i.Put(c2, "something", &searchDoc)
 	if ns := <-namec; ns != nil {
 		t.Errorf(`Put with c2: ns = %q, want nil`, *ns)
+	}
+}
+
+func TestDelete(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "DeleteDocument", func(in *pb.DeleteDocumentRequest, out *pb.DeleteDocumentResponse) error {
+		expectedIn := &pb.DeleteDocumentRequest{
+			Params: &pb.DeleteDocumentParams{
+				DocId:     []string{"id"},
+				IndexSpec: &pb.IndexSpec{Name: proto.String("Doc")},
+			},
+		}
+		if !proto.Equal(in, expectedIn) {
+			return fmt.Errorf("unsupported argument:\ngot  %v\nwant %v", in, expectedIn)
+		}
+		*out = pb.DeleteDocumentResponse{
+			Status: []*pb.RequestStatus{
+				{Code: pb.SearchServiceError_OK.Enum()},
+			},
+		}
+		return nil
+	})
+
+	if err := index.Delete(c, "id"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeleteMulti(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "DeleteDocument", func(in *pb.DeleteDocumentRequest, out *pb.DeleteDocumentResponse) error {
+		expectedIn := &pb.DeleteDocumentRequest{
+			Params: &pb.DeleteDocumentParams{
+				DocId:     []string{"id1", "id2"},
+				IndexSpec: &pb.IndexSpec{Name: proto.String("Doc")},
+			},
+		}
+		if !proto.Equal(in, expectedIn) {
+			return fmt.Errorf("unsupported argument:\ngot  %v\nwant %v", in, expectedIn)
+		}
+		*out = pb.DeleteDocumentResponse{
+			Status: []*pb.RequestStatus{
+				{Code: pb.SearchServiceError_OK.Enum()},
+				{Code: pb.SearchServiceError_OK.Enum()},
+			},
+		}
+		return nil
+	})
+
+	if err := index.DeleteMulti(c, []string{"id1", "id2"}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDeleteWrongNumberOfResults(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "DeleteDocument", func(in *pb.DeleteDocumentRequest, out *pb.DeleteDocumentResponse) error {
+		expectedIn := &pb.DeleteDocumentRequest{
+			Params: &pb.DeleteDocumentParams{
+				DocId:     []string{"id1", "id2"},
+				IndexSpec: &pb.IndexSpec{Name: proto.String("Doc")},
+			},
+		}
+		if !proto.Equal(in, expectedIn) {
+			return fmt.Errorf("unsupported argument:\ngot  %v\nwant %v", in, expectedIn)
+		}
+		*out = pb.DeleteDocumentResponse{
+			Status: []*pb.RequestStatus{
+				{Code: pb.SearchServiceError_OK.Enum()},
+			},
+		}
+		return nil
+	})
+
+	if err := index.DeleteMulti(c, []string{"id1", "id2"}); err == nil {
+		t.Fatalf("got nil, want error")
+	}
+}
+
+func TestDeleteMultiError(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	c := aetesting.FakeSingleContext(t, "search", "DeleteDocument", func(in *pb.DeleteDocumentRequest, out *pb.DeleteDocumentResponse) error {
+		expectedIn := &pb.DeleteDocumentRequest{
+			Params: &pb.DeleteDocumentParams{
+				DocId:     []string{"id1", "id2"},
+				IndexSpec: &pb.IndexSpec{Name: proto.String("Doc")},
+			},
+		}
+		if !proto.Equal(in, expectedIn) {
+			return fmt.Errorf("unsupported argument:\ngot  %v\nwant %v", in, expectedIn)
+		}
+		*out = pb.DeleteDocumentResponse{
+			Status: []*pb.RequestStatus{
+				{Code: pb.SearchServiceError_OK.Enum()},
+				{Code: pb.SearchServiceError_PERMISSION_DENIED.Enum(), ErrorDetail: proto.String("foo")},
+			},
+		}
+		return nil
+	})
+
+	switch err := index.DeleteMulti(c, []string{"id1", "id2"}); {
+	case err == nil:
+		t.Fatalf("got nil, want error")
+	case err.(appengine.MultiError)[0] != nil:
+		t.Fatalf("got %v, want nil MultiError[0]", err.(appengine.MultiError)[0])
+	case err.(appengine.MultiError)[1] == nil:
+		t.Fatalf("got nil, want not-nill MultiError[1]")
 	}
 }
