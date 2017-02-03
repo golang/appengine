@@ -150,6 +150,9 @@ type fieldCodec struct {
 	// path is the index path to the field
 	path    []int
 	noIndex bool
+	// omitEmpty indicates that the field should be omitted on save
+	// if empty.
+	omitEmpty bool
 	// structCodec is the codec fot the struct field at index 'path',
 	// or nil if the field is not a struct.
 	structCodec *structCodec
@@ -261,6 +264,7 @@ func getStructCodecLocked(t reflect.Type) (ret *structCodec, retErr error) {
 					c.fields[subname] = fieldCodec{
 						path:        append([]int{i}, subfield.path...),
 						noIndex:     subfield.noIndex || opts["noindex"],
+						omitEmpty:   subfield.omitEmpty,
 						structCodec: subfield.structCodec,
 					}
 				}
@@ -274,6 +278,7 @@ func getStructCodecLocked(t reflect.Type) (ret *structCodec, retErr error) {
 		c.fields[name] = fieldCodec{
 			path:        []int{i},
 			noIndex:     opts["noindex"],
+			omitEmpty:   opts["omitempty"],
 			structCodec: sub,
 		}
 	}
