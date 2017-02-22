@@ -71,6 +71,8 @@ var (
 	testGeoPt0   = appengine.GeoPoint{Lat: 1.2, Lng: 3.4}
 	testGeoPt1   = appengine.GeoPoint{Lat: 5, Lng: 10}
 	testBadGeoPt = appengine.GeoPoint{Lat: 1000, Lng: 34}
+
+	now = time.Unix(1e9, 0).UTC()
 )
 
 type B0 struct {
@@ -349,6 +351,14 @@ type Repeated struct {
 
 func (d *Doubler) Load(props []Property) error {
 	return LoadStruct(d, props)
+}
+
+type EmbeddedTime struct {
+	time.Time
+}
+
+type SpecialTime struct {
+	MyTime EmbeddedTime
 }
 
 func (d *Doubler) Save() ([]Property, error) {
@@ -1410,6 +1420,22 @@ var testCases = []testCase{
 			B: json.RawMessage("rawr"),
 		},
 		&B2{B: myBlob("rawr")},
+		"",
+		"",
+	},
+	{
+		"embedded time field",
+		&SpecialTime{MyTime: EmbeddedTime{now}},
+		&SpecialTime{MyTime: EmbeddedTime{now}},
+		"",
+		"",
+	},
+	{
+		"embedded time load",
+		&PropertyList{
+			Property{Name: "MyTime.", Value: now, NoIndex: false, Multiple: false},
+		},
+		&SpecialTime{MyTime: EmbeddedTime{now}},
 		"",
 		"",
 	},
