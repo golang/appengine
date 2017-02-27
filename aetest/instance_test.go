@@ -1,6 +1,7 @@
 package aetest
 
 import (
+	"net/url"
 	"os"
 	"testing"
 
@@ -8,6 +9,7 @@ import (
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/internal"
 	"google.golang.org/appengine/memcache"
+	"google.golang.org/appengine/taskqueue"
 	"google.golang.org/appengine/user"
 )
 
@@ -115,5 +117,38 @@ func TestUsers(t *testing.T) {
 	Logout(req)
 	if user := user.Current(ctx); user != nil {
 		t.Errorf("user.Current after logout %v, want nil", user)
+	}
+}
+func TestTaskQueue(t *testing.T) {
+	// Only run the test if APPENGINE_DEV_APPSERVER is explicitly set.
+	if os.Getenv("APPENGINE_DEV_APPSERVER") == "" {
+		t.Skip("APPENGINE_DEV_APPSERVER not set")
+	}
+	queueNames := []string{
+		"taskQueueName",
+	}
+	ctx, done, err := NewContextOptions(&Options{
+		TaskQueues: queueNames,
+	})
+	queueNames = append(queueNames, "default")
+	if err != nil {
+		t.Fatalf("NewContext: %v", err)
+	}
+	defer done()
+
+	for _, queueName := range queueNames {
+		_, err = taskqueue.Add(ctx, taskqueue.NewPOSTTask("/worker", url.Values{
+			"key": {"value"},
+		}), queueName)
+		if err != nil {
+			t.Errorf("Unable to add task to queue - %v", err)
+		}
+		if stats, err := taskqueue.QueueStats(ctx, []string{queueName}); err != nil {
+			t.Errorf("Unable to fetch queue statistics - %v", err)
+		} else if len(stats) == 0 {
+			t.Errorf("No stats found for the default taskqueue!")
+		} else if stats[0].Tasks != 1 {
+			t.Errorf("Wrong number of tasks found in queue, wanted 1, got %d", stats[0].Tasks)
+		}
 	}
 }
