@@ -2,9 +2,7 @@
 
 [![Build Status](https://travis-ci.org/golang/appengine.svg)](https://travis-ci.org/golang/appengine)
 
-This repository supports the Go runtime on App Engine,
-including both the standard App Engine and the
-"App Engine flexible environment" (formerly known as "Managed VMs").
+This repository supports the Go runtime on *App Engine standard*.
 It provides APIs for interacting with App Engine services.
 Its canonical import path is `google.golang.org/appengine`.
 
@@ -13,6 +11,15 @@ for more information.
 
 File issue reports and feature requests on the [GitHub's issue
 tracker](https://github.com/golang/appengine/issues).
+
+## Upgrading an App Engine app to the flexible environment
+
+This package does not work on *App Engine flexible*.
+
+There are many differences between the App Engine standard environment and
+the flexible environment.
+
+See the [documentation on upgrading to the flexible environment](https://cloud.google.com/appengine/docs/flexible/go/upgrading).
 
 ## Directory structure
 
@@ -24,13 +31,6 @@ packages are in subdirectories (e.g. `datastore`).
 There is an `internal` subdirectory that contains service protocol buffers,
 plus packages required for connectivity to make API calls. App Engine apps
 should not directly import any package under `internal`.
-
-## Upgrading an App Engine app to the flexible environment
-
-There are many differences between the App Engine standard environment and
-the flexible environment.
-
-See the [documentation on upgrading to the flexible environment](https://cloud.google.com/appengine/docs/flexible/go/upgrading).
 
 ## Updating from legacy (`import "appengine"`) packages
 
