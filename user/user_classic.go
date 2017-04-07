@@ -15,7 +15,11 @@ import (
 )
 
 func Current(ctx context.Context) *User {
-	u := user.Current(internal.ClassicContextFromContext(ctx))
+	c, err := internal.ClassicContextFromContext(ctx)
+	if err != nil {
+		panic(err)
+	}
+	u := user.Current(c)
 	if u == nil {
 		return nil
 	}

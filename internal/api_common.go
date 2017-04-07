@@ -5,6 +5,7 @@
 package internal
 
 import (
+	"errors"
 	"os"
 
 	"github.com/golang/protobuf/proto"
@@ -79,7 +80,11 @@ func Logf(ctx netcontext.Context, level int64, format string, args ...interface{
 		f(level, format, args...)
 		return
 	}
-	logf(fromContext(ctx), level, format, args...)
+	c := fromContext(ctx)
+	if c == nil {
+		panic(errNonAEContext)
+	}
+	logf(c, level, format, args...)
 }
 
 // NamespacedContext wraps a Context to support namespaces.
@@ -114,3 +119,5 @@ func SetTestEnv() func() {
 		}
 	}
 }
+
+var errNonAEContext = errors.New("not an App Engine context")
