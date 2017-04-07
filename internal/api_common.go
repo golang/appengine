@@ -12,6 +12,8 @@ import (
 	netcontext "golang.org/x/net/context"
 )
 
+var errNotAppEngineContext = errors.New("not an App Engine context")
+
 type CallOverrideFunc func(ctx netcontext.Context, service, method string, in, out proto.Message) error
 
 var callOverrideKey = "holds []CallOverrideFunc"
@@ -82,7 +84,7 @@ func Logf(ctx netcontext.Context, level int64, format string, args ...interface{
 	}
 	c := fromContext(ctx)
 	if c == nil {
-		panic(errNonAEContext)
+		panic(errNotAppEngineContext)
 	}
 	logf(c, level, format, args...)
 }
@@ -119,5 +121,3 @@ func SetTestEnv() func() {
 		}
 	}
 }
-
-var errNonAEContext = errors.New("not an App Engine context")

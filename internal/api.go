@@ -470,7 +470,7 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message)
 	c := fromContext(ctx)
 	if c == nil {
 		// Give a good error message rather than a panic lower down.
-		return errNonAEContext
+		return errNotAppEngineContext
 	}
 
 	// Apply transaction modifications if we're in a transaction.

@@ -33,7 +33,7 @@ func fromContext(ctx netcontext.Context) appengine.Context {
 func ClassicContextFromContext(ctx netcontext.Context) (appengine.Context, error) {
 	c := fromContext(ctx)
 	if c == nil {
-		return nil, errNonAEContext
+		return nil, errNotAppEngineContext
 	}
 	return c, nil
 }
@@ -104,7 +104,7 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message)
 	c := fromContext(ctx)
 	if c == nil {
 		// Give a good error message rather than a panic lower down.
-		return errNonAEContext
+		return errNotAppEngineContext
 	}
 
 	// Apply transaction modifications if we're in a transaction.

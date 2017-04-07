@@ -15,7 +15,7 @@ import (
 func DefaultVersionHostname(ctx netcontext.Context) string {
 	c := fromContext(ctx)
 	if c == nil {
-		panic(errNonAEContext)
+		panic(errNotAppEngineContext)
 	}
 	return appengine.DefaultVersionHostname(c)
 }
@@ -28,7 +28,7 @@ func IsDevAppServer() bool                   { return appengine.IsDevAppServer()
 func RequestID(ctx netcontext.Context) string {
 	c := fromContext(ctx)
 	if c == nil {
-		panic(errNonAEContext)
+		panic(errNotAppEngineContext)
 	}
 	return appengine.RequestID(c)
 }
@@ -36,14 +36,14 @@ func RequestID(ctx netcontext.Context) string {
 func ModuleName(ctx netcontext.Context) string {
 	c := fromContext(ctx)
 	if c == nil {
-		panic(errNonAEContext)
+		panic(errNotAppEngineContext)
 	}
 	return appengine.ModuleName(c)
 }
 func VersionID(ctx netcontext.Context) string {
 	c := fromContext(ctx)
 	if c == nil {
-		panic(errNonAEContext)
+		panic(errNotAppEngineContext)
 	}
 	return appengine.VersionID(c)
 }
@@ -51,7 +51,7 @@ func VersionID(ctx netcontext.Context) string {
 func fullyQualifiedAppID(ctx netcontext.Context) string {
 	c := fromContext(ctx)
 	if c == nil {
-		panic(errNonAEContext)
+		panic(errNotAppEngineContext)
 	}
 	return c.FullyQualifiedAppID()
 }
