@@ -70,6 +70,11 @@ func RunInTransaction(c context.Context, f func(tc context.Context) error, opts 
 	return ErrConcurrentTransaction
 }
 
+// IsInTransaction indicates whether the current context is a transaction context or not.
+func IsInTransaction(c context.Context) bool {
+	return internal.TransactionFromContext(c) != nil
+}
+
 // TransactionOptions are the options for running a transaction.
 type TransactionOptions struct {
 	// XG is whether the transaction can cross multiple entity groups. In

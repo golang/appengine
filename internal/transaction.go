@@ -38,7 +38,7 @@ func applyTransaction(pb proto.Message, t *pb.Transaction) {
 
 var transactionKey = "used for *Transaction"
 
-func transactionFromContext(ctx netcontext.Context) *transaction {
+func TransactionFromContext(ctx netcontext.Context) *transaction {
 	t, _ := ctx.Value(&transactionKey).(*transaction)
 	return t
 }
