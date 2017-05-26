@@ -100,6 +100,7 @@ func (i *instance) Close() (err error) {
 
 	if p := child.Process; p != nil {
 		errc := make(chan error, 1)
+		child := i.child // copy to avoid race with deferred func assigning nil
 		go func() {
 			errc <- child.Wait()
 		}()
