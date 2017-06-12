@@ -273,7 +273,7 @@ func NewKey(c context.Context, kind, stringID string, intID int64, parent *Key) 
 
 // NameKey creates a new key with a name.
 // The supplied kind cannot be empty.
-func NameKey(c context.Context, kind, name string, parent *Key) *Key {
+func NameKey(c context.Context, kind string, name string, parent *Key) *Key {
 	return NewKey(c, kind, name, 0, parent)
 }
 
