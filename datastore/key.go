@@ -271,6 +271,18 @@ func NewKey(c context.Context, kind, stringID string, intID int64, parent *Key) 
 	}
 }
 
+// NameKey creates a new key with a name.
+// The supplied kind cannot be empty.
+func NameKey(c context.Context, kind, name string, parent *Key) *Key {
+	return NewKey(c, kind, name, 0, parent)
+}
+
+// IDKey creates a new key with an ID.
+// The supplied kind cannot be empty.
+func IDKey(c context.Context, kind string, id int64, parent *Key) *Key {
+	return NewKey(c, kind, "", id, parent)
+}
+
 // AllocateIDs returns a range of n integer IDs with the given kind and parent
 // combination. kind cannot be empty; parent may be nil. The IDs in the range
 // returned will not be used by the datastore's automatic ID sequence generator
