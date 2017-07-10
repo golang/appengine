@@ -94,6 +94,13 @@ var (
 			dupeWhich = 2
 		}
 	})
+
+	reqFuncRuns    = 0
+	reqFuncHeaders *taskqueue.RequestHeaders
+	reqFunc        = Func("req", func(c context.Context) {
+		reqFuncRuns++
+		reqFuncHeaders = RequestHeaders(c)
+	})
 )
 
 type fakeContext struct {
@@ -371,5 +378,38 @@ func TestDuplicateFunction(t *testing.T) {
 		t.Error("dupe2Func.Call used old registered function")
 	} else if dupeWhich != 2 {
 		t.Errorf("dupeWhich = %d; want 2", dupeWhich)
+	}
+}
+
+func TestGetRequestHeadersFromContext(t *testing.T) {
+	c := newFakeContext()
+
+	// Fake out the adding of a task.
+	var task *taskqueue.Task
+	taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
+		if queue != "" {
+			t.Errorf(`Got queue %q, expected ""`, queue)
+		}
+		task = tk
+		return tk, nil
+	}
+
+	reqFunc.Call(c.ctx)
+
+	reqFuncRuns, reqFuncHeaders = 0, nil // reset state
+	// Simulate the Task Queue service.
+	req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
+	req.Header.Set("x-appengine-taskname", "foobar")
+	if err != nil {
+		t.Fatalf("Failed making http.Request: %v", err)
+	}
+	rw := httptest.NewRecorder()
+	runFunc(c.ctx, rw, req)
+
+	if reqFuncRuns != 1 {
+		t.Errorf("reqFuncRuns: got %d, want 1", reqFuncRuns)
+	}
+	if reqFuncHeaders.TaskName != "foobar" {
+		t.Errorf("reqFuncHeaders.TaskName: got %v, want 'foobar'", reqFuncHeaders.TaskName)
 	}
 }

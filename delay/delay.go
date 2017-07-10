@@ -74,6 +74,8 @@ const (
 	queue = ""
 )
 
+type contextKey int
+
 var (
 	// registry of all delayed functions
 	funcs = make(map[string]*Function)
@@ -84,6 +86,8 @@ var (
 
 	// errors
 	errFirstArg = errors.New("first argument must be context.Context")
+
+	headersContextKey contextKey = 0
 )
 
 // Func declares a new Function. The second argument must be a function with a
@@ -222,6 +226,12 @@ func (f *Function) Task(args ...interface{}) (*taskqueue.Task, error) {
 	}, nil
 }
 
+// Request returns the special task-queue HTTP request headers for the current
+// task queue handler. Panics if called from outside a delay.Func.
+func RequestHeaders(c context.Context) *taskqueue.RequestHeaders {
+	return c.Value(headersContextKey).(*taskqueue.RequestHeaders)
+}
+
 var taskqueueAdder = taskqueue.Add // for testing
 
 func init() {
@@ -232,6 +242,8 @@ func init() {
 
 func runFunc(c context.Context, w http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
+
+	c = context.WithValue(c, headersContextKey, taskqueue.ParseRequestHeaders(req.Header))
 
 	var inv invocation
 	if err := gob.NewDecoder(req.Body).Decode(&inv); err != nil {
