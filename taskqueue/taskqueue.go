@@ -165,7 +165,8 @@ type RequestHeaders struct {
 }
 
 // ParseRequestHeaders parses the special HTTP request headers available to push
-// task request handlers.
+// task request handlers. This function silently ignores values of the wrong
+// format.
 func ParseRequestHeaders(h http.Header) *RequestHeaders {
 	ret := &RequestHeaders{
 		QueueName: h.Get("X-AppEngine-QueueName"),

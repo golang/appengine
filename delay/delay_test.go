@@ -97,9 +97,10 @@ var (
 
 	reqFuncRuns    = 0
 	reqFuncHeaders *taskqueue.RequestHeaders
+	reqFuncErr     error
 	reqFunc        = Func("req", func(c context.Context) {
 		reqFuncRuns++
-		reqFuncHeaders = RequestHeaders(c)
+		reqFuncHeaders, reqFuncErr = RequestHeaders(c)
 	})
 )
 
@@ -384,6 +385,15 @@ func TestDuplicateFunction(t *testing.T) {
 func TestGetRequestHeadersFromContext(t *testing.T) {
 	c := newFakeContext()
 
+	// Outside a delay.Func should return an error.
+	headers, err := RequestHeaders(c.ctx)
+	if headers != nil {
+		t.Errorf("RequestHeaders outside Func, got %v, want nil", headers)
+	}
+	if err != errOutsideDelayFunc {
+		t.Errorf("RequestHeaders outside Func err, got %v, want %v", err, errOutsideDelayFunc)
+	}
+
 	// Fake out the adding of a task.
 	var task *taskqueue.Task
 	taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
@@ -411,5 +421,8 @@ func TestGetRequestHeadersFromContext(t *testing.T) {
 	}
 	if reqFuncHeaders.TaskName != "foobar" {
 		t.Errorf("reqFuncHeaders.TaskName: got %v, want 'foobar'", reqFuncHeaders.TaskName)
+	}
+	if reqFuncErr != nil {
+		t.Errorf("reqFuncErr: got %v, want nil", reqFuncErr)
 	}
 }

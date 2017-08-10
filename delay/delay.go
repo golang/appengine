@@ -85,8 +85,10 @@ var (
 	errorType   = reflect.TypeOf((*error)(nil)).Elem()
 
 	// errors
-	errFirstArg = errors.New("first argument must be context.Context")
+	errFirstArg         = errors.New("first argument must be context.Context")
+	errOutsideDelayFunc = errors.New("request headers are only available inside a delay.Func")
 
+	// context keys
 	headersContextKey contextKey = 0
 )
 
@@ -227,9 +229,12 @@ func (f *Function) Task(args ...interface{}) (*taskqueue.Task, error) {
 }
 
 // Request returns the special task-queue HTTP request headers for the current
-// task queue handler. Panics if called from outside a delay.Func.
-func RequestHeaders(c context.Context) *taskqueue.RequestHeaders {
-	return c.Value(headersContextKey).(*taskqueue.RequestHeaders)
+// task queue handler. Returns an error if called from outside a delay.Func.
+func RequestHeaders(c context.Context) (*taskqueue.RequestHeaders, error) {
+	if ret, ok := c.Value(headersContextKey).(*taskqueue.RequestHeaders); ok {
+		return ret, nil
+	}
+	return nil, errOutsideDelayFunc
 }
 
 var taskqueueAdder = taskqueue.Add // for testing
