@@ -114,8 +114,13 @@ func (c *Client) call(ctx context.Context, service, method string, in, out proto
 		return fmt.Errorf("proto.Marshal: %v", err)
 	}
 
-	// TODO(djd): Respect ctx.Deadline()?
-	resp, err := c.hc.Post(c.url, "application/octet-stream", bytes.NewReader(req))
+	hreq, err := http.NewRequest(http.MethodPost, c.url, bytes.NewReader(req))
+	if err != nil {
+		return fmt.Errorf("error creating request: %v", err)
+	}
+	hreq = hreq.WithContext(ctx)
+	hreq.Header.Set("Content-Type", "application/octet-stream")
+	resp, err := c.hc.Do(hreq)
 	if err != nil {
 		return fmt.Errorf("error sending request: %v", err)
 	}
