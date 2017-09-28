@@ -22,6 +22,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
+	"golang.org/x/net/context/ctxhttp"
 
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/remote_api"
@@ -114,13 +115,7 @@ func (c *Client) call(ctx context.Context, service, method string, in, out proto
 		return fmt.Errorf("proto.Marshal: %v", err)
 	}
 
-	hreq, err := http.NewRequest(http.MethodPost, c.url, bytes.NewReader(req))
-	if err != nil {
-		return fmt.Errorf("error creating request: %v", err)
-	}
-	hreq = hreq.WithContext(ctx)
-	hreq.Header.Set("Content-Type", "application/octet-stream")
-	resp, err := c.hc.Do(hreq)
+	resp, err := ctxhttp.Post(ctx, c.hc, c.url, "application/octet-stream", bytes.NewReader(req))
 	if err != nil {
 		return fmt.Errorf("error sending request: %v", err)
 	}
