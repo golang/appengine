@@ -145,6 +145,9 @@ func saveStructProperty(props *[]Property, name string, opts saveOpts, v reflect
 	case *Key:
 		p.Value = x
 	case time.Time:
+		if opts.omitEmpty && x.IsZero() {
+			return nil
+		}
 		p.Value = x
 	case appengine.BlobKey:
 		p.Value = x
