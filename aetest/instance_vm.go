@@ -17,7 +17,6 @@ import (
 	"regexp"
 	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/appengine/internal"
 )
 
@@ -69,13 +68,10 @@ func (i *instance) NewRequest(method, urlStr string, body io.Reader) (*http.Requ
 	if err != nil {
 		return nil, err
 	}
+	req = req.WithContext(internal.WithAppIDOverride(req.Context(), "dev~"+i.appID))
 
 	// Associate this request.
-	release := internal.RegisterTestRequest(req, i.apiURL, func(ctx context.Context) context.Context {
-		ctx = internal.WithAppIDOverride(ctx, "dev~"+i.appID)
-		return ctx
-	})
-	i.relFuncs = append(i.relFuncs, release)
+	req = internal.RegisterTestRequest(req, i.apiURL)
 
 	return req, nil
 }
