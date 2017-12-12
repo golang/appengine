@@ -267,13 +267,14 @@ func IncomingHeaders(ctx netcontext.Context) http.Header {
 	return nil
 }
 
+func ReqContext(req *http.Request) netcontext.Context {
+	return req.Context()
+}
+
 func WithContext(parent netcontext.Context, req *http.Request) netcontext.Context {
-	if parent == netcontext.Background() {
-		return req.Context()
-	}
 	return jointContext{
-		base:       req.Context(),
-		valuesOnly: parent,
+		base:       parent,
+		valuesOnly: req.Context(),
 	}
 }
 
