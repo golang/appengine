@@ -63,8 +63,10 @@ var (
 		},
 	}
 
-	defaultTicketOnce sync.Once
-	defaultTicket     string
+	defaultTicketOnce     sync.Once
+	defaultTicket         string
+	backgroundContextOnce sync.Once
+	backgroundContext     netcontext.Context
 )
 
 func apiURL() *url.URL {
@@ -190,11 +192,6 @@ func renderPanic(x interface{}) string {
 	return string(buf)
 }
 
-var ctxs = struct {
-	sync.Mutex
-	bg *context // background context, lazily initialized
-}{}
-
 // context represents the context of an in-flight HTTP request.
 // It implements the appengine.Context and http.ResponseWriter interfaces.
 type context struct {
@@ -297,29 +294,25 @@ func DefaultTicket() string {
 }
 
 func BackgroundContext() netcontext.Context {
-	ctxs.Lock()
-	defer ctxs.Unlock()
+	backgroundContextOnce.Do(func() {
+		// Compute background security ticket.
+		ticket := DefaultTicket()
 
-	if ctxs.bg != nil {
-		return toContext(ctxs.bg)
-	}
-
-	// Compute background security ticket.
-	ticket := DefaultTicket()
-
-	ctxs.bg = &context{
-		req: &http.Request{
-			Header: http.Header{
-				ticketHeader: []string{ticket},
+		c := &context{
+			req: &http.Request{
+				Header: http.Header{
+					ticketHeader: []string{ticket},
+				},
 			},
-		},
-		apiURL: apiURL(),
-	}
+			apiURL: apiURL(),
+		}
+		backgroundContext = toContext(c)
 
-	// TODO(dsymonds): Wire up the shutdown handler to do a final flush.
-	go ctxs.bg.logFlusher(make(chan int))
+		// TODO(dsymonds): Wire up the shutdown handler to do a final flush.
+		go c.logFlusher(make(chan int))
+	})
 
-	return toContext(ctxs.bg)
+	return backgroundContext
 }
 
 // RegisterTestRequest registers the HTTP request req for testing, such that
