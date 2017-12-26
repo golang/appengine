@@ -186,6 +186,11 @@ func (i *instance) startChild() (err error) {
 	if err != nil {
 		return err
 	}
+	if PrepareOtherYAML != nil {
+		if err := PrepareOtherYAML(filepath.Join(i.appDir, "app")); err != nil {
+			return err
+		}
+	}
 
 	appserverArgs := []string{
 		devAppserver,

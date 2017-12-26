@@ -53,3 +53,9 @@ func NewContext() (context.Context, func(), error) {
 // dev_appserver.py is started, each time it is started. If aetest.NewContext
 // is invoked from the goapp test tool, this hook is unnecessary.
 var PrepareDevAppserver func() error
+
+// PrepareOtherYAML is a hook which, if set, will be called after
+// the test app directory is created, each time dev_appserver.py is started.
+// If aetest.NewContext is invoked from the goapp test tool, this hook is no effect.
+// This hook works in aetest.NewContext invoked from the go test tool.
+var PrepareOtherYAML func(appDir string) error
