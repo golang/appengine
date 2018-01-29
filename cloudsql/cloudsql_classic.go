@@ -9,7 +9,7 @@ package cloudsql
 import (
 	"net"
 
-	"appengine/cloudsql"
+	"google.golang.org/appengine/cloudsql"
 )
 
 func connect(instance string) (net.Conn, error) {
