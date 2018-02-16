@@ -58,14 +58,18 @@ func RunInTransaction(c context.Context, f func(tc context.Context) error, opts 
 	if opts != nil {
 		xg = opts.XG
 	}
+	readOnly := false
+	if opts != nil {
+		readOnly = opts.ReadOnly
+	}
 	attempts := 3
 	if opts != nil && opts.Attempts > 0 {
 		attempts = opts.Attempts
 	}
+	var t *pb.Transaction
+	var err error
 	for i := 0; i < attempts; i++ {
-		var t *pb.Transaction
-		var err error
-		if t, err = internal.RunTransactionOnce(c, f, xg, opts.ReadOnly, t); err != internal.ErrConcurrentTransaction {
+		if t, err = internal.RunTransactionOnce(c, f, xg, readOnly, t); err != internal.ErrConcurrentTransaction {
 			return err
 		}
 	}
