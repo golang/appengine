@@ -5,7 +5,12 @@
 package blobstore
 
 import (
+	"bytes"
+	"encoding/base64"
 	"io"
+	"mime/multipart"
+	"net/http"
+	"net/textproto"
 	"os"
 	"strconv"
 	"strings"
@@ -179,5 +184,44 @@ func TestReader(t *testing.T) {
 				t.Fatalf("%s step %d: got %q want %q", rt.blobKey, i, got, step.want)
 			}
 		}
+	}
+}
+
+func TestParseUploadBase64Encoding(t *testing.T) {
+	body_buf := &bytes.Buffer{}
+	w := multipart.NewWriter(body_buf)
+
+	h := textproto.MIMEHeader{}
+	h.Set("Content-Disposition", "form-data; name=\"body\"")
+	h.Set("Content-Type", "text/plain; blob-key=\"foo\"")
+	h.Set("Content-Transfer-Encoding", "base64")
+	h.Set("X-AppEngine-Upload-Creation", "2011-03-15 21:38:34.712136")
+
+	pw, err := w.CreatePart(h)
+	if err != nil {
+		t.Fatalf("create part: %v", err)
+	}
+	bw := base64.NewEncoder(base64.StdEncoding, pw)
+	body := "Hello, 世界"
+	bw.Write([]byte(body))
+
+	if err := bw.Close(); err != nil {
+		t.Fatalf("closing base64 multipart writer: %v", err)
+	}
+	if err := w.Close(); err != nil {
+		t.Fatalf("closing multipart writer: %v\n", err)
+	}
+
+	req, err := http.NewRequest("POST", "/upload", body_buf)
+	if err != nil {
+		t.Fatalf("new request: %v", err)
+	}
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	_, other, err := ParseUpload(req)
+	if err != nil {
+		t.Fatalf("parse upload: %v", err)
+	}
+	if other["body"][0] != body {
+		t.Errorf("body: got %v want %v", other["body"][0], body)
 	}
 }
