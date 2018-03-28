@@ -252,6 +252,12 @@ func TestParseUploadUTF8Base64Encoding(t *testing.T) {
 	doPlainTextParseUploadTest(t, charsetUTF8, "base64", nonASCIIStr, encoded)
 }
 
+func TestParseUploadUTF8Base64EncodingMultiline(t *testing.T) {
+	testStr := "words words words words words words words words words words words words"
+	encoded := "d29yZHMgd29yZHMgd29yZHMgd29yZHMgd29yZHMgd29yZHMgd29yZHMgd29yZHMgd29yZHMgd29y\r\nZHMgd29yZHMgd29yZHM="
+	doPlainTextParseUploadTest(t, charsetUTF8, "base64", testStr, encoded)
+}
+
 func TestParseUploadUTF8QuotedPrintableEncoding(t *testing.T) {
 	var encoded bytes.Buffer
 	writer := quotedprintable.NewWriter(&encoded)
