@@ -8,8 +8,6 @@ package cloudsql
 
 import (
 	"net"
-
-	"appengine/cloudsql"
 )
 
 func connect(instance string) (net.Conn, error) {
