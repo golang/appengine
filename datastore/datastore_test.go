@@ -144,20 +144,23 @@ type NoOmit struct {
 	A string
 	B int  `datastore:"Bb"`
 	C bool `datastore:",noindex"`
+	D time.Time
 }
 
 type OmitAll struct {
-	A string `datastore:",omitempty"`
-	B int    `datastore:"Bb,omitempty"`
-	C bool   `datastore:",omitempty,noindex"`
-	F []int  `datastore:",omitempty"`
+	A string    `datastore:",omitempty"`
+	B int       `datastore:"Bb,omitempty"`
+	C bool      `datastore:",omitempty,noindex"`
+	D time.Time `datastore:",omitempty"`
+	F []int     `datastore:",omitempty"`
 }
 
 type Omit struct {
-	A string `datastore:",omitempty"`
-	B int    `datastore:"Bb,omitempty"`
-	C bool   `datastore:",omitempty,noindex"`
-	F []int  `datastore:",omitempty"`
+	A string    `datastore:",omitempty"`
+	B int       `datastore:"Bb,omitempty"`
+	C bool      `datastore:",omitempty,noindex"`
+	D time.Time `datastore:",omitempty"`
+	F []int     `datastore:",omitempty"`
 	S `datastore:",omitempty"`
 }
 
@@ -548,12 +551,14 @@ var testCases = []testCase{
 			A: "a",
 			B: 10,
 			C: true,
+			D: now,
 			F: []int{11},
 		},
 		&PropertyList{
 			Property{Name: "A", Value: "a", NoIndex: false, Multiple: false},
 			Property{Name: "Bb", Value: int64(10), NoIndex: false, Multiple: false},
 			Property{Name: "C", Value: true, NoIndex: true, Multiple: false},
+			Property{Name: "D", Value: now, NoIndex: false, Multiple: false},
 			Property{Name: "F", Value: int64(11), NoIndex: false, Multiple: true},
 			Property{Name: "St", Value: "", NoIndex: false, Multiple: false},
 		},
@@ -566,6 +571,7 @@ var testCases = []testCase{
 			A: "a",
 			B: 10,
 			C: true,
+			D: now,
 			F: []int{11},
 			S: S{St: "string"},
 		},
@@ -573,6 +579,7 @@ var testCases = []testCase{
 			Property{Name: "A", Value: "a", NoIndex: false, Multiple: false},
 			Property{Name: "Bb", Value: int64(10), NoIndex: false, Multiple: false},
 			Property{Name: "C", Value: true, NoIndex: true, Multiple: false},
+			Property{Name: "D", Value: now, NoIndex: false, Multiple: false},
 			Property{Name: "F", Value: int64(11), NoIndex: false, Multiple: true},
 			Property{Name: "St", Value: "string", NoIndex: false, Multiple: false},
 		},
@@ -592,6 +599,7 @@ var testCases = []testCase{
 			Property{Name: "No.A", Value: "", NoIndex: false, Multiple: true},
 			Property{Name: "No.Bb", Value: int64(0), NoIndex: false, Multiple: true},
 			Property{Name: "No.C", Value: false, NoIndex: true, Multiple: true},
+			Property{Name: "No.D", Value: time.Time{}, NoIndex: false, Multiple: true},
 			Property{Name: "Ss.St", Value: "", NoIndex: false, Multiple: false},
 			Property{Name: "St", Value: "", NoIndex: false, Multiple: false}},
 		"",

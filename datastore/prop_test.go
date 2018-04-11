@@ -545,3 +545,80 @@ func TestNilKeyIsStored(t *testing.T) {
 		t.Errorf("I field was not zero")
 	}
 }
+
+func TestSaveStructOmitEmpty(t *testing.T) {
+	expectedPropNames := []string{"EmptyValue", "NonEmptyValue", "OmitEmptyWithValue"}
+
+	assert := func(src interface{}) {
+		t.Helper()
+		if props, err := SaveStruct(src); err != nil {
+			t.Fatal(err)
+		} else if len(props) != len(expectedPropNames) {
+			t.Errorf("Expected %v properties, got %v", len(expectedPropNames), len(props))
+		} else {
+			expected := make([]string, len(expectedPropNames))
+			copy(expected, expectedPropNames)
+		PROPS:
+			for _, p := range props {
+				for i, name := range expected {
+					if p.Name == name {
+						expected = append(expected[:i], expected[i+1:]...)
+						continue PROPS
+					}
+				}
+				t.Errorf("Unexpected property: %v", p.Name)
+			}
+		}
+	}
+
+	assert(&struct {
+		EmptyValue         int
+		NonEmptyValue      int
+		OmitEmptyNoValue   int `datastore:",omitempty"`
+		OmitEmptyWithValue int `datastore:",omitempty"`
+	}{
+		NonEmptyValue:      1,
+		OmitEmptyWithValue: 2,
+	})
+
+	// TODO: The uint is unsuported property type but is checked in func isEmptyValue() - probably should be removed from there
+	// assert(&struct {
+	// 	EmptyValue         uint
+	// 	NonEmptyValue      uint
+	// 	OmitEmptyNoValue   uint `datastore:",omitempty"`
+	// 	OmitEmptyWithValue uint `datastore:",omitempty"`
+	// }{
+	// 	NonEmptyValue:      1,
+	// 	OmitEmptyWithValue: 2,
+	// })
+
+	assert(&struct {
+		EmptyValue         string
+		NonEmptyValue      string
+		OmitEmptyNoValue   string `datastore:",omitempty"`
+		OmitEmptyWithValue string `datastore:",omitempty"`
+	}{
+		NonEmptyValue:      "s",
+		OmitEmptyWithValue: "s",
+	})
+
+	assert(&struct {
+		EmptyValue         float32
+		NonEmptyValue      float32
+		OmitEmptyNoValue   float32 `datastore:",omitempty"`
+		OmitEmptyWithValue float32 `datastore:",omitempty"`
+	}{
+		NonEmptyValue:      1.1,
+		OmitEmptyWithValue: 1.2,
+	})
+
+	assert(&struct {
+		EmptyValue         time.Time
+		NonEmptyValue      time.Time
+		OmitEmptyNoValue   time.Time `datastore:",omitempty"`
+		OmitEmptyWithValue time.Time `datastore:",omitempty"`
+	}{
+		NonEmptyValue:      now,
+		OmitEmptyWithValue: now,
+	})
+}
