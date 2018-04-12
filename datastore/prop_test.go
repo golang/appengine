@@ -557,15 +557,13 @@ func TestSaveStructOmitEmpty(t *testing.T) {
 		if props, err := SaveStruct(src); err != nil {
 			t.Fatal(err)
 		} else {
-			// Collect names for reporting if diffs from expected
+			// Collect names for reporting if diffs from expected and for easier sorting
 			actualPropNames := make([]string, len(props))
 			for i := range props {
 				actualPropNames[i] = props[i].Name
 			}
 			// and sort actuals for comparing with already sorted expected names
-			sort.Slice(actualPropNames, func(i, j int) bool {
-				return actualPropNames[i] < actualPropNames[j]
-			})
+			sort.Sort(sort.StringSlice(actualPropNames))
 			if !reflect.DeepEqual(actualPropNames, expectedPropNames) {
 				t.Errorf("Expected this properties: %v, got: %v", expectedPropNames, actualPropNames)
 			}
