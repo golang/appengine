@@ -553,7 +553,7 @@ func TestSaveStructOmitEmpty(t *testing.T) {
 	expectedPropNamesForSlices := []string{"NonEmptyValue", "NonEmptyValue", "OmitEmptyWithValue", "OmitEmptyWithValue"}
 
 	testOmitted := func(expectedPropNames []string, src interface{}) {
-		t.Helper()
+		// t.Helper() - this is available from Go version 1.9, but we also support Go versions 1.6, 1.7, 1.8
 		if props, err := SaveStruct(src); err != nil {
 			t.Fatal(err)
 		} else {
