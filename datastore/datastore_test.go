@@ -144,7 +144,6 @@ type NoOmit struct {
 	A string
 	B int  `datastore:"Bb"`
 	C bool `datastore:",noindex"`
-	D time.Time
 }
 
 type OmitAll struct {
@@ -599,7 +598,6 @@ var testCases = []testCase{
 			Property{Name: "No.A", Value: "", NoIndex: false, Multiple: true},
 			Property{Name: "No.Bb", Value: int64(0), NoIndex: false, Multiple: true},
 			Property{Name: "No.C", Value: false, NoIndex: true, Multiple: true},
-			Property{Name: "No.D", Value: time.Time{}, NoIndex: false, Multiple: true},
 			Property{Name: "Ss.St", Value: "", NoIndex: false, Multiple: false},
 			Property{Name: "St", Value: "", NoIndex: false, Multiple: false}},
 		"",
