@@ -246,7 +246,7 @@ func (q *Query) Offset(offset int) *Query {
 // at once. This value should be equal to or less than the Limit.
 func (q *Query) BatchSize(size int) *Query {
 	q = q.clone()
-	if size < math.MinInt32 || size > math.MaxInt32 {
+	if size < 0 || size > math.MaxInt32 {
 		q.err = errors.New("datastore: query batch size overflow")
 		return q
 	}
