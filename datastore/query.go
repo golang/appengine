@@ -589,7 +589,8 @@ type Iterator struct {
 	// limit is the limit on the number of results this iterator should return.
 	// A negative value means unlimited.
 	limit int32
-	// count is the number of results this iterator should fetch at once.
+	// count is the number of results this iterator should fetch at once. This
+	// should be equal to or greater than zero.
 	count int32
 	// q is the original query which yielded this iterator.
 	q *Query
