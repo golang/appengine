@@ -553,9 +553,11 @@ func (q *Query) Run(c context.Context) *Iterator {
 		return t
 	}
 	offset := q.offset - t.res.GetSkippedResults()
-	count := t.limit
-	if t.count > 0 && (count == 0 || t.count < count) {
+	var count int32
+	if t.count > 0 && (t.limit < 0 || t.count < t.limit) {
 		count = t.count
+	} else {
+		count = t.limit
 	}
 	for offset > 0 && t.res.GetMoreResults() {
 		t.prevCC = t.res.CompiledCursor
