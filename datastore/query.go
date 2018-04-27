@@ -631,9 +631,11 @@ func (t *Iterator) next() (*Key, *pb.EntityProto, error) {
 			return nil, nil, t.err
 		}
 		t.prevCC = t.res.CompiledCursor
-		count := t.limit
-		if t.count > 0 && (count == 0 || t.count < count) {
+		var count int32
+		if t.count > 0 && (t.limit < 0 || t.count < t.limit) {
 			count = t.count
+		} else {
+			count = t.limit
 		}
 		if err := callNext(t.c, &t.res, 0, count); err != nil {
 			t.err = err
