@@ -243,10 +243,11 @@ func (q *Query) Offset(offset int) *Query {
 }
 
 // BatchSize returns a derivative query to fetch the supplied number of results
-// at once. This value should be equal to or less than the Limit.
+// at once. This value should be greater than zero, and equal to or less than
+// the Limit.
 func (q *Query) BatchSize(size int) *Query {
 	q = q.clone()
-	if size < 0 || size > math.MaxInt32 {
+	if size <= 0 || size > math.MaxInt32 {
 		q.err = errors.New("datastore: query batch size overflow")
 		return q
 	}
