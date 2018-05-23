@@ -393,7 +393,7 @@ func propValue(v *pb.PropertyValue, m pb.Property_Meaning) (interface{}, error) 
 			return ByteString(*v.StringValue), nil
 		} else if m == pb.Property_ENTITY_PROTO {
 			var ent pb.EntityProto
-			err := proto.Unmarshal([]byte(*v.StringValue), &ent)
+			err := proto.UnmarshalText(*v.StringValue, &ent)
 			if err != nil {
 				return nil, err
 			}
