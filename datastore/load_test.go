@@ -265,7 +265,7 @@ var (
 func init() {
 	// simpleEntityProto corresponds to:
 	// Simple{I: testInt64}
-	simpleEntityProtob, err := proto.Marshal(&pb.EntityProto{
+	simpleEntityProtoE = proto.MarshalTextString(&pb.EntityProto{
 		Key: keyToProto("", incompleteKey),
 		Property: []*pb.Property{
 			&pb.Property{
@@ -278,17 +278,13 @@ func init() {
 		},
 		EntityGroup: &pb.Path{},
 	})
-	if err != nil {
-		panic(err)
-	}
-	simpleEntityProto = string(simpleEntityProtob)
 
 	// nestedSimpleEntityProto corresponds to:
 	// NestedSimple{
 	// 	A: Simple{I: testInt64},
 	// 	I: testInt64,
 	// }
-	nestedSimpleEntityProtob, err := proto.Marshal(&pb.EntityProto{
+	nestedSimpleEntityProto = proto.MarshalTextString(&pb.EntityProto{
 		Key: keyToProto("", incompleteKey),
 		Property: []*pb.Property{
 			&pb.Property{
@@ -310,14 +306,10 @@ func init() {
 		},
 		EntityGroup: &pb.Path{},
 	})
-	if err != nil {
-		panic(err)
-	}
-	nestedSimpleEntityProto = string(nestedSimpleEntityProtob)
 
 	// simpleTwoFieldsEntityProto corresponds to:
 	// SimpleTwoFields{S: testString2, SS: testString3}
-	simpleTwoFieldsEntityProtob, err := proto.Marshal(&pb.EntityProto{
+	simpleTwoFieldsEntityProto = proto.MarshalTextString(&pb.EntityProto{
 		Key: keyToProto("", incompleteKey),
 		Property: []*pb.Property{
 			&pb.Property{
@@ -337,14 +329,10 @@ func init() {
 		},
 		EntityGroup: &pb.Path{},
 	})
-	if err != nil {
-		panic(err)
-	}
-	simpleTwoFieldsEntityProto = string(simpleTwoFieldsEntityProtob)
 
 	// simpleWithTagEntityProto corresponds to:
 	// SimpleWithTag{I: testInt64}
-	simpleWithTagEntityProtob, err := proto.Marshal(&pb.EntityProto{
+	simpleWithTagEntityProto = proto.MarshalTextString(&pb.EntityProto{
 		Key: keyToProto("", incompleteKey),
 		Property: []*pb.Property{
 			&pb.Property{
@@ -357,16 +345,12 @@ func init() {
 		},
 		EntityGroup: &pb.Path{},
 	})
-	if err != nil {
-		panic(err)
-	}
-	simpleWithTagEntityProto = string(simpleWithTagEntityProtob)
 
 	// bDotBEntityProto corresponds to:
 	// BDotB{
 	// 	B: testString2,
 	// }
-	bDotBEntityProtob, err := proto.Marshal(&pb.EntityProto{
+	bDotBEntityProto = proto.MarshalTextString(&pb.EntityProto{
 		Key: keyToProto("", incompleteKey),
 		Property: []*pb.Property{
 			&pb.Property{
@@ -379,10 +363,6 @@ func init() {
 		},
 		EntityGroup: &pb.Path{},
 	})
-	if err != nil {
-		panic(err)
-	}
-	bDotBEntityProto = string(bDotBEntityProtob)
 
 	// withKeyEntityProto corresponds to:
 	// WithKey{
@@ -390,7 +370,7 @@ func init() {
 	// 	I: testInt64,
 	// 	K: testKey1a,
 	// }
-	withKeyEntityProtob, err := proto.Marshal(&pb.EntityProto{
+	withKeyEntityProto = proto.MarshalTextString(&pb.EntityProto{
 		Key: keyToProto("", testKey1a),
 		Property: []*pb.Property{
 			&pb.Property{
@@ -410,10 +390,6 @@ func init() {
 		},
 		EntityGroup: &pb.Path{},
 	})
-	if err != nil {
-		panic(err)
-	}
-	withKeyEntityProto = string(withKeyEntityProtob)
 
 }
 
