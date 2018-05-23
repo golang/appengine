@@ -265,7 +265,7 @@ var (
 func init() {
 	// simpleEntityProto corresponds to:
 	// Simple{I: testInt64}
-	simpleEntityProtoE = proto.MarshalTextString(&pb.EntityProto{
+	simpleEntityProto = proto.MarshalTextString(&pb.EntityProto{
 		Key: keyToProto("", incompleteKey),
 		Property: []*pb.Property{
 			&pb.Property{
