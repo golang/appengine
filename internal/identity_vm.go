@@ -47,6 +47,9 @@ func ServerSoftware() string {
 	if s := os.Getenv("SERVER_SOFTWARE"); s != "" {
 		return s
 	}
+	if s := os.Getenv("GAE_ENV"); s != "" {
+		return s
+	}
 	return "Google App Engine/1.x.x"
 }
 
@@ -56,11 +59,17 @@ func ModuleName(_ netcontext.Context) string {
 	if s := os.Getenv("GAE_MODULE_NAME"); s != "" {
 		return s
 	}
+	if s := os.Getenv("GAE_SERVICE"); s != "" {
+		return s
+	}
 	return string(mustGetMetadata("instance/attributes/gae_backend_name"))
 }
 
 func VersionID(_ netcontext.Context) string {
 	if s1, s2 := os.Getenv("GAE_MODULE_VERSION"), os.Getenv("GAE_MINOR_VERSION"); s1 != "" && s2 != "" {
+		return s1 + "." + s2
+	}
+	if s1, s2 := os.Getenv("GAE_VERSION"), os.Getenv("GAE_DEPLOYMENT_ID"); s1 != "" && s2 != "" {
 		return s1 + "." + s2
 	}
 	return string(mustGetMetadata("instance/attributes/gae_backend_version")) + "." + string(mustGetMetadata("instance/attributes/gae_backend_minor_version"))
@@ -70,19 +79,27 @@ func InstanceID() string {
 	if s := os.Getenv("GAE_MODULE_INSTANCE"); s != "" {
 		return s
 	}
+	if s := os.Getenv("GAE_INSTANCE"); s != "" {
+		return s
+	}
 	return string(mustGetMetadata("instance/attributes/gae_backend_instance"))
 }
 
 func partitionlessAppID() string {
 	// gae_project has everything except the partition prefix.
-	appID := os.Getenv("GAE_LONG_APP_ID")
-	if appID == "" {
-		appID = string(mustGetMetadata("instance/attributes/gae_project"))
+	if appID := os.Getenv("GAE_LONG_APP_ID"); appID != "" {
+		return appID
 	}
-	return appID
+	if project := os.Getenv("GOOGLE_CLOUD_PROJECT"); project != "" {
+		return project
+	}
+	return string(mustGetMetadata("instance/attributes/gae_project"))
 }
 
 func fullyQualifiedAppID(_ netcontext.Context) string {
+	if s := os.Getenv("GAE_APPLICATION"); s != "" {
+		return s
+	}
 	appID := partitionlessAppID()
 
 	part := os.Getenv("GAE_PARTITION")
