@@ -32,7 +32,7 @@ var (
 func mustGetMetadata(key string) []byte {
 	b, err := getMetadata(key)
 	if err != nil {
-		log.Fatalf("Metadata fetch failed: %v", err)
+		log.Fatalf("Metadata fetch failed for '%s': %v", key, err)
 	}
 	return b
 }
