@@ -7,7 +7,6 @@
 package internal
 
 import (
-	"net/http"
 	"os"
 
 	netcontext "golang.org/x/net/context"
@@ -15,32 +14,6 @@ import (
 
 // These functions are implementations of the wrapper functions
 // in ../appengine/identity.go. See that file for commentary.
-
-const (
-	hDefaultVersionHostname = "X-AppEngine-Default-Version-Hostname"
-	hRequestLogId           = "X-AppEngine-Request-Log-Id"
-	hDatacenter             = "X-AppEngine-Datacenter"
-)
-
-func ctxHeaders(ctx netcontext.Context) http.Header {
-	c := fromContext(ctx)
-	if c == nil {
-		return nil
-	}
-	return c.Request().Header
-}
-
-func DefaultVersionHostname(ctx netcontext.Context) string {
-	return ctxHeaders(ctx).Get(hDefaultVersionHostname)
-}
-
-func RequestID(ctx netcontext.Context) string {
-	return ctxHeaders(ctx).Get(hRequestLogId)
-}
-
-func Datacenter(ctx netcontext.Context) string {
-	return ctxHeaders(ctx).Get(hDatacenter)
-}
 
 func ServerSoftware() string {
 	// TODO(dsymonds): Remove fallback when we've verified this.
