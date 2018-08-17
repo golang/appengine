@@ -7,13 +7,59 @@
 package internal
 
 import (
+	"log"
+	"net/http"
 	"os"
+	"strings"
 
 	netcontext "golang.org/x/net/context"
 )
 
 // These functions are implementations of the wrapper functions
 // in ../appengine/identity.go. See that file for commentary.
+
+const (
+	hDefaultVersionHostname = "X-AppEngine-Default-Version-Hostname"
+	hRequestLogId           = "X-AppEngine-Request-Log-Id"
+	hDatacenter             = "X-AppEngine-Datacenter"
+)
+
+func ctxHeaders(ctx netcontext.Context) http.Header {
+	c := fromContext(ctx)
+	if c == nil {
+		return nil
+	}
+	return c.Request().Header
+}
+
+func DefaultVersionHostname(ctx netcontext.Context) string {
+	if dvh := ctxHeaders(ctx).Get(hDefaultVersionHostname); dvh != "" {
+		return dvh
+	}
+	return os.Getenv("DEFAULT_VERSION_HOSTNAME")
+}
+
+func RequestID(ctx netcontext.Context) string {
+	return ctxHeaders(ctx).Get(hRequestLogId)
+}
+
+func Datacenter(ctx netcontext.Context) string {
+	if dc := ctxHeaders(ctx).Get(hDatacenter); dc != "" {
+		return dc
+	}
+	// If the header isn't set, read zone from the metadata service.
+	// It has the format projects/[NUMERIC_PROJECT_ID]/zones/[ZONE]
+	zone, err := getMetadata("instance/zone")
+	if err != nil {
+		log.Printf("Datacenter: %v", err)
+		return ""
+	}
+	parts := strings.Split(string(zone), "/")
+	if len(parts) == 0 {
+		return ""
+	}
+	return parts[len(parts)-1]
+}
 
 func ServerSoftware() string {
 	// TODO(dsymonds): Remove fallback when we've verified this.
