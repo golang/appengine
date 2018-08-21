@@ -33,10 +33,7 @@ func ctxHeaders(ctx netcontext.Context) http.Header {
 }
 
 func DefaultVersionHostname(ctx netcontext.Context) string {
-	if dvh := ctxHeaders(ctx).Get(hDefaultVersionHostname); dvh != "" {
-		return dvh
-	}
-	return os.Getenv("DEFAULT_VERSION_HOSTNAME")
+	return ctxHeaders(ctx).Get(hDefaultVersionHostname)
 }
 
 func RequestID(ctx netcontext.Context) string {
