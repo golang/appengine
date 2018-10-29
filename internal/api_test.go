@@ -280,7 +280,7 @@ func TestDelayedLogFlushing(t *testing.T) {
 	// Check that the log flush eventually comes in.
 	time.Sleep(1200 * time.Millisecond)
 	if f := atomic.LoadInt32(&f.LogFlushes); f != 1 {
-		t.Errorf("After 1.5s: f.LogFlushes = %d, want 1", f)
+		t.Errorf("After 1.2s: f.LogFlushes = %d, want 1", f)
 	}
 
 	wg.Wait()
