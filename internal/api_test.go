@@ -18,7 +18,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -271,10 +270,9 @@ func TestDelayedLogFlushing(t *testing.T) {
 	}
 	w := httptest.NewRecorder()
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+	handled := make(chan struct{})
 	go func() {
-		defer wg.Done()
+		defer close(handled)
 		handleHTTP(w, r)
 	}()
 	// Check that the log flush eventually comes in.
@@ -283,7 +281,7 @@ func TestDelayedLogFlushing(t *testing.T) {
 		t.Errorf("After 1.2s: f.LogFlushes = %d, want 1", f)
 	}
 
-	wg.Wait()
+	<-handled
 	const hdr = "X-AppEngine-Log-Flush-Count"
 	if got, want := w.HeaderMap.Get(hdr), "1"; got != want {
 		t.Errorf("%s header = %q, want %q", hdr, got, want)

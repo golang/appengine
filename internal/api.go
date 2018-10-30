@@ -129,10 +129,9 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 		flushes++
 	}
 	c.pendingLogs.Unlock()
-	var wg sync.WaitGroup
-	wg.Add(1)
+	flushed := make(chan struct{})
 	go func() {
-		defer wg.Done()
+		defer close(flushed)
 		// Force a log flush, because with very short requests we
 		// may not ever flush logs.
 		c.flushLog(true)
@@ -148,7 +147,7 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	// Wait for the last flush to complete before returning,
 	// otherwise the security ticket will not be valid.
-	wg.Wait()
+	<-flushed
 }
 
 func executeRequestSafely(c *context, r *http.Request) {
