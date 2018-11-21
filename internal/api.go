@@ -579,7 +579,9 @@ func logf(c *context, level int64, format string, args ...interface{}) {
 		Level:         &level,
 		Message:       &s,
 	})
-	log.Print(logLevelName[level] + ": " + s)
+	if !IsSecondGen() {
+		log.Print(logLevelName[level] + ": " + s)
+	}
 }
 
 // flushLog attempts to flush any pending logs to the appserver.
