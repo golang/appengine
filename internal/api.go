@@ -579,6 +579,7 @@ func logf(c *context, level int64, format string, args ...interface{}) {
 		Level:         &level,
 		Message:       &s,
 	})
+	// Only duplicate log to stderr if not running on App Engine second generation
 	if !IsSecondGen() {
 		log.Print(logLevelName[level] + ": " + s)
 	}
