@@ -12,12 +12,14 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 
+	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
 	"google.golang.org/appengine/taskqueue"
 )
@@ -460,5 +462,74 @@ func TestStandardContext(t *testing.T) {
 
 	if stdCtxRuns != 1 {
 		t.Errorf("stdCtxRuns: got %d, want 1", stdCtxRuns)
+	}
+}
+
+func TestFileKey(t *testing.T) {
+	os.Setenv("GAE_ENV", "standard")
+	tests := []struct {
+		mainPath string
+		file     string
+		want     string
+	}{
+		// gopath
+		{
+			"/tmp/staging1234/srv/",
+			"/tmp/staging1234/srv/foo.go",
+			"foo.go",
+		},
+		{
+			"/tmp/staging1234/srv/_gopath/src/example.com/foo",
+			"/tmp/staging1234/srv/_gopath/src/example.com/foo/foo.go",
+			"foo.go",
+		},
+		{
+			"/tmp/staging2234/srv/_gopath/src/example.com/foo",
+			"/tmp/staging2234/srv/_gopath/src/example.com/foo/bar/bar.go",
+			"example.com/foo/bar/bar.go",
+		},
+		{
+			"/tmp/staging3234/srv/_gopath/src/example.com/foo",
+			"/tmp/staging3234/srv/_gopath/src/example.com/bar/main.go",
+			"example.com/bar/main.go",
+		},
+		// go mod, same package
+		{
+			"/tmp/staging3234/srv",
+			"/tmp/staging3234/srv/main.go",
+			"main.go",
+		},
+		{
+			"/tmp/staging3234/srv",
+			"/tmp/staging3234/srv/bar/main.go",
+			"bar/main.go",
+		},
+		{
+			"/tmp/staging3234/srv/cmd",
+			"/tmp/staging3234/srv/cmd/main.go",
+			"main.go",
+		},
+		{
+			"/tmp/staging3234/srv/cmd",
+			"/tmp/staging3234/srv/bar/main.go",
+			"bar/main.go",
+		},
+		// go mod, other package
+		{
+			"/tmp/staging3234/srv",
+			"/go/pkg/mod/github.com/foo/bar@v0.0.0-20181026220418-f595d03440dc/baz.go",
+			"github.com/foo/bar/baz.go",
+		},
+	}
+	for i, tc := range tests {
+		appengine.MainPath = tc.mainPath
+		got, err := fileKey(tc.file)
+		if err != nil {
+			t.Errorf("Unexpected error, call %v, file %q: %v", i, tc.file, err)
+			continue
+		}
+		if got != tc.want {
+			t.Errorf("Call %v, file %q: got %q, want %q", i, tc.file, got, tc.want)
+		}
 	}
 }

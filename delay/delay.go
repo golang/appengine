@@ -50,13 +50,19 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"go/build"
+	stdlog "log"
 	"net/http"
+	"path/filepath"
 	"reflect"
+	"regexp"
 	"runtime"
+	"strings"
 
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
+	"google.golang.org/appengine/internal"
 	"google.golang.org/appengine/log"
 	"google.golang.org/appengine/taskqueue"
 )
@@ -98,6 +104,46 @@ func isContext(t reflect.Type) bool {
 	return t == stdContextType || t == netContextType
 }
 
+// fileKey finds a stable representation of the caller's file path.
+// On App Engine <= Go 1.9, this path is munged like:
+//   1) For calls from package main: strip all leading path entries, leaving just the filename as the path
+//   2) For calls from anywhere else, strip $GOPATH/src
+// On App Engine Second Gen (Go 1.11 and above), path munging doesn't
+// happen, so duplicate it.
+func fileKey(file string) (string, error) {
+	if !internal.IsSecondGen() {
+		return file, nil
+	}
+	// If the caller is in the same Dir as mainPath, then strip everything but the file name.
+	if filepath.Dir(file) == appengine.MainPath {
+		return filepath.Base(file), nil
+	}
+	// If the path contains "_gopath/src/", which is what the builder uses for
+	// apps which don't use go modules, strip everything up to and including src.
+	// Or, if the path starts with /tmp/staging, then we're importing a package
+	// from the app's module (and we must be using go modules), and we have a
+	// path like /tmp/staging1234/srv/... so strip everything up to and
+	// including the first /srv/.
+	// And be sure to look at the GOPATH, for local development.
+	for _, s := range []string{"_gopath/src/", "/srv/", filepath.Join(build.Default.GOPATH, "src")} {
+		if idx := strings.Index(file, s); idx > 0 {
+			return file[idx+len(s):], nil
+		}
+	}
+
+	// Finally, if that all fails then we must be using go modules, and the file is a module,
+	// so the path looks like /go/pkg/mod/github.com/foo/bar@v0.0.0-20181026220418-f595d03440dc/baz.go
+	// So... remove everything up to and including mod, plus the @.... version string.
+	m := "/mod/"
+	if idx := strings.Index(file, m); idx > 0 {
+		file = file[idx+len(m):]
+	} else {
+		return file, fmt.Errorf("fileKey: unknown file path format for %q", file)
+	}
+	re := regexp.MustCompile("@v[^/]+")
+	return re.ReplaceAllString(file, ""), nil
+}
+
 // Func declares a new Function. The second argument must be a function with a
 // first argument of type context.Context.
 // This function must be called at program initialization time. That means it
@@ -111,7 +157,12 @@ func Func(key string, i interface{}) *Function {
 
 	// Derive unique, somewhat stable key for this func.
 	_, file, _, _ := runtime.Caller(1)
-	f.key = file + ":" + key
+	fk, err := fileKey(file)
+	if err != nil {
+		// Not fatal, but log the error
+		stdlog.Printf("Func: %v", err)
+	}
+	f.key = fk + ":" + key
 
 	t := f.fv.Type()
 	if t.Kind() != reflect.Func {

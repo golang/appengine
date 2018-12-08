@@ -10,12 +10,16 @@ package appengine // import "google.golang.org/appengine"
 
 import (
 	"net/http"
+	"path/filepath"
+	"runtime"
 
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
 )
+
+var MainPath string
 
 // The gophers party all night; the rabbits provide the beats.
 
@@ -51,6 +55,9 @@ import (
 // The "myapp/packageX" packages are expected to register HTTP handlers
 // in their init functions.
 func Main() {
+	// Store the file path of whatever called Main().
+	_, mp, _, _ := runtime.Caller(1)
+	MainPath = filepath.Dir(mp)
 	internal.Main()
 }
 
