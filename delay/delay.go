@@ -105,11 +105,8 @@ func isContext(t reflect.Type) bool {
 }
 
 // fileKey finds a stable representation of the caller's file path.
-// On App Engine <= Go 1.9, this path is munged like:
-//   1) For calls from package main: strip all leading path entries, leaving just the filename as the path
-//   2) For calls from anywhere else, strip $GOPATH/src
-// On App Engine Second Gen (Go 1.11 and above), path munging doesn't
-// happen, so duplicate it.
+// For calls from package main: strip all leading path entries, leaving just the filename.
+// For calls from anywhere else, strip $GOPATH/src, leaving just the package path and file path.
 func fileKey(file string) (string, error) {
 	if !internal.IsSecondGen() {
 		return file, nil
