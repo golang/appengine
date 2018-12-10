@@ -19,7 +19,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 
-	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
 	"google.golang.org/appengine/taskqueue"
 )
@@ -522,7 +521,7 @@ func TestFileKey(t *testing.T) {
 		},
 	}
 	for i, tc := range tests {
-		appengine.MainPath = tc.mainPath
+		internal.MainPath = tc.mainPath
 		got, err := fileKey(tc.file)
 		if err != nil {
 			t.Errorf("Unexpected error, call %v, file %q: %v", i, tc.file, err)
