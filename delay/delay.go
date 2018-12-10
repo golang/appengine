@@ -112,7 +112,7 @@ func fileKey(file string) (string, error) {
 		return file, nil
 	}
 	// If the caller is in the same Dir as mainPath, then strip everything but the file name.
-	if filepath.Dir(file) == appengine.MainPath {
+	if filepath.Dir(file) == internal.MainPath {
 		return filepath.Base(file), nil
 	}
 	// If the path contains "_gopath/src/", which is what the builder uses for
