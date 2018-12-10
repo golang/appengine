@@ -159,7 +159,7 @@ func Func(key string, i interface{}) *Function {
 	fk, err := fileKey(file)
 	if err != nil {
 		// Not fatal, but log the error
-		stdlog.Printf("Func: %v", err)
+		stdlog.Printf("delay: %v", err)
 	}
 	f.key = fk + ":" + key
 
