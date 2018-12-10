@@ -104,6 +104,8 @@ func isContext(t reflect.Type) bool {
 	return t == stdContextType || t == netContextType
 }
 
+var modVersionPat = regexp.MustCompile("@v[^/]+")
+
 // fileKey finds a stable representation of the caller's file path.
 // For calls from package main: strip all leading path entries, leaving just the filename.
 // For calls from anywhere else, strip $GOPATH/src, leaving just the package path and file path.
@@ -137,8 +139,7 @@ func fileKey(file string) (string, error) {
 	} else {
 		return file, fmt.Errorf("fileKey: unknown file path format for %q", file)
 	}
-	re := regexp.MustCompile("@v[^/]+")
-	return re.ReplaceAllString(file, ""), nil
+	return modVersionPat.ReplaceAllString(file, ""), nil
 }
 
 // Func declares a new Function. The second argument must be a function with a
