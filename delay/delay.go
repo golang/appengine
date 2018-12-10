@@ -124,7 +124,8 @@ func fileKey(file string) (string, error) {
 	// path like /tmp/staging1234/srv/... so strip everything up to and
 	// including the first /srv/.
 	// And be sure to look at the GOPATH, for local development.
-	for _, s := range []string{"_gopath/src/", "/srv/", filepath.Join(build.Default.GOPATH, "src")} {
+	s := string(filepath.Separator)
+	for _, s := range []string{filepath.Join("_gopath", "src") + s, s + "srv" + s, filepath.Join(build.Default.GOPATH, "src") + s} {
 		if idx := strings.Index(file, s); idx > 0 {
 			return file[idx+len(s):], nil
 		}
