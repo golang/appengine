@@ -472,6 +472,12 @@ func TestFileKey(t *testing.T) {
 		file     string
 		want     string
 	}{
+		// first-gen
+		{
+			"",
+			filepath.FromSlash("srv/foo.go"),
+			filepath.FromSlash("srv/foo.go"),
+		},
 		// gopath
 		{
 			filepath.FromSlash("/tmp/staging1234/srv/"),

@@ -110,7 +110,7 @@ var modVersionPat = regexp.MustCompile("@v[^/]+")
 // For calls from package main: strip all leading path entries, leaving just the filename.
 // For calls from anywhere else, strip $GOPATH/src, leaving just the package path and file path.
 func fileKey(file string) (string, error) {
-	if !internal.IsSecondGen() {
+	if !internal.IsSecondGen() || internal.MainPath == "" {
 		return file, nil
 	}
 	// If the caller is in the same Dir as mainPath, then strip everything but the file name.
