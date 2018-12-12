@@ -34,8 +34,16 @@ be associated with the request that invoked the Call method.
 The state of a function invocation that has not yet successfully
 executed is preserved by combining the file name in which it is declared
 with the string key that was passed to the Func function. Updating an app
-with pending function invocations is safe as long as the relevant
-functions have the (filename, key) combination preserved.
+with pending function invocations should safe as long as the relevant
+functions have the (filename, key) combination preserved. The filename is
+parsed according to these rules:
+  * Paths in package main are shortened to just the file name (github.com/foo/foo.go -> foo.go)
+  * Paths are stripped to just package paths (/go/src/github.com/foo/bar.go -> github.com/foo/bar.go)
+  * Module versions are stripped (/go/pkg/mod/github.com/foo/bar@v0.0.0-20181026220418-f595d03440dc/baz.go -> github.com/foo/bar/baz.go)
+
+There is some inherent risk of pending function invocations being lost during
+an update that contains large changes. For example, switching from using GOPATH
+to go.mod is a large change that may inadvertently cause file paths to change.
 
 The delay package uses the Task Queue API to create tasks that call the
 reserved application path "/_ah/queue/go/delay".
