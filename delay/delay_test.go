@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
 
@@ -473,51 +474,51 @@ func TestFileKey(t *testing.T) {
 	}{
 		// gopath
 		{
-			"/tmp/staging1234/srv/",
-			"/tmp/staging1234/srv/foo.go",
+			filepath.FromSlash("/tmp/staging1234/srv/"),
+			filepath.FromSlash("/tmp/staging1234/srv/foo.go"),
 			"foo.go",
 		},
 		{
-			"/tmp/staging1234/srv/_gopath/src/example.com/foo",
-			"/tmp/staging1234/srv/_gopath/src/example.com/foo/foo.go",
+			filepath.FromSlash("/tmp/staging1234/srv/_gopath/src/example.com/foo"),
+			filepath.FromSlash("/tmp/staging1234/srv/_gopath/src/example.com/foo/foo.go"),
 			"foo.go",
 		},
 		{
-			"/tmp/staging2234/srv/_gopath/src/example.com/foo",
-			"/tmp/staging2234/srv/_gopath/src/example.com/foo/bar/bar.go",
-			"example.com/foo/bar/bar.go",
+			filepath.FromSlash("/tmp/staging2234/srv/_gopath/src/example.com/foo"),
+			filepath.FromSlash("/tmp/staging2234/srv/_gopath/src/example.com/foo/bar/bar.go"),
+			filepath.FromSlash("example.com/foo/bar/bar.go"),
 		},
 		{
-			"/tmp/staging3234/srv/_gopath/src/example.com/foo",
-			"/tmp/staging3234/srv/_gopath/src/example.com/bar/main.go",
-			"example.com/bar/main.go",
+			filepath.FromSlash("/tmp/staging3234/srv/_gopath/src/example.com/foo"),
+			filepath.FromSlash("/tmp/staging3234/srv/_gopath/src/example.com/bar/main.go"),
+			filepath.FromSlash("example.com/bar/main.go"),
 		},
 		// go mod, same package
 		{
-			"/tmp/staging3234/srv",
-			"/tmp/staging3234/srv/main.go",
+			filepath.FromSlash("/tmp/staging3234/srv"),
+			filepath.FromSlash("/tmp/staging3234/srv/main.go"),
 			"main.go",
 		},
 		{
-			"/tmp/staging3234/srv",
-			"/tmp/staging3234/srv/bar/main.go",
-			"bar/main.go",
+			filepath.FromSlash("/tmp/staging3234/srv"),
+			filepath.FromSlash("/tmp/staging3234/srv/bar/main.go"),
+			filepath.FromSlash("bar/main.go"),
 		},
 		{
-			"/tmp/staging3234/srv/cmd",
-			"/tmp/staging3234/srv/cmd/main.go",
+			filepath.FromSlash("/tmp/staging3234/srv/cmd"),
+			filepath.FromSlash("/tmp/staging3234/srv/cmd/main.go"),
 			"main.go",
 		},
 		{
-			"/tmp/staging3234/srv/cmd",
-			"/tmp/staging3234/srv/bar/main.go",
-			"bar/main.go",
+			filepath.FromSlash("/tmp/staging3234/srv/cmd"),
+			filepath.FromSlash("/tmp/staging3234/srv/bar/main.go"),
+			filepath.FromSlash("bar/main.go"),
 		},
 		// go mod, other package
 		{
-			"/tmp/staging3234/srv",
-			"/go/pkg/mod/github.com/foo/bar@v0.0.0-20181026220418-f595d03440dc/baz.go",
-			"github.com/foo/bar/baz.go",
+			filepath.FromSlash("/tmp/staging3234/srv"),
+			filepath.FromSlash("/go/pkg/mod/github.com/foo/bar@v0.0.0-20181026220418-f595d03440dc/baz.go"),
+			filepath.FromSlash("github.com/foo/bar/baz.go"),
 		},
 	}
 	for i, tc := range tests {
