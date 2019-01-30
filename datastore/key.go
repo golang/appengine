@@ -18,7 +18,58 @@ import (
 
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/datastore"
+
+	// Adding Support the new key encoding format
+	// in cloud.google.com/go/datastore
+	nds "cloud.google.com/go/datastore"
 )
+
+var errKeyConversion string = "Key conversions must be enabled in the application.\n  See <link> for more details."
+var convKey *KeyConverter
+
+// EnableKeyConversion enables forward key conversation
+// abilities.  Calling this function in a single handler
+// will enable the feature for all handlers.  This function can be called in
+// the /_ah/start handler.
+// Support for key converstion.  Variable holds the appid
+// so that key conversion can retrieve it without a context.
+func EnableKeyConversion(ctx context) *KeyConverter {
+	convKey = *KeyConverter{
+		appid: internal.FullyQualifiedAppID(ctx),
+	}
+	return
+}
+
+// KeyConverter is the struct used to hold the appid
+// for the process of key conversion
+type KeyConverter struct {
+	appid string
+}
+
+// convertKey takes at new datastore key type and
+// returns a old key type
+func convertKey(key *nds.Key) (*Key, error) {
+	// if key conerstion is not enabled return right away
+	if convKey == nil {
+		return nil, errors.New(errKeyConversion)
+	}
+	var pKey *Key
+	var err error
+	if key.Parent != nil {
+		pKey, err = convertKey(key.Parent)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &Key{
+		intID:     key.ID,
+		kind:      key.Kind,
+		namespace: key.Namespace,
+		parent:    pKey,
+		stringID:  key.Name,
+		appID:     convKey.appid,
+	}, nil
+}
 
 type KeyRangeCollisionError struct {
 	start int64
@@ -254,7 +305,18 @@ func DecodeKey(encoded string) (*Key, error) {
 
 	ref := new(pb.Reference)
 	if err := proto.Unmarshal(b, ref); err != nil {
-		return nil, err
+		// if there was an err on the key lets try
+		// to decode the new key type by default
+		nKey, nerr := nds.DecodeKey(encoded)
+		if nerr != nil {
+			// returning the orginal error on purpose
+			return nil, err
+		}
+		oKey, err := convertKey(nKey)
+		if err != nil {
+			return nil, err
+		}
+		return oKey, nil
 	}
 
 	return protoToKey(ref)
