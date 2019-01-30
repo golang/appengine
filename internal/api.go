@@ -494,6 +494,9 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message)
 	if ticket == "" {
 		ticket = DefaultTicket()
 	}
+	if dri := c.req.Header.Get("X-Appengine-Dev-Request-Id"); IsDevAppServer() && dri != "" {
+		ticket = dri
+	}
 	req := &remotepb.Request{
 		ServiceName: &service,
 		Method:      &method,
