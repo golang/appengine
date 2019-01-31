@@ -44,6 +44,7 @@ var (
 	curNamespaceHeader = http.CanonicalHeaderKey("X-AppEngine-Current-Namespace")
 	userIPHeader       = http.CanonicalHeaderKey("X-AppEngine-User-IP")
 	remoteAddrHeader   = http.CanonicalHeaderKey("X-AppEngine-Remote-Addr")
+	devRequestIdHeader = http.CanonicalHeaderKey("X-Appengine-Dev-Request-Id")
 
 	// Outgoing headers.
 	apiEndpointHeader      = http.CanonicalHeaderKey("X-Google-RPC-Service-Endpoint")
@@ -494,7 +495,7 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message)
 	if ticket == "" {
 		ticket = DefaultTicket()
 	}
-	if dri := c.req.Header.Get("X-Appengine-Dev-Request-Id"); IsDevAppServer() && dri != "" {
+	if dri := c.req.Header.Get(devRequestIdHeader); IsDevAppServer() && dri != "" {
 		ticket = dri
 	}
 	req := &remotepb.Request{
