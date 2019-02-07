@@ -260,6 +260,7 @@ func DecodeKey(encoded string) (*Key, error) {
 	if err := proto.Unmarshal(b, ref); err != nil {
 		// if there was an err on the key lets try
 		// to decode the new key type by default
+		// Check to see if key converter has been implemented
 		if convKey != nil {
 			nKey, nerr := nds.DecodeKey(encoded)
 			if nerr != nil {
@@ -272,7 +273,7 @@ func DecodeKey(encoded string) (*Key, error) {
 			}
 			return oKey, nil
 		}
-
+		return nil, err
 	}
 
 	return protoToKey(ref)
