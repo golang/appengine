@@ -48,7 +48,7 @@ type keyConverter struct {
 // returns a old key type
 func (c *keyConverter) convertNewKeyFormatToOldKeyFormat(key *nds.Key) (*Key, error) {
 	// if key conerstion is not enabled return right away
-	if convKey == nil {
+	if c == nil {
 		return nil, errors.New(errKeyConversion)
 	}
 	var pKey *Key
