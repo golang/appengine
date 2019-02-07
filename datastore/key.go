@@ -260,16 +260,19 @@ func DecodeKey(encoded string) (*Key, error) {
 	if err := proto.Unmarshal(b, ref); err != nil {
 		// if there was an err on the key lets try
 		// to decode the new key type by default
-		nKey, nerr := nds.DecodeKey(encoded)
-		if nerr != nil {
-			// returning the orginal error on purpose
-			return nil, err
+		if convKey != nil {
+			nKey, nerr := nds.DecodeKey(encoded)
+			if nerr != nil {
+				// returning the orginal error on purpose
+				return nil, err
+			}
+			oKey, err := convKey.convertNewKeyFormatToOldKeyFormat(nKey)
+			if err != nil {
+				return nil, err
+			}
+			return oKey, nil
 		}
-		oKey, err := convertKey(nKey)
-		if err != nil {
-			return nil, err
-		}
-		return oKey, nil
+
 	}
 
 	return protoToKey(ref)
