@@ -18,6 +18,7 @@ import (
 	"errors"
 
 	nds "cloud.google.com/go/datastore"
+	"golang.org/x/net/context"
 	"google.golang.org/appengine/internal"
 )
 
@@ -30,8 +31,8 @@ var convKey *keyConverter
 // the /_ah/start handler.
 // Support for key converstion.  Variable holds the appid
 // so that key conversion can retrieve it without a context.
-func EnableKeyConversion(ctx context) {
-	convKey = *keyConverter{
+func EnableKeyConversion(ctx context.Context) {
+	convKey = &keyConverter{
 		appid: internal.FullyQualifiedAppID(ctx),
 	}
 	return
@@ -53,7 +54,7 @@ func (c *keyConverter) convertNewKeyFormatToOldKeyFormat(key *nds.Key) (*Key, er
 	var pKey *Key
 	var err error
 	if key.Parent != nil {
-		pKey, err = convertNewKeyFormatToOldKeyFormat(key.Parent)
+		pKey, err = c.convertNewKeyFormatToOldKeyFormat(key.Parent)
 		if err != nil {
 			return nil, err
 		}
