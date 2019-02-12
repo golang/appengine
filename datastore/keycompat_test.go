@@ -75,12 +75,12 @@ func TestKeyCoversion(t *testing.T) {
 	convKey = &keyConverter{appid: "glibrary"}
 
 	for _, tc := range testCasesKeyCompat {
-		enc, err := DecodeKey(tc.encodedKey)
+		dk, err := DecodeKey(tc.encodedKey)
 		if err != nil {
 			t.Fatalf("%v", err.Error())
 		}
-		if !reflect.DeepEqual(enc, tc.key) {
-			t.Errorf("%s: got %+v, want %+v", tc.desc, enc, tc.key)
+		if !reflect.DeepEqual(dk, tc.key) {
+			t.Errorf("%s: got %+v, want %+v", tc.desc, dk, tc.key)
 		}
 
 	}
