@@ -19,8 +19,7 @@ import (
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/datastore"
 
-	// Adding Support the new key encoding format
-	// in cloud.google.com/go/datastore
+	// Adding Support for the new key encoding format in cloud.google.com/go/datastore
 	nds "cloud.google.com/go/datastore"
 )
 
@@ -258,9 +257,8 @@ func DecodeKey(encoded string) (*Key, error) {
 
 	ref := new(pb.Reference)
 	if err := proto.Unmarshal(b, ref); err != nil {
-		// if there was an err on the key lets try
-		// to decode the new key type by default
-		// Check to see if key converter has been implemented
+		// If there was an err on the key lets try to decode the new key type by default check to see if key converter
+		// has been implemented.
 		if convKey != nil {
 			nKey, nerr := nds.DecodeKey(encoded)
 			if nerr != nil {
