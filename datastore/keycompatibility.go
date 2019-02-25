@@ -22,8 +22,8 @@ import (
 	"google.golang.org/appengine/internal"
 )
 
-var errKeyConversion string = `Key conversions must be enabled in the application.\n  
-See https://github.com/golang/appengine#key-encode-decode-compatibiltiy-to -help-with-datastore-library-migrations for more details.`
+var errKeyConversion string = `Key conversions must be enabled in the application.
+See https://github.com/golang/appengine#key-encode-decode-compatibiltiy-to-help-with-datastore-library-migrations for more details.`
 
 var convKey *keyConverter
 
