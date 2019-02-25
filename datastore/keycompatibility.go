@@ -4,11 +4,11 @@
 
 // This change adds additional compatibility to help customers
 // transition from google.golang.org/appengine/datastore (oldds) to cloud.google.com/go/datastore (newds).
-// Each lib (oldds and newds) contain functions Key.Encode() and Key.Decode(). These functions
+// Each lib (oldds and newds) contain the functions Key.Encode() and Key.Decode(). These functions
 // create base64 representations of a json marshalled type of datastore keys.  Customers have been using
-// these encoded values to communicate between services in appengine.  Protobuf key types
+// these encoded values to communicate between services in appengine.  The protobuf key types
 // change between oldds and newds making the corresponding base64 key strings incompatible.
-// Customer who attempt to upgrade to newds that use this pattern will fail.
+// Customers who attempt to upgrade to newds that use this pattern will fail.
 // keycompatibility.go placed in oldds enables forward compatibility of newds encoded keys.
 // An update to newds will also be necessary to enable backward compatibility.
 
@@ -22,7 +22,7 @@ import (
 	"google.golang.org/appengine/internal"
 )
 
-var errKeyConversion string = `Key conversions must be enabled in the application.
+var errKeyConversion = `Key conversions must be enabled in the application.
 See https://github.com/golang/appengine#key-encode-decode-compatibiltiy-to-help-with-datastore-library-migrations for more details.`
 
 var convKey *keyConverter
