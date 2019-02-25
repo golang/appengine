@@ -260,8 +260,8 @@ func DecodeKey(encoded string) (*Key, error) {
 		// If there was an err on the key lets try to decode the new key type by default check to see if key converter
 		// has been implemented.
 		if convKey != nil {
-			nKey, nerr := nds.DecodeKey(encoded)
-			if nerr != nil {
+			nKey, nLibKeyErr := nds.DecodeKey(encoded)
+			if nLibKeyErr != nil {
 				// returning the orginal error on purpose
 				return nil, err
 			}
