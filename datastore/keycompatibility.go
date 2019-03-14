@@ -17,7 +17,6 @@ package datastore
 import (
 	"errors"
 
-	newds "cloud.google.com/go/datastore"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/internal"
 )
@@ -43,7 +42,7 @@ type keyConverter struct {
 }
 
 // convertKey takes at new datastore key type and returns a old key type
-func (c *keyConverter) convertNewKeyFormatToOldKeyFormat(key *newds.Key) (*Key, error) {
+func (c *keyConverter) convertNewKeyFormatToOldKeyFormat(key *NewFormatKey) (*Key, error) {
 	// if key conversion is not enabled return right away
 	if c == nil {
 		return nil, errors.New(errKeyConversion)

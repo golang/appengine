@@ -18,9 +18,8 @@ import (
 
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/datastore"
-
 	// Adding Support for the new key encoding format in cloud.google.com/go/datastore
-	newds "cloud.google.com/go/datastore"
+	//newds "cloud.google.com/go/datastore"
 )
 
 type KeyRangeCollisionError struct {
@@ -260,7 +259,7 @@ func DecodeKey(encoded string) (*Key, error) {
 		// If there was an err on the key lets try to decode the new key type by default check to see if key converter
 		// has been implemented.
 		if convKey != nil {
-			nKey, nLibKeyErr := newds.DecodeKey(encoded)
+			nKey, nLibKeyErr := decodeToNewKey(encoded)
 			if nLibKeyErr != nil {
 				// returning the orginal error on purpose
 				return nil, err
