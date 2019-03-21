@@ -16,26 +16,30 @@ package datastore
 
 import (
 	"errors"
+	"sync"
 
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/internal"
-	"google.golang.org/appengine/log"
 )
 
 var errKeyConversion = `Key conversions must be enabled in the application.
 See https://github.com/golang/appengine#key-encode-decode-compatibiltiy-to-help-with-datastore-library-migrations for more details.`
 
 var convKey *keyConverter
+var once sync.Once
 
 // EnableKeyConversion enables forward key conversion abilities.  Calling this function in a single handler will enable
 // the feature for all handlers.  This function can be called in the /_ah/start handler.  Support for key converstion.
 // Variable holds the appid so that key conversion can retrieve it without a context.
 func EnableKeyConversion(ctx context.Context) {
 
-	convKey = &keyConverter{
-		appid: internal.FullyQualifiedAppID(ctx),
-	}
-	log.Debugf(ctx, "AppID Is:%v", convKey.appid)
+	once.Do(func() {
+		convKey = &keyConverter{
+			appid: internal.FullyQualifiedAppID(ctx),
+		}
+
+	})
+
 	return
 }
 
