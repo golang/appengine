@@ -84,4 +84,15 @@ keycompatibility.go placed in oldds enables forward compatibility of newds encod
 An update to newds will also be necessary to enable backward compatibility.
 
 ### Enabling key conversation
-<< Update with test code.>>
+Enable key conversion by calling `EnableKeyConversion(ctx)` in the `/_ah/startup` handler for basic and manual scaling or any handler in automatic scaling.
+
+### 1. Basic or manual scaling
+This startup handler will enable key conversion for all handlers in the service.
+```
+    http.HandleFunc("/_ah/start", func(w http.ResponseWriter, r *http.Request) {
+		datastore.EnableKeyConversion(appengine.NewContext(r))
+	})
+```
+### 2. Automatic scaling
+Since `/_ah/start` is not called in atomatic scaling and `/_ah/warmup` is not garenteed a call to `datastore.EnableKeyConversion(appengine.NewContext(r))`
+is needed in each handler where key conversion is needed.  `EnableKeyConversion` is safe for concurrent use.
