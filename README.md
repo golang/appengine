@@ -94,5 +94,5 @@ This startup handler will enable key conversion for all handlers in the service.
 	})
 ```
 ### 2. Automatic scaling
-Since `/_ah/start` is not called in atomatic scaling and `/_ah/warmup` is not garenteed a call to `datastore.EnableKeyConversion(appengine.NewContext(r))`
+Since `/_ah/start` is not called in automatic scaling and `/_ah/warmup` is not guaranteed, a call to `datastore.EnableKeyConversion(appengine.NewContext(r))`
 is needed in each handler where key conversion is needed.  `EnableKeyConversion` is safe for concurrent use.
