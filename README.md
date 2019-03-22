@@ -75,7 +75,7 @@ A few APIs were cleaned up, and there are some differences:
 ## Key Encode Decode compatibiltiy to help with datastore library migrations
 
 Key compatibility updates have been added to help customers transition from google.golang.org/appengine/datastore to cloud.google.com/go/datastore.
-the `EnableKeyConversion` enable automatic coversion from and key encoded with cloud.google.com/go/datastore to google.golang.org/appengine/datastore key type.
+The `EnableKeyConversion` enables automatic conversion from a key encoded with cloud.google.com/go/datastore to google.golang.org/appengine/datastore key type.
 
 ### Enabling key conversation
 Enable key conversion by calling `EnableKeyConversion(ctx)` in the `/_ah/startup` handler for basic and manual scaling or any handler in automatic scaling.
