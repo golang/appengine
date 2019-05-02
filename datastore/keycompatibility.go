@@ -25,26 +25,25 @@ import (
 )
 
 var (
-	errKeyConversion = `Key conversions must be enabled in the application.
-						See https://github.com/golang/appengine#key-encode-decode-compatibiltiy-to-help-with-datastore-library-migrations for more details.`
-	keyConversionProject string
-	once                 sync.Once
+	errKeyConversion        = errors.New(`Key conversions must be enabled in the application. See https://github.com/golang/appengine#key-encode-decode-compatibiltiy-to-help-with-datastore-library-migrations for more details.`)
+	keyConversionProject    string
+	keyConversionEnableOnce sync.Once
 )
 
 // EnableKeyConversion enables forward key conversion abilities.  Calling this function in a single handler will enable
-// the feature for all handlers.  This function can be called in the /_ah/start handler.  Support for key converstion.
-// Variable holds the appid so that key conversion can retrieve it without a context.
+// the feature for all handlers.  This function can be called in the /_ah/start handler.
+// The keyConversionProject variable holds the appid so that key conversion can retrieve it without a context.
 func EnableKeyConversion(ctx context.Context) {
-	once.Do(func() {
+	keyConversionEnableOnce.Do(func() {
 		keyConversionProject = internal.FullyQualifiedAppID(ctx)
 	})
 }
 
-// convertKey takes at new datastore key type and returns a old key type
+// convertNewKeyFormatToOldKeyFormat takes at new datastore key type and returns a old key type
 func convertNewKeyFormatToOldKeyFormat(key *keycompat.NewFormatKey) (*Key, error) {
 	// if key conversion is not enabled return right away
 	if keyConversionProject == "" {
-		return nil, errors.New(errKeyConversion)
+		return nil, errKeyConversion
 	}
 	var pKey *Key
 	var err error

@@ -257,17 +257,13 @@ func DecodeKey(encoded string) (*Key, error) {
 	if err := proto.Unmarshal(b, ref); err != nil {
 		// If there was an err on the key lets try to decode the new key type by default check to see if key converter
 		// has been implemented.
-		if keyConversionProject == "" {
-			nKey, nLibKeyErr := keycompat.DecodeToNewKey(encoded)
-			if nLibKeyErr != nil {
+		if keyConversionProject != "" {
+			newKey, conversionErr := keycompat.DecodeToNewKey(encoded)
+			if conversionErr != nil {
 				// returning the orginal error on purpose
 				return nil, err
 			}
-			oKey, err := convertNewKeyFormatToOldKeyFormat(nKey)
-			if err != nil {
-				return nil, err
-			}
-			return oKey, nil
+			return convertNewKeyFormatToOldKeyFormat(newKey)
 		}
 		return nil, err
 	}

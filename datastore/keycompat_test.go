@@ -73,7 +73,6 @@ var testCasesKeyCompat = []struct {
 func TestKeyCoversion(t *testing.T) {
 	// Simulate the key converter enablement
 	keyConversionProject = "glibrary"
-
 	for _, tc := range testCasesKeyCompat {
 		dk, err := DecodeKey(tc.encodedKey)
 		if err != nil {
@@ -82,6 +81,5 @@ func TestKeyCoversion(t *testing.T) {
 		if !reflect.DeepEqual(dk, tc.key) {
 			t.Errorf("%s: got %+v, want %+v", tc.desc, dk, tc.key)
 		}
-
 	}
 }
