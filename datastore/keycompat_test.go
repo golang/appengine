@@ -72,7 +72,7 @@ var testCasesKeyCompat = []struct {
 
 func TestKeyCoversion(t *testing.T) {
 	// Simulate the key converter enablement
-	convKey = &keyConverter{appid: "glibrary"}
+	keyConversionProject = "glibrary"
 
 	for _, tc := range testCasesKeyCompat {
 		dk, err := DecodeKey(tc.encodedKey)

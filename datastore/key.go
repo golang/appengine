@@ -16,10 +16,9 @@ import (
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 
+	"google.golang.org/appengine/datastore/internal/keycompat"
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/datastore"
-	// Adding Support for the new key encoding format in cloud.google.com/go/datastore
-	//newds "cloud.google.com/go/datastore"
 )
 
 type KeyRangeCollisionError struct {
@@ -258,13 +257,13 @@ func DecodeKey(encoded string) (*Key, error) {
 	if err := proto.Unmarshal(b, ref); err != nil {
 		// If there was an err on the key lets try to decode the new key type by default check to see if key converter
 		// has been implemented.
-		if convKey != nil {
-			nKey, nLibKeyErr := decodeToNewKey(encoded)
+		if keyConversionProject == "" {
+			nKey, nLibKeyErr := keycompat.DecodeToNewKey(encoded)
 			if nLibKeyErr != nil {
 				// returning the orginal error on purpose
 				return nil, err
 			}
-			oKey, err := convKey.convertNewKeyFormatToOldKeyFormat(nKey)
+			oKey, err := convertNewKeyFormatToOldKeyFormat(nKey)
 			if err != nil {
 				return nil, err
 			}
