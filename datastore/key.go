@@ -16,7 +16,6 @@ import (
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 
-	"google.golang.org/appengine/datastore/internal/keycompat"
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/datastore"
 )
@@ -255,15 +254,8 @@ func DecodeKey(encoded string) (*Key, error) {
 
 	ref := new(pb.Reference)
 	if err := proto.Unmarshal(b, ref); err != nil {
-		// If there was an err on the key lets try to decode the new key type by default check to see if key converter
-		// has been implemented.
-		if keyConversionProject != "" {
-			newKey, conversionErr := keycompat.DecodeToNewKey(encoded)
-			if conversionErr != nil {
-				// returning the orginal error on purpose
-				return nil, err
-			}
-			return convertNewKeyFormatToOldKeyFormat(newKey)
+		if k := decodeCloudKey(encoded); k != nil {
+			return k, nil
 		}
 		return nil, err
 	}

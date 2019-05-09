@@ -1,4 +1,8 @@
-package keycompat
+// Copyright 2019 Google Inc. All rights reserved.
+// Use of this source code is governed by the Apache 2.0
+// license that can be found in the LICENSE file.
+
+package cloudpb
 
 import (
 	"fmt"
@@ -6,24 +10,7 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-// This code is duplicated from https://github.com/googleapis/google-cloud-go/blob/master/datastore/key.go with the method renamed.
-// Key represents the datastore key for a stored entity.
-type NewFormatKey struct {
-	// Kind cannot be empty.
-	Kind string
-	// Either ID or Name must be zero for the Key to be valid.
-	// If both are zero, the Key is incomplete.
-	ID   int64
-	Name string
-	// Parent must either be a complete Key or nil.
-	Parent *NewFormatKey
-
-	// Namespace provides the ability to partition your data for multiple
-	// tenants. In most cases, it is not necessary to specify a namespace.
-	// See docs on datastore multitenancy for details:
-	// https://cloud.google.com/datastore/docs/concepts/multitenancy
-	Namespace string
-}
+// Code below is copied from google.golang.org/genproto/googleapis/datastore/v1
 
 // A partition ID identifies a grouping of entities. The grouping is always
 // by project and namespace, however the namespace ID may be empty.
@@ -97,7 +84,7 @@ func (m *PartitionId) GetNamespaceId() string {
 // If a key's partition ID or any of its path kinds or names are
 // reserved/read-only, the key is reserved/read-only.
 // A reserved/read-only key is forbidden in certain documented contexts.
-type PBKey struct {
+type Key struct {
 	// Entities are partitioned into subsets, currently identified by a project
 	// ID and namespace ID.
 	// Queries are scoped to a single partition.
@@ -124,25 +111,25 @@ type PBKey struct {
 	XXX_sizecache        int32              `json:"-"`
 }
 
-func (m *PBKey) Reset()         { *m = PBKey{} }
-func (m *PBKey) String() string { return proto.CompactTextString(m) }
-func (*PBKey) ProtoMessage()    {}
-func (*PBKey) Descriptor() ([]byte, []int) {
+func (m *Key) Reset()         { *m = Key{} }
+func (m *Key) String() string { return proto.CompactTextString(m) }
+func (*Key) ProtoMessage()    {}
+func (*Key) Descriptor() ([]byte, []int) {
 	return fileDescriptor_entity_096a297364b049a5, []int{1}
 }
-func (m *PBKey) XXX_Unmarshal(b []byte) error {
+func (m *Key) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Key.Unmarshal(m, b)
 }
-func (m *PBKey) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Key) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	return xxx_messageInfo_Key.Marshal(b, m, deterministic)
 }
-func (dst *PBKey) XXX_Merge(src proto.Message) {
+func (dst *Key) XXX_Merge(src proto.Message) {
 	xxx_messageInfo_Key.Merge(dst, src)
 }
-func (m *PBKey) XXX_Size() int {
+func (m *Key) XXX_Size() int {
 	return xxx_messageInfo_Key.Size(m)
 }
-func (m *PBKey) XXX_DiscardUnknown() {
+func (m *Key) XXX_DiscardUnknown() {
 	xxx_messageInfo_Key.DiscardUnknown(m)
 }
 

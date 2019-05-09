@@ -1,3 +1,7 @@
+// Copyright 2019 Google Inc. All Rights Reserved.
+// Use of this source code is governed by the Apache 2.0
+// license that can be found in the LICENSE file.
+
 package datastore
 
 import (
@@ -72,7 +76,7 @@ var testCasesKeyCompat = []struct {
 
 func TestKeyCoversion(t *testing.T) {
 	// Simulate the key converter enablement
-	keyConversionProject = "glibrary"
+	keyConversion.project = "glibrary"
 	for _, tc := range testCasesKeyCompat {
 		dk, err := DecodeKey(tc.encodedKey)
 		if err != nil {
