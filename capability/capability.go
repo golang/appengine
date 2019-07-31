@@ -34,16 +34,16 @@ func Enabled(ctx context.Context, api, capability string) bool {
 		Capability: []string{capability},
 	}
 	res := &pb.IsEnabledResponse{}
-        if api == "datastore_v3" && capability == "write" {
-                if err := internal.Call(ctx, "capability_service", "IsEnabled", req, res); err != nil {
-                        log.Warningf(ctx, "capability.Enabled: RPC failed: %v", err)
-                        return false
-                }
-        } else {
-                return true
-        }
+	if api == "datastore_v3" && capability == "write" {
+		if err := internal.Call(ctx, "capability_service", "IsEnabled", req, res); err != nil {
+			log.Warningf(ctx, "capability.Enabled: RPC failed: %v", err)
+			return false
+		}
+	} else {
+		return true
+	}
 	switch *res.SummaryStatus {
-	case pb.IsEnabledResponse_ENABLED,
+	case pb.IsEnabledResponse_ENABLED:
 		return true
 	default:
 		return false
