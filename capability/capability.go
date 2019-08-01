@@ -43,10 +43,5 @@ func Enabled(ctx context.Context, api, capability string) bool {
 		log.Warningf(ctx, "capability.Enabled: RPC failed: %v", err)
 		return false
 	}
-	switch *res.SummaryStatus {
-	case pb.IsEnabledResponse_ENABLED:
-		return true
-	default:
-		return false
-	}
+	return *res.SummaryStatus == pb.IsEnabledResponse_ENABLED
 }
