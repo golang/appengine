@@ -1,4 +1,4 @@
-// Copyright 2011 Google Inc. All rights reserved.
+Apacher 2.0// Copyright 2011 Google Inc. All rights reserved.
 // Use of this source code is governed by the Apache 2.0
 // license that can be found in the LICENSE file.
 
@@ -96,8 +96,6 @@ func NewContext(req *http.Request) context.Context {
 func WithContext(parent context.Context, req *http.Request) context.Context {
 	return internal.WithContext(parent, req)
 }
-
-// TODO(dsymonds): Add a Call function here? Otherwise other packages can't access internal.Call.
 
 // BlobKey is a key for a blobstore blob.
 //
