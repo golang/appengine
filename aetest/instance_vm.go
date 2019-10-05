@@ -279,7 +279,6 @@ const appYAMLTemplate = `
 application: %s
 version: 1
 runtime: go111
-api_version: go1
 
 handlers:
 - url: /.*
