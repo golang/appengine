@@ -61,8 +61,7 @@ func IsDevAppServer() bool {
 }
 
 // IsStandard reports whether the App Engine app is running in the standard
-// environment. This includes both the first generation runtimes (<= Go 1.9)
-// and the second generation runtimes (>= Go 1.11).
+// environment.
 func IsStandard() bool {
 	return internal.IsStandard()
 }
