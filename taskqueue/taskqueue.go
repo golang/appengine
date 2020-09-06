@@ -365,7 +365,7 @@ func Delete(c context.Context, task *Task, queueName string) error {
 // DeleteMulti deletes multiple tasks from a named queue.
 // If a given task could not be deleted, an appengine.MultiError is returned.
 // Each task is deleted independently; one may fail to delete while the others
-// are sucessfully deleted.
+// are successfully deleted.
 func DeleteMulti(c context.Context, tasks []*Task, queueName string) error {
 	taskNames := make([][]byte, len(tasks))
 	for i, t := range tasks {
