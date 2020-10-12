@@ -39,10 +39,6 @@ func NewInstance(opts *Options) (Instance, error) {
 			i.startupTimeout = opts.StartupTimeout
 		}
 	}
-	if len(os.Getenv("APPENGINE_DEV_APPSERVER_BINARY")) > 0 {
-		os.Setenv("APPENGINE_DEV_APPSERVER", os.Getenv("APPENGINE_DEV_APPSERVER_BINARY"))
-		PrepareDevAppserver = nil
-	}
 	if err := i.startChild(); err != nil {
 		return nil, err
 	}
