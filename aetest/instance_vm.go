@@ -163,7 +163,7 @@ func (i *instance) startChild() (err error) {
 	executable := os.Getenv("APPENGINE_DEV_APPSERVER_BINARY")
 	var appserverArgs []string
 	if len(executable) == 0 {
-		executable, err := findPython()
+		executable, err = findPython()
 		if err != nil {
 			return fmt.Errorf("Could not find python interpreter: %v", err)
 		}
