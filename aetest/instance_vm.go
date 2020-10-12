@@ -39,6 +39,10 @@ func NewInstance(opts *Options) (Instance, error) {
 			i.startupTimeout = opts.StartupTimeout
 		}
 	}
+	if len(os.Getenv("APPENGINE_DEV_APPSERVER_BINARY")) > 0 {
+		os.Setenv("APPENGINE_DEV_APPSERVER", os.Getenv("APPENGINE_DEV_APPSERVER_BINARY"))
+		PrepareDevAppserver = nil
+	}
 	if err := i.startChild(); err != nil {
 		return nil, err
 	}
@@ -206,9 +210,13 @@ func (i *instance) startChild() (err error) {
 	}
 	appserverArgs = append(appserverArgs, filepath.Join(i.appDir, "app"))
 
-	i.child = exec.Command(python,
-		appserverArgs...,
-	)
+	if len(os.Getenv("APPENGINE_DEV_APPSERVER_BINARY")) > 0 {
+		appserverArgs = appserverArgs[1:]
+		i.child = exec.Command(devAppserver, appserverArgs...)
+	} else {
+		i.child = exec.Command(python, appserverArgs...)
+	}
+
 	i.child.Stdout = os.Stdout
 	var stderr io.Reader
 	stderr, err = i.child.StderrPipe()
