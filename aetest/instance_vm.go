@@ -156,13 +156,18 @@ func (i *instance) startChild() (err error) {
 			return err
 		}
 	}
-	python, err := findPython()
-	if err != nil {
-		return fmt.Errorf("Could not find python interpreter: %v", err)
-	}
-	devAppserver, err := findDevAppserver()
-	if err != nil {
-		return fmt.Errorf("Could not find dev_appserver.py: %v", err)
+	executable := os.Getenv("APPENGINE_DEV_APPSERVER_BINARY")
+	var appserverArgs []string
+	if len(executable) == 0 {
+		executable, err = findPython()
+		if err != nil {
+			return fmt.Errorf("Could not find python interpreter: %v", err)
+		}
+		devAppserver, err := findDevAppserver()
+		if err != nil {
+			return fmt.Errorf("Could not find dev_appserver.py: %v", err)
+		}
+		appserverArgs = append(appserverArgs, devAppserver)
 	}
 
 	i.appDir, err = ioutil.TempDir("", "appengine-aetest")
@@ -187,8 +192,7 @@ func (i *instance) startChild() (err error) {
 		return err
 	}
 
-	appserverArgs := []string{
-		devAppserver,
+	appserverArgs = append(appserverArgs,
 		"--port=0",
 		"--api_port=0",
 		"--admin_port=0",
@@ -197,7 +201,7 @@ func (i *instance) startChild() (err error) {
 		"--clear_datastore=true",
 		"--clear_search_indexes=true",
 		"--datastore_path", filepath.Join(i.appDir, "datastore"),
-	}
+	)
 	if i.opts != nil && i.opts.StronglyConsistentDatastore {
 		appserverArgs = append(appserverArgs, "--datastore_consistency_policy=consistent")
 	}
@@ -206,9 +210,8 @@ func (i *instance) startChild() (err error) {
 	}
 	appserverArgs = append(appserverArgs, filepath.Join(i.appDir, "app"))
 
-	i.child = exec.Command(python,
-		appserverArgs...,
-	)
+	i.child = exec.Command(executable, appserverArgs...)
+
 	i.child.Stdout = os.Stdout
 	var stderr io.Reader
 	stderr, err = i.child.StderrPipe()
