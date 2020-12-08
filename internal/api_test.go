@@ -30,6 +30,7 @@ import (
 )
 
 const testTicketHeader = "X-Magic-Ticket-Header"
+const logserviceEnvVarKey = "LOG_TO_LOGSERVICE"
 
 func init() {
 	ticketHeader = testTicketHeader
@@ -159,6 +160,17 @@ func setup() (f *fakeAPIHandler, c *context, cleanup func()) {
 	}, srv.Close
 }
 
+func restoreEnvVar(key string) (cleanup func()) {
+	oldval, ok := os.LookupEnv(key)
+	return func() {
+		if ok {
+			os.Setenv(key, oldval)
+		} else {
+			os.Unsetenv(key)
+		}
+	}
+}
+
 func TestAPICall(t *testing.T) {
 	_, c, cleanup := setup()
 	defer cleanup()
@@ -247,81 +259,116 @@ func TestAPICallDialFailure(t *testing.T) {
 }
 
 func TestDelayedLogFlushing(t *testing.T) {
-	f, c, cleanup := setup()
-	defer cleanup()
+	defer restoreEnvVar(logserviceEnvVarKey)()
 
-	http.HandleFunc("/slow_log", func(w http.ResponseWriter, r *http.Request) {
-		logC := WithContext(netcontext.Background(), r)
-		fromContext(logC).apiURL = c.apiURL // Otherwise it will try to use the default URL.
-		Logf(logC, 1, "It's a lovely day.")
-		w.WriteHeader(200)
-		time.Sleep(1200 * time.Millisecond)
-		w.Write(make([]byte, 100<<10)) // write 100 KB to force HTTP flush
-	})
-
-	r := &http.Request{
-		Method: "GET",
-		URL: &url.URL{
-			Scheme: "http",
-			Path:   "/slow_log",
-		},
-		Header: c.req.Header,
-		Body:   ioutil.NopCloser(bytes.NewReader(nil)),
+	testCases := []struct {
+		logToLogservice    string
+		wantInitialFlushes int32
+		wantHeader         string
+		wantEndFlushes     int32
+	}{
+		{logToLogservice: "", wantHeader: "1", wantInitialFlushes: 1, wantEndFlushes: 2}, // default behavior
+		{logToLogservice: "1", wantHeader: "1", wantInitialFlushes: 1, wantEndFlushes: 2},
+		{logToLogservice: "0", wantHeader: "", wantInitialFlushes: 0, wantEndFlushes: 0},
 	}
-	w := httptest.NewRecorder()
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("$%s=%q", logserviceEnvVarKey, tc.logToLogservice), func(t *testing.T) {
+			f, c, cleanup := setup()
+			defer cleanup()
+			os.Setenv(logserviceEnvVarKey, tc.logToLogservice)
 
-	handled := make(chan struct{})
-	go func() {
-		defer close(handled)
-		handleHTTP(w, r)
-	}()
-	// Check that the log flush eventually comes in.
-	time.Sleep(1200 * time.Millisecond)
-	if f := atomic.LoadInt32(&f.LogFlushes); f != 1 {
-		t.Errorf("After 1.2s: f.LogFlushes = %d, want 1", f)
-	}
+			path := "/slow_log_" + tc.logToLogservice
 
-	<-handled
-	const hdr = "X-AppEngine-Log-Flush-Count"
-	if got, want := w.HeaderMap.Get(hdr), "1"; got != want {
-		t.Errorf("%s header = %q, want %q", hdr, got, want)
-	}
-	if got, want := atomic.LoadInt32(&f.LogFlushes), int32(2); got != want {
-		t.Errorf("After HTTP response: f.LogFlushes = %d, want %d", got, want)
-	}
+			http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+				logC := WithContext(netcontext.Background(), r)
+				fromContext(logC).apiURL = c.apiURL // Otherwise it will try to use the default URL.
+				Logf(logC, 1, "It's a lovely day.")
+				w.WriteHeader(200)
+				time.Sleep(1200 * time.Millisecond)
+				w.Write(make([]byte, 100<<10)) // write 100 KB to force HTTP flush
+			})
 
+			r := &http.Request{
+				Method: "GET",
+				URL: &url.URL{
+					Scheme: "http",
+					Path:   path,
+				},
+				Header: c.req.Header,
+				Body:   ioutil.NopCloser(bytes.NewReader(nil)),
+			}
+			w := httptest.NewRecorder()
+
+			handled := make(chan struct{})
+			go func() {
+				defer close(handled)
+				handleHTTP(w, r)
+			}()
+			// Check that the log flush eventually comes in.
+			time.Sleep(1200 * time.Millisecond)
+			if got := atomic.LoadInt32(&f.LogFlushes); got != tc.wantInitialFlushes {
+				t.Errorf("After 1.2s: f.LogFlushes = %d, want %d", got, tc.wantInitialFlushes)
+			}
+
+			<-handled
+			const hdr = "X-AppEngine-Log-Flush-Count"
+			if got := w.HeaderMap.Get(hdr); got != tc.wantHeader {
+				t.Errorf("%s header = %q, want %q", hdr, got, tc.wantHeader)
+			}
+			if got := atomic.LoadInt32(&f.LogFlushes); got != tc.wantEndFlushes {
+				t.Errorf("After HTTP response: f.LogFlushes = %d, want %d", got, tc.wantEndFlushes)
+			}
+		})
+	}
 }
 
 func TestLogFlushing(t *testing.T) {
-	f, c, cleanup := setup()
-	defer cleanup()
+	defer restoreEnvVar(logserviceEnvVarKey)()
 
-	http.HandleFunc("/quick_log", func(w http.ResponseWriter, r *http.Request) {
-		logC := WithContext(netcontext.Background(), r)
-		fromContext(logC).apiURL = c.apiURL // Otherwise it will try to use the default URL.
-		Logf(logC, 1, "It's a lovely day.")
-		w.WriteHeader(200)
-		w.Write(make([]byte, 100<<10)) // write 100 KB to force HTTP flush
-	})
-
-	r := &http.Request{
-		Method: "GET",
-		URL: &url.URL{
-			Scheme: "http",
-			Path:   "/quick_log",
-		},
-		Header: c.req.Header,
-		Body:   ioutil.NopCloser(bytes.NewReader(nil)),
+	testCases := []struct {
+		logToLogservice string
+		wantHeader      string
+		wantFlushes     int32
+	}{
+		{logToLogservice: "", wantHeader: "1", wantFlushes: 1}, // default behavior
+		{logToLogservice: "1", wantHeader: "1", wantFlushes: 1},
+		{logToLogservice: "0", wantHeader: "", wantFlushes: 0},
 	}
-	w := httptest.NewRecorder()
+	for _, tc := range testCases {
+		t.Run(fmt.Sprintf("$%s=%q", logserviceEnvVarKey, tc.logToLogservice), func(t *testing.T) {
+			f, c, cleanup := setup()
+			defer cleanup()
+			os.Setenv(logserviceEnvVarKey, tc.logToLogservice)
 
-	handleHTTP(w, r)
-	const hdr = "X-AppEngine-Log-Flush-Count"
-	if got, want := w.HeaderMap.Get(hdr), "1"; got != want {
-		t.Errorf("%s header = %q, want %q", hdr, got, want)
-	}
-	if got, want := atomic.LoadInt32(&f.LogFlushes), int32(1); got != want {
-		t.Errorf("After HTTP response: f.LogFlushes = %d, want %d", got, want)
+			path := "/quick_log_" + tc.logToLogservice
+			http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
+				logC := WithContext(netcontext.Background(), r)
+				fromContext(logC).apiURL = c.apiURL // Otherwise it will try to use the default URL.
+				Logf(logC, 1, "It's a lovely day.")
+				w.WriteHeader(200)
+				w.Write(make([]byte, 100<<10)) // write 100 KB to force HTTP flush
+			})
+
+			r := &http.Request{
+				Method: "GET",
+				URL: &url.URL{
+					Scheme: "http",
+					Path:   path,
+				},
+				Header: c.req.Header,
+				Body:   ioutil.NopCloser(bytes.NewReader(nil)),
+			}
+			w := httptest.NewRecorder()
+
+			handleHTTP(w, r)
+			const hdr = "X-AppEngine-Log-Flush-Count"
+			if got := w.HeaderMap.Get(hdr); got != tc.wantHeader {
+				t.Errorf("%s header = %q, want %q", hdr, got, tc.wantHeader)
+			}
+			if got := atomic.LoadInt32(&f.LogFlushes); got != tc.wantFlushes {
+				t.Errorf("After HTTP response: f.LogFlushes = %d, want %d", got, tc.wantFlushes)
+			}
+		})
 	}
 }
 
