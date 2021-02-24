@@ -22,12 +22,6 @@ const (
 )
 
 var (
-	// This is set to true in identity_classic.go, which is behind the appengine build tag.
-	// The appengine build tag is set for the first generation runtimes (<= Go 1.9) but not
-	// the second generation runtimes (>= Go 1.11), so this indicates whether we're on a
-	// first-gen runtime. See IsStandard below for the second-gen check.
-	appengineStandard bool
-
 	// This is set to true in identity_flex.go, which is behind the appenginevm build tag.
 	appengineFlex bool
 )
@@ -41,9 +35,7 @@ func AppID(c netcontext.Context) string {
 // IsStandard is the implementation of the wrapper function of the same name in
 // ../appengine.go. See that file for commentary.
 func IsStandard() bool {
-	// appengineStandard will be true for first-gen runtimes (<= Go 1.9) but not
-	// second-gen (>= Go 1.11).
-	return appengineStandard || IsSecondGen()
+	return IsSecondGen()
 }
 
 // IsStandard is the implementation of the wrapper function of the same name in
