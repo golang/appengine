@@ -5,12 +5,11 @@
 package internal
 
 import (
+	netcontext "context"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-
-	netcontext "golang.org/x/net/context"
 )
 
 // These functions are implementations of the wrapper functions

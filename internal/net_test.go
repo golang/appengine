@@ -5,11 +5,10 @@
 package internal
 
 import (
+	netcontext "context"
 	"sync"
 	"testing"
 	"time"
-
-	netcontext "golang.org/x/net/context"
 
 	basepb "google.golang.org/appengine/internal/base"
 )

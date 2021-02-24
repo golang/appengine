@@ -2,6 +2,7 @@ package aetest
 
 import (
 	"bufio"
+	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -14,8 +15,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"time"
-
-	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"

@@ -7,6 +7,7 @@ package internal
 import (
 	"bufio"
 	"bytes"
+	netcontext "context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -21,7 +22,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	netcontext "golang.org/x/net/context"
 
 	basepb "google.golang.org/appengine/internal/base"
 	remotepb "google.golang.org/appengine/internal/remote_api"

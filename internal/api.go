@@ -6,6 +6,7 @@ package internal
 
 import (
 	"bytes"
+	netcontext "context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -22,7 +23,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	netcontext "golang.org/x/net/context"
 
 	basepb "google.golang.org/appengine/internal/base"
 	logpb "google.golang.org/appengine/internal/log"
