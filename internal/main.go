@@ -14,6 +14,9 @@ import (
 	"runtime"
 )
 
+// MainPath stores the file path of the main package.
+var MainPath string
+
 func Main() {
 	MainPath = filepath.Dir(findMainPath())
 	installHealthChecker(http.DefaultServeMux)

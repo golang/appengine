@@ -53,10 +53,15 @@ columns 'first_name' and 'last_name':
 package cloudsql
 
 import (
+	"errors"
 	"net"
 )
 
 // Dial connects to the named Cloud SQL instance.
 func Dial(instance string) (net.Conn, error) {
 	return connect(instance)
+}
+
+func connect(instance string) (net.Conn, error) {
+	return nil, errors.New(`cloudsql: not supported in App Engine "flexible environment"`)
 }
