@@ -192,6 +192,11 @@ func (i *instance) startChild() (err error) {
 		return err
 	}
 
+	datastore_path := os.Getenv("APPENGINE_DEV_APPSERVER_DATASTORE_PATH")
+	if len(datastore_path) == 0 {
+		datastore_path = filepath.Join(i.appDir, "datastore")
+	}
+
 	appserverArgs = append(appserverArgs,
 		"--port=0",
 		"--api_port=0",
@@ -200,7 +205,7 @@ func (i *instance) startChild() (err error) {
 		"--skip_sdk_update_check=true",
 		"--clear_datastore=true",
 		"--clear_search_indexes=true",
-		"--datastore_path", filepath.Join(i.appDir, "datastore"),
+		"--datastore_path", datastore_path,
 	)
 	if i.opts != nil && i.opts.StronglyConsistentDatastore {
 		appserverArgs = append(appserverArgs, "--datastore_consistency_policy=consistent")
