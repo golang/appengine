@@ -14,52 +14,6 @@ import (
 	pb "google.golang.org/appengine/internal/log"
 )
 
-func TestQueryToRequest(t *testing.T) {
-	testCases := []struct {
-		desc  string
-		query *Query
-		want  *pb.LogReadRequest
-	}{
-		{
-			desc:  "Empty",
-			query: &Query{},
-			want: &pb.LogReadRequest{
-				AppId:     proto.String("s~fake"),
-				VersionId: []string{"v12"},
-			},
-		},
-		{
-			desc: "Versions",
-			query: &Query{
-				Versions: []string{"alpha", "backend:beta"},
-			},
-			want: &pb.LogReadRequest{
-				AppId: proto.String("s~fake"),
-				ModuleVersion: []*pb.LogModuleVersion{
-					{
-						VersionId: proto.String("alpha"),
-					}, {
-						ModuleId:  proto.String("backend"),
-						VersionId: proto.String("beta"),
-					},
-				},
-			},
-		},
-	}
-
-	for _, tt := range testCases {
-		req, err := makeRequest(tt.query, "s~fake", "v12")
-
-		if err != nil {
-			t.Errorf("%s: got err %v, want nil", tt.desc, err)
-			continue
-		}
-		if !proto.Equal(req, tt.want) {
-			t.Errorf("%s request:\ngot  %v\nwant %v", tt.desc, req, tt.want)
-		}
-	}
-}
-
 func TestProtoToRecord(t *testing.T) {
 	// We deliberately leave ModuleId and other optional fields unset.
 	p := &pb.RequestLog{
