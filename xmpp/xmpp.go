@@ -25,11 +25,10 @@ To receive messages,
 package xmpp // import "google.golang.org/appengine/xmpp"
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
-
-	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"

@@ -6,9 +6,8 @@
 package file
 
 import (
+	"context"
 	"fmt"
-
-	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
 	aipb "google.golang.org/appengine/internal/app_identity"
