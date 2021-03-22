@@ -98,3 +98,8 @@ before you use code that needs key conversion.
 
 You may want to add this to each of your handlers, or introduce middleware where it's called.
 `EnableKeyConversion` is safe for concurrent use. Any call to it after the first is ignored.
+
+## QA
+
+Googlers, [integration tests](http://go/appengine-go-integration) run on the QA branch. You should first merge to QA
+and verify the integration tests pass before cutting a new release.
