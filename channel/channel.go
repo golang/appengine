@@ -25,9 +25,8 @@ https://cloud.google.com/appengine/docs/deprecations/channel
 package channel // import "google.golang.org/appengine/channel"
 
 import (
+	"context"
 	"encoding/json"
-
-	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"

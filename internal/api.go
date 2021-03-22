@@ -2,12 +2,11 @@
 // Use of this source code is governed by the Apache 2.0
 // license that can be found in the LICENSE file.
 
-// +build !appengine
-
 package internal
 
 import (
 	"bytes"
+	netcontext "context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -24,7 +23,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	netcontext "golang.org/x/net/context"
 
 	basepb "google.golang.org/appengine/internal/base"
 	logpb "google.golang.org/appengine/internal/log"
@@ -116,31 +114,35 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 		r.RemoteAddr = net.JoinHostPort(r.RemoteAddr, "80")
 	}
 
-	// Start goroutine responsible for flushing app logs.
-	// This is done after adding c to ctx.m (and stopped before removing it)
-	// because flushing logs requires making an API call.
-	go c.logFlusher(stopFlushing)
+	if logToLogservice() {
+		// Start goroutine responsible for flushing app logs.
+		// This is done after adding c to ctx.m (and stopped before removing it)
+		// because flushing logs requires making an API call.
+		go c.logFlusher(stopFlushing)
+	}
 
 	executeRequestSafely(c, r)
 	c.outHeader = nil // make sure header changes aren't respected any more
 
-	stopFlushing <- 1 // any logging beyond this point will be dropped
-
-	// Flush any pending logs asynchronously.
-	c.pendingLogs.Lock()
-	flushes := c.pendingLogs.flushes
-	if len(c.pendingLogs.lines) > 0 {
-		flushes++
-	}
-	c.pendingLogs.Unlock()
 	flushed := make(chan struct{})
-	go func() {
-		defer close(flushed)
-		// Force a log flush, because with very short requests we
-		// may not ever flush logs.
-		c.flushLog(true)
-	}()
-	w.Header().Set(logFlushHeader, strconv.Itoa(flushes))
+	if logToLogservice() {
+		stopFlushing <- 1 // any logging beyond this point will be dropped
+
+		// Flush any pending logs asynchronously.
+		c.pendingLogs.Lock()
+		flushes := c.pendingLogs.flushes
+		if len(c.pendingLogs.lines) > 0 {
+			flushes++
+		}
+		c.pendingLogs.Unlock()
+		go func() {
+			defer close(flushed)
+			// Force a log flush, because with very short requests we
+			// may not ever flush logs.
+			c.flushLog(true)
+		}()
+		w.Header().Set(logFlushHeader, strconv.Itoa(flushes))
+	}
 
 	// Avoid nil Write call if c.Write is never called.
 	if c.outCode != 0 {
@@ -149,9 +151,11 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 	if c.outBody != nil {
 		w.Write(c.outBody)
 	}
-	// Wait for the last flush to complete before returning,
-	// otherwise the security ticket will not be valid.
-	<-flushed
+	if logToLogservice() {
+		// Wait for the last flush to complete before returning,
+		// otherwise the security ticket will not be valid.
+		<-flushed
+	}
 }
 
 func executeRequestSafely(c *context, r *http.Request) {
@@ -581,12 +585,14 @@ func logf(c *context, level int64, format string, args ...interface{}) {
 	}
 	s := fmt.Sprintf(format, args...)
 	s = strings.TrimRight(s, "\n") // Remove any trailing newline characters.
-	c.addLogLine(&logpb.UserAppLogLine{
-		TimestampUsec: proto.Int64(time.Now().UnixNano() / 1e3),
-		Level:         &level,
-		Message:       &s,
-	})
-	// Only duplicate log to stderr if not running on App Engine second generation
+	if logToLogservice() {
+		c.addLogLine(&logpb.UserAppLogLine{
+			TimestampUsec: proto.Int64(time.Now().UnixNano() / 1e3),
+			Level:         &level,
+			Message:       &s,
+		})
+	}
+	// Log to stdout if not deployed
 	if !IsSecondGen() {
 		log.Print(logLevelName[level] + ": " + s)
 	}
@@ -675,4 +681,10 @@ func (c *context) logFlusher(stop <-chan int) {
 
 func ContextForTesting(req *http.Request) netcontext.Context {
 	return toContext(&context{req: req})
+}
+
+func logToLogservice() bool {
+	// TODO: replace logservice with json structured logs to $LOG_DIR/app.log.json
+	// where $LOG_DIR is /var/log in prod and some tmpdir in dev
+	return os.Getenv("LOG_TO_LOGSERVICE") != "0"
 }
