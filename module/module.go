@@ -28,7 +28,8 @@ func List(c context.Context) ([]string, error) {
 }
 
 // NumInstances returns the number of instances of the given module/version.
-// If either argument is the empty string it means the default.
+// If either argument is the empty string it means the default. This only works
+// if you are using manual_scaling in your app's config file.
 func NumInstances(c context.Context, module, version string) (int, error) {
 	req := &pb.GetNumInstancesRequest{}
 	if module != "" {
@@ -47,7 +48,7 @@ func NumInstances(c context.Context, module, version string) (int, error) {
 
 // SetNumInstances sets the number of instances of the given module.version to the
 // specified value. If either module or version are the empty string it means the
-// default.
+// default.  This only works if you are using manual_scaling in your app's config file.
 func SetNumInstances(c context.Context, module, version string, instances int) error {
 	req := &pb.SetNumInstancesRequest{}
 	if module != "" {
