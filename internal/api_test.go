@@ -302,7 +302,7 @@ func TestDelayedLogFlushing(t *testing.T) {
 			handled := make(chan struct{})
 			go func() {
 				defer close(handled)
-				handleHTTP(w, r)
+				Middleware(http.DefaultServeMux).ServeHTTP(w, r)
 			}()
 			// Check that the log flush eventually comes in.
 			time.Sleep(1200 * time.Millisecond)
@@ -360,7 +360,7 @@ func TestLogFlushing(t *testing.T) {
 			}
 			w := httptest.NewRecorder()
 
-			handleHTTP(w, r)
+			Middleware(http.DefaultServeMux).ServeHTTP(w, r)
 			const hdr = "X-AppEngine-Log-Flush-Count"
 			if got := w.HeaderMap.Get(hdr); got != tc.wantHeader {
 				t.Errorf("%s header = %q, want %q", hdr, got, tc.wantHeader)
@@ -403,7 +403,7 @@ func TestRemoteAddr(t *testing.T) {
 			Header: tc.headers,
 			Body:   ioutil.NopCloser(bytes.NewReader(nil)),
 		}
-		handleHTTP(httptest.NewRecorder(), r)
+		Middleware(http.DefaultServeMux).ServeHTTP(httptest.NewRecorder(), r)
 		if addr != tc.addr {
 			t.Errorf("Header %v, got %q, want %q", tc.headers, addr, tc.addr)
 		}
@@ -420,7 +420,7 @@ func TestPanickingHandler(t *testing.T) {
 		Body:   ioutil.NopCloser(bytes.NewReader(nil)),
 	}
 	rec := httptest.NewRecorder()
-	handleHTTP(rec, r)
+	Middleware(http.DefaultServeMux).ServeHTTP(rec, r)
 	if rec.Code != 500 {
 		t.Errorf("Panicking handler returned HTTP %d, want HTTP %d", rec.Code, 500)
 	}
