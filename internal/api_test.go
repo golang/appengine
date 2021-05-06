@@ -2,13 +2,12 @@
 // Use of this source code is governed by the Apache 2.0
 // license that can be found in the LICENSE file.
 
-// +build !appengine
-
 package internal
 
 import (
 	"bufio"
 	"bytes"
+	netcontext "context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -23,7 +22,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	netcontext "golang.org/x/net/context"
 
 	basepb "google.golang.org/appengine/internal/base"
 	remotepb "google.golang.org/appengine/internal/remote_api"

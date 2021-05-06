@@ -6,11 +6,10 @@ package datastore
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"encoding/json"
 	"testing"
-
-	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
 )

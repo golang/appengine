@@ -2,16 +2,13 @@
 // Use of this source code is governed by the Apache 2.0
 // license that can be found in the LICENSE file.
 
-// +build !appengine
-
 package internal
 
 import (
+	netcontext "context"
 	"sync"
 	"testing"
 	"time"
-
-	netcontext "golang.org/x/net/context"
 
 	basepb "google.golang.org/appengine/internal/base"
 )
