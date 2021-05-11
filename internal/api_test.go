@@ -28,7 +28,6 @@ import (
 )
 
 const testTicketHeader = "X-Magic-Ticket-Header"
-const logserviceEnvVarKey = "LOG_TO_LOGSERVICE"
 
 func init() {
 	ticketHeader = testTicketHeader
@@ -256,120 +255,6 @@ func TestAPICallDialFailure(t *testing.T) {
 	}
 }
 
-func TestDelayedLogFlushing(t *testing.T) {
-	defer restoreEnvVar(logserviceEnvVarKey)()
-
-	testCases := []struct {
-		logToLogservice    string
-		wantInitialFlushes int32
-		wantHeader         string
-		wantEndFlushes     int32
-	}{
-		{logToLogservice: "", wantHeader: "1", wantInitialFlushes: 1, wantEndFlushes: 2}, // default behavior
-		{logToLogservice: "1", wantHeader: "1", wantInitialFlushes: 1, wantEndFlushes: 2},
-		{logToLogservice: "0", wantHeader: "", wantInitialFlushes: 0, wantEndFlushes: 0},
-	}
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("$%s=%q", logserviceEnvVarKey, tc.logToLogservice), func(t *testing.T) {
-			f, c, cleanup := setup()
-			defer cleanup()
-			os.Setenv(logserviceEnvVarKey, tc.logToLogservice)
-
-			path := "/slow_log_" + tc.logToLogservice
-
-			http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-				logC := WithContext(netcontext.Background(), r)
-				fromContext(logC).apiURL = c.apiURL // Otherwise it will try to use the default URL.
-				Logf(logC, 1, "It's a lovely day.")
-				w.WriteHeader(200)
-				time.Sleep(1200 * time.Millisecond)
-				w.Write(make([]byte, 100<<10)) // write 100 KB to force HTTP flush
-			})
-
-			r := &http.Request{
-				Method: "GET",
-				URL: &url.URL{
-					Scheme: "http",
-					Path:   path,
-				},
-				Header: c.req.Header,
-				Body:   ioutil.NopCloser(bytes.NewReader(nil)),
-			}
-			w := httptest.NewRecorder()
-
-			handled := make(chan struct{})
-			go func() {
-				defer close(handled)
-				handleHTTP(w, r)
-			}()
-			// Check that the log flush eventually comes in.
-			time.Sleep(1200 * time.Millisecond)
-			if got := atomic.LoadInt32(&f.LogFlushes); got != tc.wantInitialFlushes {
-				t.Errorf("After 1.2s: f.LogFlushes = %d, want %d", got, tc.wantInitialFlushes)
-			}
-
-			<-handled
-			const hdr = "X-AppEngine-Log-Flush-Count"
-			if got := w.HeaderMap.Get(hdr); got != tc.wantHeader {
-				t.Errorf("%s header = %q, want %q", hdr, got, tc.wantHeader)
-			}
-			if got := atomic.LoadInt32(&f.LogFlushes); got != tc.wantEndFlushes {
-				t.Errorf("After HTTP response: f.LogFlushes = %d, want %d", got, tc.wantEndFlushes)
-			}
-		})
-	}
-}
-
-func TestLogFlushing(t *testing.T) {
-	defer restoreEnvVar(logserviceEnvVarKey)()
-
-	testCases := []struct {
-		logToLogservice string
-		wantHeader      string
-		wantFlushes     int32
-	}{
-		{logToLogservice: "", wantHeader: "1", wantFlushes: 1}, // default behavior
-		{logToLogservice: "1", wantHeader: "1", wantFlushes: 1},
-		{logToLogservice: "0", wantHeader: "", wantFlushes: 0},
-	}
-	for _, tc := range testCases {
-		t.Run(fmt.Sprintf("$%s=%q", logserviceEnvVarKey, tc.logToLogservice), func(t *testing.T) {
-			f, c, cleanup := setup()
-			defer cleanup()
-			os.Setenv(logserviceEnvVarKey, tc.logToLogservice)
-
-			path := "/quick_log_" + tc.logToLogservice
-			http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-				logC := WithContext(netcontext.Background(), r)
-				fromContext(logC).apiURL = c.apiURL // Otherwise it will try to use the default URL.
-				Logf(logC, 1, "It's a lovely day.")
-				w.WriteHeader(200)
-				w.Write(make([]byte, 100<<10)) // write 100 KB to force HTTP flush
-			})
-
-			r := &http.Request{
-				Method: "GET",
-				URL: &url.URL{
-					Scheme: "http",
-					Path:   path,
-				},
-				Header: c.req.Header,
-				Body:   ioutil.NopCloser(bytes.NewReader(nil)),
-			}
-			w := httptest.NewRecorder()
-
-			handleHTTP(w, r)
-			const hdr = "X-AppEngine-Log-Flush-Count"
-			if got := w.HeaderMap.Get(hdr); got != tc.wantHeader {
-				t.Errorf("%s header = %q, want %q", hdr, got, tc.wantHeader)
-			}
-			if got := atomic.LoadInt32(&f.LogFlushes); got != tc.wantFlushes {
-				t.Errorf("After HTTP response: f.LogFlushes = %d, want %d", got, tc.wantFlushes)
-			}
-		})
-	}
-}
-
 func TestRemoteAddr(t *testing.T) {
 	var addr string
 	http.HandleFunc("/remote_addr", func(w http.ResponseWriter, r *http.Request) {
@@ -542,4 +427,208 @@ func TestBackgroundContext(t *testing.T) {
 	}
 	res := &basepb.StringProto{}
 	Call(BackgroundContext(), "actordb", "LookupActor", req, res) // expected to fail
+}
+
+func TestLogf(t *testing.T) {
+
+	testCases := []struct {
+		name     string
+		deployed bool
+		level    int64
+		format   string
+		args     []interface{}
+		want     string
+	}{
+		{
+			name:   "local-debug",
+			level:  0,
+			format: "my %s %d",
+			args:   []interface{}{"abc", 1},
+			want:   "DEBUG: my abc 1\n",
+		},
+		{
+			name:   "local-info",
+			level:  1,
+			format: "my %s %d",
+			args:   []interface{}{"abc", 1},
+			want:   "INFO: my abc 1\n",
+		},
+		{
+			name:   "local-warning",
+			level:  2,
+			format: "my %s %d",
+			args:   []interface{}{"abc", 1},
+			want:   "WARNING: my abc 1\n",
+		},
+		{
+			name:   "local-error",
+			level:  3,
+			format: "my %s %d",
+			args:   []interface{}{"abc", 1},
+			want:   "ERROR: my abc 1\n",
+		},
+		{
+			name:   "local-critical",
+			level:  4,
+			format: "my %s %d",
+			args:   []interface{}{"abc", 1},
+			want:   "CRITICAL: my abc 1\n",
+		},
+		{
+			name:   "local-multiline",
+			level:  0,
+			format: "my \n multiline\n\n",
+			want:   "DEBUG: my \n multiline\n",
+		},
+		{
+			name:     "deployed-plain-debug",
+			deployed: true,
+			level:    0,
+			format:   "my %s %d",
+			args:     []interface{}{"abc", 1},
+			want:     `{"message": "my abc 1", "severity": "DEBUG"}` + "\n",
+		},
+		{
+			name:     "deployed-plain-info",
+			deployed: true,
+			level:    1,
+			format:   "my %s %d",
+			args:     []interface{}{"abc", 1},
+			want:     `{"message": "my abc 1", "severity": "INFO"}` + "\n",
+		},
+		{
+			name:     "deployed-plain-warning",
+			deployed: true,
+			level:    2,
+			format:   "my %s %d",
+			args:     []interface{}{"abc", 1},
+			want:     `{"message": "my abc 1", "severity": "WARNING"}` + "\n",
+		},
+		{
+			name:     "deployed-plain-error",
+			deployed: true,
+			level:    3,
+			format:   "my %s %d",
+			args:     []interface{}{"abc", 1},
+			want:     `{"message": "my abc 1", "severity": "ERROR"}` + "\n",
+		},
+		{
+			name:     "deployed-plain-critical",
+			deployed: true,
+			level:    4,
+			format:   "my %s %d",
+			args:     []interface{}{"abc", 1},
+			want:     `{"message": "my abc 1", "severity": "CRITICAL"}` + "\n",
+		},
+		{
+			name:     "deployed-plain-multiline",
+			deployed: true,
+			level:    0,
+			format:   "my \n multiline\n\n",
+			want:     "{\"message\": \"my \\n multiline\\n\\n\", \"severity\": \"DEBUG\"}\n",
+		},
+		{
+			name:     "deployed-structured-debug",
+			deployed: true,
+			level:    0,
+			format:   `{"some": "message %s %d"}`,
+			args:     []interface{}{"abc", 1},
+			want:     `{"some": "message abc 1"}` + "\n",
+		},
+		{
+			name:     "deployed-structured-info",
+			deployed: true,
+			level:    1,
+			format:   `{"some": "message %s %d"}`,
+			args:     []interface{}{"abc", 1},
+			want:     `{"some": "message abc 1"}` + "\n",
+		},
+		{
+			name:     "deployed-structured-warning",
+			deployed: true,
+			level:    2,
+			format:   `{"some": "message %s %d"}`,
+			args:     []interface{}{"abc", 1},
+			want:     `{"some": "message abc 1"}` + "\n",
+		},
+		{
+			name:     "deployed-structured-error",
+			deployed: true,
+			level:    3,
+			format:   `{"some": "message %s %d"}`,
+			args:     []interface{}{"abc", 1},
+			want:     `{"some": "message abc 1"}` + "\n",
+		},
+		{
+			name:     "deployed-structured-critical",
+			deployed: true,
+			level:    4,
+			format:   `{"some": "message %s %d"}`,
+			args:     []interface{}{"abc", 1},
+			want:     `{"some": "message abc 1"}` + "\n",
+		},
+		{
+			// The leading "{" assumes this is already a structured log, so no alteration is performed.
+			name:     "deployed-structured-multiline",
+			deployed: true,
+			level:    4,
+			// This is not even valid JSON; we don't attempt to validate and only use the first character.
+			format: "{\"some\": \"message\n%s %d\"",
+			args:   []interface{}{"abc", 1},
+			want:   "{\"some\": \"message\nabc 1\"\n",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			env := ""
+			if tc.deployed {
+				env = "standard"
+			}
+			defer setEnvVar(t, "GAE_ENV", env)()
+			var got string
+			defer overrideLogPrint(t, &got)()
+			ctx := fromContext(BackgroundContext())
+
+			logf(ctx, tc.level, tc.format, tc.args...)
+
+			if got != tc.want {
+				t.Errorf("incorrect log got=%q want=%q", got, tc.want)
+			}
+		})
+	}
+}
+
+func setEnvVar(t *testing.T, key, value string) func() {
+	t.Helper()
+	old, present := os.LookupEnv(key)
+	if err := os.Setenv(key, value); err != nil {
+		t.Fatal(err)
+	}
+	return func() {
+		if present {
+			if err := os.Setenv(key, old); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Unsetenv(key); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}
+
+func overrideLogPrint(t *testing.T, output *string) func() {
+	t.Helper()
+	old := logPrint
+	logPrint = func(args ...interface{}) {
+		if len(args) != 1 {
+			t.Fatal("expected exactly 1 arg")
+		}
+		s, ok := args[0].(string)
+		if !ok {
+			t.Fatalf("expected string, got %T", args[0])
+		}
+		*output = s
+	}
+	return func() { logPrint = old }
 }

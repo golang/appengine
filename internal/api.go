@@ -24,8 +24,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	basepb "google.golang.org/appengine/internal/base"
-	logpb "google.golang.org/appengine/internal/log"
 	remotepb "google.golang.org/appengine/internal/remote_api"
 )
 
@@ -68,6 +66,8 @@ var (
 	defaultTicket         string
 	backgroundContextOnce sync.Once
 	backgroundContext     netcontext.Context
+
+	logPrint = log.Print // For test hooks.
 )
 
 func apiURL() *url.URL {
@@ -94,8 +94,6 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 	r = r.WithContext(withContext(r.Context(), c))
 	c.req = r
 
-	stopFlushing := make(chan int)
-
 	// Patch up RemoteAddr so it looks reasonable.
 	if addr := r.Header.Get(userIPHeader); addr != "" {
 		r.RemoteAddr = addr
@@ -114,35 +112,35 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 		r.RemoteAddr = net.JoinHostPort(r.RemoteAddr, "80")
 	}
 
-	if logToLogservice() {
-		// Start goroutine responsible for flushing app logs.
-		// This is done after adding c to ctx.m (and stopped before removing it)
-		// because flushing logs requires making an API call.
-		go c.logFlusher(stopFlushing)
-	}
+	// if logToLogservice() {
+	// 	// Start goroutine responsible for flushing app logs.
+	// 	// This is done after adding c to ctx.m (and stopped before removing it)
+	// 	// because flushing logs requires making an API call.
+	// 	go c.logFlusher(stopFlushing)
+	// }
 
 	executeRequestSafely(c, r)
 	c.outHeader = nil // make sure header changes aren't respected any more
 
-	flushed := make(chan struct{})
-	if logToLogservice() {
-		stopFlushing <- 1 // any logging beyond this point will be dropped
+	// flushed := make(chan struct{})
+	// if logToLogservice() {
+	// 	stopFlushing <- 1 // any logging beyond this point will be dropped
 
-		// Flush any pending logs asynchronously.
-		c.pendingLogs.Lock()
-		flushes := c.pendingLogs.flushes
-		if len(c.pendingLogs.lines) > 0 {
-			flushes++
-		}
-		c.pendingLogs.Unlock()
-		go func() {
-			defer close(flushed)
-			// Force a log flush, because with very short requests we
-			// may not ever flush logs.
-			c.flushLog(true)
-		}()
-		w.Header().Set(logFlushHeader, strconv.Itoa(flushes))
-	}
+	// 	// Flush any pending logs asynchronously.
+	// 	c.pendingLogs.Lock()
+	// 	flushes := c.pendingLogs.flushes
+	// 	if len(c.pendingLogs.lines) > 0 {
+	// 		flushes++
+	// 	}
+	// 	c.pendingLogs.Unlock()
+	// 	go func() {
+	// 		defer close(flushed)
+	// 		// Force a log flush, because with very short requests we
+	// 		// may not ever flush logs.
+	// 		c.flushLog(true)
+	// 	}()
+	// 	w.Header().Set(logFlushHeader, strconv.Itoa(flushes))
+	// }
 
 	// Avoid nil Write call if c.Write is never called.
 	if c.outCode != 0 {
@@ -151,11 +149,11 @@ func handleHTTP(w http.ResponseWriter, r *http.Request) {
 	if c.outBody != nil {
 		w.Write(c.outBody)
 	}
-	if logToLogservice() {
-		// Wait for the last flush to complete before returning,
-		// otherwise the security ticket will not be valid.
-		<-flushed
-	}
+	// if logToLogservice() {
+	// 	// Wait for the last flush to complete before returning,
+	// 	// otherwise the security ticket will not be valid.
+	// 	<-flushed
+	// }
 }
 
 func executeRequestSafely(c *context, r *http.Request) {
@@ -216,12 +214,6 @@ type context struct {
 	outCode   int
 	outHeader http.Header
 	outBody   []byte
-
-	pendingLogs struct {
-		sync.Mutex
-		lines   []*logpb.UserAppLogLine
-		flushes int
-	}
 
 	apiURL *url.URL
 }
@@ -323,9 +315,6 @@ func BackgroundContext() netcontext.Context {
 			apiURL: apiURL(),
 		}
 		backgroundContext = toContext(c)
-
-		// TODO(dsymonds): Wire up the shutdown handler to do a final flush.
-		go c.logFlusher(make(chan int))
 	})
 
 	return backgroundContext
@@ -557,19 +546,19 @@ func (c *context) Request() *http.Request {
 	return c.req
 }
 
-func (c *context) addLogLine(ll *logpb.UserAppLogLine) {
-	// Truncate long log lines.
-	// TODO(dsymonds): Check if this is still necessary.
-	const lim = 8 << 10
-	if len(*ll.Message) > lim {
-		suffix := fmt.Sprintf("...(length %d)", len(*ll.Message))
-		ll.Message = proto.String((*ll.Message)[:lim-len(suffix)] + suffix)
-	}
+// func (c *context) addLogLine(ll *logpb.UserAppLogLine) {
+// 	// Truncate long log lines.
+// 	// TODO(dsymonds): Check if this is still necessary.
+// 	const lim = 8 << 10
+// 	if len(*ll.Message) > lim {
+// 		suffix := fmt.Sprintf("...(length %d)", len(*ll.Message))
+// 		ll.Message = proto.String((*ll.Message)[:lim-len(suffix)] + suffix)
+// 	}
 
-	c.pendingLogs.Lock()
-	c.pendingLogs.lines = append(c.pendingLogs.lines, ll)
-	c.pendingLogs.Unlock()
-}
+// 	c.pendingLogs.Lock()
+// 	c.pendingLogs.lines = append(c.pendingLogs.lines, ll)
+// 	c.pendingLogs.Unlock()
+// }
 
 var logLevelName = map[int64]string{
 	0: "DEBUG",
@@ -583,108 +572,113 @@ func logf(c *context, level int64, format string, args ...interface{}) {
 	if c == nil {
 		panic("not an App Engine context")
 	}
-	s := fmt.Sprintf(format, args...)
-	s = strings.TrimRight(s, "\n") // Remove any trailing newline characters.
-	if logToLogservice() {
-		c.addLogLine(&logpb.UserAppLogLine{
-			TimestampUsec: proto.Int64(time.Now().UnixNano() / 1e3),
-			Level:         &level,
-			Message:       &s,
-		})
-	}
-	// Log to stdout if not deployed
 	if !IsSecondGen() {
-		log.Print(logLevelName[level] + ": " + s)
+		s := strings.TrimRight(fmt.Sprintf(format, args...), "\n")
+		logPrint(logLevelName[level] + ": " + s + "\n")
+		return
 	}
+	var msg string
+	if strings.HasPrefix(format, "{") {
+		// Assume the message is already structured; leave exactly as-is.
+		msg = fmt.Sprintf(format, args...)
+		if !strings.HasSuffix(msg, "\n") {
+			msg += "\n"
+		}
+	} else {
+		// Structure the message to preserve the log levels.
+		s := fmt.Sprintf(format, args...)
+		msg = fmt.Sprintf(`{"message": %q, "severity": %q}`+"\n", s, logLevelName[level])
+	}
+	logPrint(msg)
 }
 
-// flushLog attempts to flush any pending logs to the appserver.
-// It should not be called concurrently.
-func (c *context) flushLog(force bool) (flushed bool) {
-	c.pendingLogs.Lock()
-	// Grab up to 30 MB. We can get away with up to 32 MB, but let's be cautious.
-	n, rem := 0, 30<<20
-	for ; n < len(c.pendingLogs.lines); n++ {
-		ll := c.pendingLogs.lines[n]
-		// Each log line will require about 3 bytes of overhead.
-		nb := proto.Size(ll) + 3
-		if nb > rem {
-			break
-		}
-		rem -= nb
-	}
-	lines := c.pendingLogs.lines[:n]
-	c.pendingLogs.lines = c.pendingLogs.lines[n:]
-	c.pendingLogs.Unlock()
+// // flushLog attempts to flush any pending logs to the appserver.
+// // It should not be called concurrently.
+// func (c *context) flushLog(force bool) (flushed bool) {
+// 	c.pendingLogs.Lock()
+// 	// Grab up to 30 MB. We can get away with up to 32 MB, but let's be cautious.
+// 	n, rem := 0, 30<<20
+// 	for ; n < len(c.pendingLogs.lines); n++ {
+// 		ll := c.pendingLogs.lines[n]
+// 		// Each log line will require about 3 bytes of overhead.
+// 		nb := proto.Size(ll) + 3
+// 		if nb > rem {
+// 			break
+// 		}
+// 		rem -= nb
+// 	}
+// 	lines := c.pendingLogs.lines[:n]
+// 	c.pendingLogs.lines = c.pendingLogs.lines[n:]
+// 	c.pendingLogs.Unlock()
 
-	if len(lines) == 0 && !force {
-		// Nothing to flush.
-		return false
-	}
+// 	if len(lines) == 0 && !force {
+// 		// Nothing to flush.
+// 		return false
+// 	}
 
-	rescueLogs := false
-	defer func() {
-		if rescueLogs {
-			c.pendingLogs.Lock()
-			c.pendingLogs.lines = append(lines, c.pendingLogs.lines...)
-			c.pendingLogs.Unlock()
-		}
-	}()
+// 	rescueLogs := false
+// 	defer func() {
+// 		if rescueLogs {
+// 			c.pendingLogs.Lock()
+// 			c.pendingLogs.lines = append(lines, c.pendingLogs.lines...)
+// 			c.pendingLogs.Unlock()
+// 		}
+// 	}()
 
-	buf, err := proto.Marshal(&logpb.UserAppLogGroup{
-		LogLine: lines,
-	})
-	if err != nil {
-		log.Printf("internal.flushLog: marshaling UserAppLogGroup: %v", err)
-		rescueLogs = true
-		return false
-	}
+// 	buf, err := proto.Marshal(&logpb.UserAppLogGroup{
+// 		LogLine: lines,
+// 	})
+// 	if err != nil {
+// 		log.Printf("internal.flushLog: marshaling UserAppLogGroup: %v", err)
+// 		rescueLogs = true
+// 		return false
+// 	}
 
-	req := &logpb.FlushRequest{
-		Logs: buf,
-	}
-	res := &basepb.VoidProto{}
-	c.pendingLogs.Lock()
-	c.pendingLogs.flushes++
-	c.pendingLogs.Unlock()
-	if err := Call(toContext(c), "logservice", "Flush", req, res); err != nil {
-		log.Printf("internal.flushLog: Flush RPC: %v", err)
-		rescueLogs = true
-		return false
-	}
-	return true
-}
+// 	req := &logpb.FlushRequest{
+// 		Logs: buf,
+// 	}
+// 	res := &basepb.VoidProto{}
+// 	c.pendingLogs.Lock()
+// 	c.pendingLogs.flushes++
+// 	c.pendingLogs.Unlock()
+// 	if err := Call(toContext(c), "logservice", "Flush", req, res); err != nil {
+// 		log.Printf("internal.flushLog: Flush RPC: %v", err)
+// 		rescueLogs = true
+// 		return false
+// 	}
+// 	return true
+// }
 
-const (
-	// Log flushing parameters.
-	flushInterval      = 1 * time.Second
-	forceFlushInterval = 60 * time.Second
-)
+// const (
+// 	// Log flushing parameters.
+// 	flushInterval      = 1 * time.Second
+// 	forceFlushInterval = 60 * time.Second
+// )
 
-func (c *context) logFlusher(stop <-chan int) {
-	lastFlush := time.Now()
-	tick := time.NewTicker(flushInterval)
-	for {
-		select {
-		case <-stop:
-			// Request finished.
-			tick.Stop()
-			return
-		case <-tick.C:
-			force := time.Now().Sub(lastFlush) > forceFlushInterval
-			if c.flushLog(force) {
-				lastFlush = time.Now()
-			}
-		}
-	}
-}
+// func (c *context) logFlusher(stop <-chan int) {
+// 	lastFlush := time.Now()
+// 	tick := time.NewTicker(flushInterval)
+// 	for {
+// 		select {
+// 		case <-stop:
+// 			// Request finished.
+// 			tick.Stop()
+// 			return
+// 		case <-tick.C:
+// 			force := time.Now().Sub(lastFlush) > forceFlushInterval
+// 			if c.flushLog(force) {
+// 				lastFlush = time.Now()
+// 			}
+// 		}
+// 	}
+// }
 
 func ContextForTesting(req *http.Request) netcontext.Context {
 	return toContext(&context{req: req})
 }
 
-func logToLogservice() bool {
-	// TODO: replace logservice with json structured logs to $LOG_DIR/app.log.json
-	// where $LOG_DIR is /var/log in prod and some tmpdir in dev
-	return os.Getenv("LOG_TO_LOGSERVICE") != "0"
-}
+// func logToLogservice() bool {
+// 	// TODO: replace logservice with json structured logs to $LOG_DIR/app.log.json
+// 	// where $LOG_DIR is /var/log in prod and some tmpdir in dev
+// 	return os.Getenv("LOG_TO_LOGSERVICE") != "0"
+// }
