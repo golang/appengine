@@ -8,6 +8,7 @@ import (
 	"bufio"
 	"bytes"
 	netcontext "context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -438,6 +439,7 @@ func TestLogf(t *testing.T) {
 		format   string
 		args     []interface{}
 		want     string
+		wantJSON bool
 	}{
 		{
 			name:   "local-debug",
@@ -487,6 +489,7 @@ func TestLogf(t *testing.T) {
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
 			want:     `{"message": "my abc 1", "severity": "DEBUG"}` + "\n",
+			wantJSON: true,
 		},
 		{
 			name:     "deployed-plain-info",
@@ -495,6 +498,7 @@ func TestLogf(t *testing.T) {
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
 			want:     `{"message": "my abc 1", "severity": "INFO"}` + "\n",
+			wantJSON: true,
 		},
 		{
 			name:     "deployed-plain-warning",
@@ -503,6 +507,7 @@ func TestLogf(t *testing.T) {
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
 			want:     `{"message": "my abc 1", "severity": "WARNING"}` + "\n",
+			wantJSON: true,
 		},
 		{
 			name:     "deployed-plain-error",
@@ -511,6 +516,7 @@ func TestLogf(t *testing.T) {
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
 			want:     `{"message": "my abc 1", "severity": "ERROR"}` + "\n",
+			wantJSON: true,
 		},
 		{
 			name:     "deployed-plain-critical",
@@ -519,6 +525,7 @@ func TestLogf(t *testing.T) {
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
 			want:     `{"message": "my abc 1", "severity": "CRITICAL"}` + "\n",
+			wantJSON: true,
 		},
 		{
 			name:     "deployed-plain-multiline",
@@ -526,6 +533,16 @@ func TestLogf(t *testing.T) {
 			level:    0,
 			format:   "my \n multiline\n\n",
 			want:     "{\"message\": \"my \\n multiline\\n\\n\", \"severity\": \"DEBUG\"}\n",
+			wantJSON: true,
+		},
+		{
+			name:     "deployed-plain-megaquote",
+			deployed: true,
+			level:    0,
+			format:   `my "megaquote" %q`,
+			args:     []interface{}{`internal "quote"`},
+			want:     "{\"message\": \"my \\\"megaquote\\\" \\\"internal \\\\\\\"quote\\\\\\\"\\\"\", \"severity\": \"DEBUG\"}\n",
+			wantJSON: true,
 		},
 		{
 			name:     "deployed-structured-debug",
@@ -594,6 +611,22 @@ func TestLogf(t *testing.T) {
 
 			if got != tc.want {
 				t.Errorf("incorrect log got=%q want=%q", got, tc.want)
+			}
+
+			if tc.wantJSON {
+				var e struct {
+					Message  string `json:"message"`
+					Severity string `json:"severity"`
+				}
+				if err := json.Unmarshal([]byte(got), &e); err != nil {
+					t.Fatalf("invalid JSON: %v", err)
+				}
+				if gotMsg, wantMsg := e.Message, fmt.Sprintf(tc.format, tc.args...); gotMsg != wantMsg {
+					t.Errorf("JSON-encoded message incorrect got=%q want=%q", gotMsg, wantMsg)
+				}
+				if gotSev, wantSev := e.Severity, logLevelName[tc.level]; gotSev != wantSev {
+					t.Errorf("JSON-encoded severity incorrect got=%q want=%q", gotSev, wantSev)
+				}
 			}
 		})
 	}
