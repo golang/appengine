@@ -9,8 +9,8 @@ import (
 	netcontext "context"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -67,7 +67,8 @@ var (
 	backgroundContextOnce sync.Once
 	backgroundContext     netcontext.Context
 
-	logPrint = log.Print // For test hooks.
+	logStream io.Writer        = os.Stdout // For test hooks.
+	timeNow   func() time.Time = time.Now  // For test hooks.
 )
 
 func apiURL() *url.URL {
@@ -528,7 +529,9 @@ func logf(c *context, level int64, format string, args ...interface{}) {
 	}
 	if !IsSecondGen() {
 		s := strings.TrimRight(fmt.Sprintf(format, args...), "\n")
-		logPrint(logLevelName[level] + ": " + s + "\n")
+		now := timeNow().UTC()
+		timestamp := fmt.Sprintf("%d/%02d/%02d %02d:%02d:%02d", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second())
+		fmt.Fprintf(logStream, timestamp+" "+logLevelName[level]+": "+s+"\n")
 		return
 	}
 	var msg string
@@ -541,9 +544,9 @@ func logf(c *context, level int64, format string, args ...interface{}) {
 	} else {
 		// Structure the message to preserve the log levels.
 		s := fmt.Sprintf(format, args...)
-		msg = fmt.Sprintf(`{"message": %q, "severity": %q}`+"\n", s, string(logLevelName[level][0]))
+		msg = fmt.Sprintf(`{"message": %q, "severity": %q}`+"\n", s, logLevelName[level])
 	}
-	logPrint(msg)
+	fmt.Fprintf(logStream, msg)
 }
 
 func ContextForTesting(req *http.Request) netcontext.Context {

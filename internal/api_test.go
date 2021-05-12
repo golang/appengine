@@ -446,41 +446,41 @@ func TestLogf(t *testing.T) {
 			level:  0,
 			format: "my %s %d",
 			args:   []interface{}{"abc", 1},
-			want:   "DEBUG: my abc 1\n",
+			want:   "2021/05/12 16:09:52 DEBUG: my abc 1\n",
 		},
 		{
 			name:   "local-info",
 			level:  1,
 			format: "my %s %d",
 			args:   []interface{}{"abc", 1},
-			want:   "INFO: my abc 1\n",
+			want:   "2021/05/12 16:09:52 INFO: my abc 1\n",
 		},
 		{
 			name:   "local-warning",
 			level:  2,
 			format: "my %s %d",
 			args:   []interface{}{"abc", 1},
-			want:   "WARNING: my abc 1\n",
+			want:   "2021/05/12 16:09:52 WARNING: my abc 1\n",
 		},
 		{
 			name:   "local-error",
 			level:  3,
 			format: "my %s %d",
 			args:   []interface{}{"abc", 1},
-			want:   "ERROR: my abc 1\n",
+			want:   "2021/05/12 16:09:52 ERROR: my abc 1\n",
 		},
 		{
 			name:   "local-critical",
 			level:  4,
 			format: "my %s %d",
 			args:   []interface{}{"abc", 1},
-			want:   "CRITICAL: my abc 1\n",
+			want:   "2021/05/12 16:09:52 CRITICAL: my abc 1\n",
 		},
 		{
 			name:   "local-multiline",
 			level:  0,
 			format: "my \n multiline\n\n",
-			want:   "DEBUG: my \n multiline\n",
+			want:   "2021/05/12 16:09:52 DEBUG: my \n multiline\n",
 		},
 		{
 			name:     "deployed-plain-debug",
@@ -488,7 +488,7 @@ func TestLogf(t *testing.T) {
 			level:    0,
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
-			want:     `{"message": "my abc 1", "severity": "D"}` + "\n",
+			want:     `{"message": "my abc 1", "severity": "DEBUG"}` + "\n",
 			wantJSON: true,
 		},
 		{
@@ -497,7 +497,7 @@ func TestLogf(t *testing.T) {
 			level:    1,
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
-			want:     `{"message": "my abc 1", "severity": "I"}` + "\n",
+			want:     `{"message": "my abc 1", "severity": "INFO"}` + "\n",
 			wantJSON: true,
 		},
 		{
@@ -506,7 +506,7 @@ func TestLogf(t *testing.T) {
 			level:    2,
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
-			want:     `{"message": "my abc 1", "severity": "W"}` + "\n",
+			want:     `{"message": "my abc 1", "severity": "WARNING"}` + "\n",
 			wantJSON: true,
 		},
 		{
@@ -515,7 +515,7 @@ func TestLogf(t *testing.T) {
 			level:    3,
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
-			want:     `{"message": "my abc 1", "severity": "E"}` + "\n",
+			want:     `{"message": "my abc 1", "severity": "ERROR"}` + "\n",
 			wantJSON: true,
 		},
 		{
@@ -524,7 +524,7 @@ func TestLogf(t *testing.T) {
 			level:    4,
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
-			want:     `{"message": "my abc 1", "severity": "C"}` + "\n",
+			want:     `{"message": "my abc 1", "severity": "CRITICAL"}` + "\n",
 			wantJSON: true,
 		},
 		{
@@ -532,7 +532,7 @@ func TestLogf(t *testing.T) {
 			deployed: true,
 			level:    0,
 			format:   "my \n multiline\n\n",
-			want:     "{\"message\": \"my \\n multiline\\n\\n\", \"severity\": \"D\"}\n",
+			want:     "{\"message\": \"my \\n multiline\\n\\n\", \"severity\": \"DEBUG\"}\n",
 			wantJSON: true,
 		},
 		{
@@ -541,7 +541,7 @@ func TestLogf(t *testing.T) {
 			level:    0,
 			format:   `my "megaquote" %q`,
 			args:     []interface{}{`internal "quote"`},
-			want:     "{\"message\": \"my \\\"megaquote\\\" \\\"internal \\\\\\\"quote\\\\\\\"\\\"\", \"severity\": \"D\"}\n",
+			want:     "{\"message\": \"my \\\"megaquote\\\" \\\"internal \\\\\\\"quote\\\\\\\"\\\"\", \"severity\": \"DEBUG\"}\n",
 			wantJSON: true,
 		},
 		{
@@ -603,14 +603,15 @@ func TestLogf(t *testing.T) {
 				env = "standard"
 			}
 			defer setEnvVar(t, "GAE_ENV", env)()
-			var got string
-			defer overrideLogPrint(t, &got)()
+			var buf bytes.Buffer
+			defer overrideLogStream(t, &buf)()
+			defer overrideTimeNow(t, time.Date(2021, 5, 12, 16, 9, 52, 0, time.UTC))()
 			ctx := fromContext(BackgroundContext())
 
 			logf(ctx, tc.level, tc.format, tc.args...)
 
-			if got != tc.want {
-				t.Errorf("incorrect log got=%q want=%q", got, tc.want)
+			if got, want := buf.String(), tc.want; got != want {
+				t.Errorf("incorrect log got=%q want=%q", got, want)
 			}
 
 			if tc.wantJSON {
@@ -618,13 +619,13 @@ func TestLogf(t *testing.T) {
 					Message  string `json:"message"`
 					Severity string `json:"severity"`
 				}
-				if err := json.Unmarshal([]byte(got), &e); err != nil {
+				if err := json.Unmarshal(buf.Bytes(), &e); err != nil {
 					t.Fatalf("invalid JSON: %v", err)
 				}
 				if gotMsg, wantMsg := e.Message, fmt.Sprintf(tc.format, tc.args...); gotMsg != wantMsg {
 					t.Errorf("JSON-encoded message incorrect got=%q want=%q", gotMsg, wantMsg)
 				}
-				if gotSev, wantSev := e.Severity, string(logLevelName[tc.level][0]); gotSev != wantSev {
+				if gotSev, wantSev := e.Severity, logLevelName[tc.level]; gotSev != wantSev {
 					t.Errorf("JSON-encoded severity incorrect got=%q want=%q", gotSev, wantSev)
 				}
 			}
@@ -650,18 +651,16 @@ func setEnvVar(t *testing.T, key, value string) func() {
 	}
 }
 
-func overrideLogPrint(t *testing.T, output *string) func() {
+func overrideLogStream(t *testing.T, writer io.Writer) func() {
 	t.Helper()
-	old := logPrint
-	logPrint = func(args ...interface{}) {
-		if len(args) != 1 {
-			t.Fatal("expected exactly 1 arg")
-		}
-		s, ok := args[0].(string)
-		if !ok {
-			t.Fatalf("expected string, got %T", args[0])
-		}
-		*output = s
-	}
-	return func() { logPrint = old }
+	old := logStream
+	logStream = writer
+	return func() { logStream = old }
+}
+
+func overrideTimeNow(t *testing.T, now time.Time) func() {
+	t.Helper()
+	old := timeNow
+	timeNow = func() time.Time { return now }
+	return func() { timeNow = old }
 }
