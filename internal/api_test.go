@@ -488,7 +488,7 @@ func TestLogf(t *testing.T) {
 			level:    0,
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
-			want:     `{"message": "my abc 1", "severity": "DEBUG"}` + "\n",
+			want:     `{"message": "my abc 1", "severity": "D"}` + "\n",
 			wantJSON: true,
 		},
 		{
@@ -497,7 +497,7 @@ func TestLogf(t *testing.T) {
 			level:    1,
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
-			want:     `{"message": "my abc 1", "severity": "INFO"}` + "\n",
+			want:     `{"message": "my abc 1", "severity": "I"}` + "\n",
 			wantJSON: true,
 		},
 		{
@@ -506,7 +506,7 @@ func TestLogf(t *testing.T) {
 			level:    2,
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
-			want:     `{"message": "my abc 1", "severity": "WARNING"}` + "\n",
+			want:     `{"message": "my abc 1", "severity": "W"}` + "\n",
 			wantJSON: true,
 		},
 		{
@@ -515,7 +515,7 @@ func TestLogf(t *testing.T) {
 			level:    3,
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
-			want:     `{"message": "my abc 1", "severity": "ERROR"}` + "\n",
+			want:     `{"message": "my abc 1", "severity": "E"}` + "\n",
 			wantJSON: true,
 		},
 		{
@@ -524,7 +524,7 @@ func TestLogf(t *testing.T) {
 			level:    4,
 			format:   "my %s %d",
 			args:     []interface{}{"abc", 1},
-			want:     `{"message": "my abc 1", "severity": "CRITICAL"}` + "\n",
+			want:     `{"message": "my abc 1", "severity": "C"}` + "\n",
 			wantJSON: true,
 		},
 		{
@@ -532,7 +532,7 @@ func TestLogf(t *testing.T) {
 			deployed: true,
 			level:    0,
 			format:   "my \n multiline\n\n",
-			want:     "{\"message\": \"my \\n multiline\\n\\n\", \"severity\": \"DEBUG\"}\n",
+			want:     "{\"message\": \"my \\n multiline\\n\\n\", \"severity\": \"D\"}\n",
 			wantJSON: true,
 		},
 		{
@@ -541,7 +541,7 @@ func TestLogf(t *testing.T) {
 			level:    0,
 			format:   `my "megaquote" %q`,
 			args:     []interface{}{`internal "quote"`},
-			want:     "{\"message\": \"my \\\"megaquote\\\" \\\"internal \\\\\\\"quote\\\\\\\"\\\"\", \"severity\": \"DEBUG\"}\n",
+			want:     "{\"message\": \"my \\\"megaquote\\\" \\\"internal \\\\\\\"quote\\\\\\\"\\\"\", \"severity\": \"D\"}\n",
 			wantJSON: true,
 		},
 		{
@@ -624,7 +624,7 @@ func TestLogf(t *testing.T) {
 				if gotMsg, wantMsg := e.Message, fmt.Sprintf(tc.format, tc.args...); gotMsg != wantMsg {
 					t.Errorf("JSON-encoded message incorrect got=%q want=%q", gotMsg, wantMsg)
 				}
-				if gotSev, wantSev := e.Severity, logLevelName[tc.level]; gotSev != wantSev {
+				if gotSev, wantSev := e.Severity, string(logLevelName[tc.level][0]); gotSev != wantSev {
 					t.Errorf("JSON-encoded severity incorrect got=%q want=%q", gotSev, wantSev)
 				}
 			}

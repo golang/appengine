@@ -541,7 +541,7 @@ func logf(c *context, level int64, format string, args ...interface{}) {
 	} else {
 		// Structure the message to preserve the log levels.
 		s := fmt.Sprintf(format, args...)
-		msg = fmt.Sprintf(`{"message": %q, "severity": %q}`+"\n", s, logLevelName[level])
+		msg = fmt.Sprintf(`{"message": %q, "severity": %q}`+"\n", s, string(logLevelName[level][0]))
 	}
 	logPrint(msg)
 }
