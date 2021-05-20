@@ -139,6 +139,10 @@ func partitionlessAppID() string {
 	if appID := os.Getenv("GAE_LONG_APP_ID"); appID != "" {
 		return appID
 	}
+	return projectID()
+}
+
+func projectID() string {
 	if project := os.Getenv("GOOGLE_CLOUD_PROJECT"); project != "" {
 		return project
 	}
