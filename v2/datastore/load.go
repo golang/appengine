@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"google.golang.org/appengine"
-	pb "google.golang.org/appengine/internal/datastore"
+	"google.golang.org/appengine/v2"
+	pb "google.golang.org/appengine/v2/internal/datastore"
 )
 
 var (

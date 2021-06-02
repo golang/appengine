@@ -4099,7 +4099,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google.golang.org/appengine/internal/datastore/datastore_v3.proto", fileDescriptor_datastore_v3_83b17b80c34f6179)
+	proto.RegisterFile("google.golang.org/appengine/v2/internal/datastore/datastore_v3.proto", fileDescriptor_datastore_v3_83b17b80c34f6179)
 }
 
 var fileDescriptor_datastore_v3_83b17b80c34f6179 = []byte{

@@ -287,7 +287,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google.golang.org/appengine/internal/base/api_base.proto", fileDescriptor_api_base_9d49f8792e0c1140)
+	proto.RegisterFile("google.golang.org/appengine/v2/internal/base/api_base.proto", fileDescriptor_api_base_9d49f8792e0c1140)
 }
 
 var fileDescriptor_api_base_9d49f8792e0c1140 = []byte{

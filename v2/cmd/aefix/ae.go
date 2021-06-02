@@ -36,7 +36,7 @@ var logMethod = map[string]bool{
 	"Criticalf": true,
 }
 
-// mapPackage turns "appengine" into "google.golang.org/appengine", etc.
+// mapPackage turns "appengine" into "google.golang.org/appengine/v2", etc.
 func mapPackage(s string) string {
 	if stutterPackage {
 		s += "/" + path.Base(s)

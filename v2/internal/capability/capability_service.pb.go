@@ -172,7 +172,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google.golang.org/appengine/internal/capability/capability_service.proto", fileDescriptor_capability_service_030277ff00db7e72)
+	proto.RegisterFile("google.golang.org/appengine/v2/internal/capability/capability_service.proto", fileDescriptor_capability_service_030277ff00db7e72)
 }
 
 var fileDescriptor_capability_service_030277ff00db7e72 = []byte{

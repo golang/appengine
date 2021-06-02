@@ -14,7 +14,7 @@ taskqueue operation is to add a single POST task, NewPOSTTask makes it easy.
 	})
 	taskqueue.Add(c, t, "") // add t to the default queue
 */
-package taskqueue // import "google.golang.org/appengine/taskqueue"
+package taskqueue // import "google.golang.org/appengine/v2/taskqueue"
 
 import (
 	"context"
@@ -27,10 +27,10 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/internal"
-	dspb "google.golang.org/appengine/internal/datastore"
-	pb "google.golang.org/appengine/internal/taskqueue"
+	"google.golang.org/appengine/v2"
+	"google.golang.org/appengine/v2/internal"
+	dspb "google.golang.org/appengine/v2/internal/datastore"
+	pb "google.golang.org/appengine/v2/internal/taskqueue"
 )
 
 var (

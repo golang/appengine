@@ -8,8 +8,8 @@ import (
 	"context"
 	"errors"
 
-	"google.golang.org/appengine/internal"
-	pb "google.golang.org/appengine/internal/datastore"
+	"google.golang.org/appengine/v2/internal"
+	pb "google.golang.org/appengine/v2/internal/datastore"
 )
 
 func init() {

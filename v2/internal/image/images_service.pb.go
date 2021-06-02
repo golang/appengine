@@ -1275,7 +1275,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google.golang.org/appengine/internal/image/images_service.proto", fileDescriptor_images_service_42a9d451721edce4)
+	proto.RegisterFile("google.golang.org/appengine/v2/internal/image/images_service.proto", fileDescriptor_images_service_42a9d451721edce4)
 }
 
 var fileDescriptor_images_service_42a9d451721edce4 = []byte{

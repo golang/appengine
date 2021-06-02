@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	proto "github.com/golang/protobuf/proto"
-	pb "google.golang.org/appengine/internal/datastore"
+	pb "google.golang.org/appengine/v2/internal/datastore"
 )
 
 type Simple struct {

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"regexp"
 
-	"google.golang.org/appengine/internal"
+	"google.golang.org/appengine/v2/internal"
 )
 
 // Namespace returns a replacement context that operates within the given namespace.

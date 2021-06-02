@@ -317,7 +317,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google.golang.org/appengine/internal/mail/mail_service.proto", fileDescriptor_mail_service_78722be3c4c01d17)
+	proto.RegisterFile("google.golang.org/appengine/v2/internal/mail/mail_service.proto", fileDescriptor_mail_service_78722be3c4c01d17)
 }
 
 var fileDescriptor_mail_service_78722be3c4c01d17 = []byte{

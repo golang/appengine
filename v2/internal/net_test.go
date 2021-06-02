@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	basepb "google.golang.org/appengine/internal/base"
+	basepb "google.golang.org/appengine/v2/internal/base"
 )
 
 func TestDialLimit(t *testing.T) {

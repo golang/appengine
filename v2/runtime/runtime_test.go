@@ -14,8 +14,8 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"google.golang.org/appengine/internal/aetesting"
-	pb "google.golang.org/appengine/internal/system"
+	"google.golang.org/appengine/v2/internal/aetesting"
+	pb "google.golang.org/appengine/v2/internal/system"
 )
 
 func TestRunInBackgroundSendFirst(t *testing.T) { testRunInBackground(t, true) }

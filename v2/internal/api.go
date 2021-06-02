@@ -24,7 +24,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	remotepb "google.golang.org/appengine/internal/remote_api"
+	remotepb "google.golang.org/appengine/v2/internal/remote_api"
 )
 
 const (

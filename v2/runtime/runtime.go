@@ -8,15 +8,15 @@ It also provides a way to run code in a new background context of a module.
 
 This package does not work on App Engine "flexible environment".
 */
-package runtime // import "google.golang.org/appengine/runtime"
+package runtime // import "google.golang.org/appengine/v2/runtime"
 
 import (
 	"context"
 	"net/http"
 
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/internal"
-	pb "google.golang.org/appengine/internal/system"
+	"google.golang.org/appengine/v2"
+	"google.golang.org/appengine/v2/internal"
+	pb "google.golang.org/appengine/v2/internal/system"
 )
 
 // Statistics represents the system's statistics.

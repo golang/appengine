@@ -8,8 +8,8 @@ import (
 	"context"
 	"sync"
 
-	"google.golang.org/appengine/datastore/internal/cloudkey"
-	"google.golang.org/appengine/internal"
+	"google.golang.org/appengine/v2/datastore/internal/cloudkey"
+	"google.golang.org/appengine/v2/internal"
 )
 
 var keyConversion struct {

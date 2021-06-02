@@ -330,7 +330,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google.golang.org/appengine/internal/system/system_service.proto", fileDescriptor_system_service_ccf41ec210fc59eb)
+	proto.RegisterFile("google.golang.org/appengine/v2/internal/system/system_service.proto", fileDescriptor_system_service_ccf41ec210fc59eb)
 }
 
 var fileDescriptor_system_service_ccf41ec210fc59eb = []byte{

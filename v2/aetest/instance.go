@@ -16,8 +16,8 @@ import (
 	"regexp"
 	"time"
 
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/internal"
+	"google.golang.org/appengine/v2"
+	"google.golang.org/appengine/v2/internal"
 )
 
 // Instance represents a running instance of the development API Server.
@@ -340,6 +340,6 @@ handlers:
 
 const appSource = `
 package main
-import "google.golang.org/appengine"
+import "google.golang.org/appengine/v2"
 func main() { appengine.Main() }
 `

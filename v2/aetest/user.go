@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"google.golang.org/appengine/user"
+	"google.golang.org/appengine/v2/user"
 )
 
 // Login causes the provided Request to act as though issued by the given user.

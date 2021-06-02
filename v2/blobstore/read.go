@@ -14,10 +14,10 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/internal"
+	"google.golang.org/appengine/v2"
+	"google.golang.org/appengine/v2/internal"
 
-	blobpb "google.golang.org/appengine/internal/blobstore"
+	blobpb "google.golang.org/appengine/v2/internal/blobstore"
 )
 
 // openBlob returns a reader for a blob. It always succeeds; if the blob does

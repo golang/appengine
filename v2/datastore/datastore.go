@@ -12,9 +12,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/internal"
-	pb "google.golang.org/appengine/internal/datastore"
+	"google.golang.org/appengine/v2"
+	"google.golang.org/appengine/v2/internal"
+	pb "google.golang.org/appengine/v2/internal/datastore"
 )
 
 var (

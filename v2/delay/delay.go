@@ -50,7 +50,7 @@ reserved application path "/_ah/queue/go/delay".
 This path must not be marked as "login: required" in app.yaml;
 it must be marked as "login: admin" or have no access restriction.
 */
-package delay // import "google.golang.org/appengine/delay"
+package delay // import "google.golang.org/appengine/v2/delay"
 
 import (
 	"bytes"
@@ -69,10 +69,10 @@ import (
 
 	"golang.org/x/net/context"
 
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/internal"
-	"google.golang.org/appengine/log"
-	"google.golang.org/appengine/taskqueue"
+	"google.golang.org/appengine/v2"
+	"google.golang.org/appengine/v2/internal"
+	"google.golang.org/appengine/v2/log"
+	"google.golang.org/appengine/v2/taskqueue"
 )
 
 // Function represents a function that may have a delayed invocation.
