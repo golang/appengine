@@ -11,9 +11,8 @@ including the module name.
 package module // import "google.golang.org/appengine/module"
 
 import (
-	"context"
-
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/modules"
@@ -28,8 +27,7 @@ func List(c context.Context) ([]string, error) {
 }
 
 // NumInstances returns the number of instances of the given module/version.
-// If either argument is the empty string it means the default. This only works
-// if you are using manual_scaling in your app's config file.
+// If either argument is the empty string it means the default.
 func NumInstances(c context.Context, module, version string) (int, error) {
 	req := &pb.GetNumInstancesRequest{}
 	if module != "" {

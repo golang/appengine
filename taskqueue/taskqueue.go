@@ -17,7 +17,6 @@ taskqueue operation is to add a single POST task, NewPOSTTask makes it easy.
 package taskqueue // import "google.golang.org/appengine/taskqueue"
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -26,6 +25,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"

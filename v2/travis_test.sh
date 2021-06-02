@@ -1,0 +1,6 @@
+#!/bin/bash
+set -e
+
+go version
+go test -v google.golang.org/appengine/...
+go test -v -race google.golang.org/appengine/...

@@ -5,11 +5,11 @@
 package internal
 
 import (
-	netcontext "context"
 	"errors"
 	"os"
 
 	"github.com/golang/protobuf/proto"
+	netcontext "golang.org/x/net/context"
 )
 
 var errNotAppEngineContext = errors.New("not an App Engine context")
