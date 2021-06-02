@@ -13,9 +13,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"google.golang.org/appengine/internal"
-	"google.golang.org/appengine/internal/aetesting"
-	pb "google.golang.org/appengine/internal/datastore"
+	"google.golang.org/appengine/v2/internal"
+	"google.golang.org/appengine/v2/internal/aetesting"
+	pb "google.golang.org/appengine/v2/internal/datastore"
 )
 
 var (

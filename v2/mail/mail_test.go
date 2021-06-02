@@ -9,9 +9,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"google.golang.org/appengine/internal/aetesting"
-	basepb "google.golang.org/appengine/internal/base"
-	pb "google.golang.org/appengine/internal/mail"
+	"google.golang.org/appengine/v2/internal/aetesting"
+	basepb "google.golang.org/appengine/v2/internal/base"
+	pb "google.golang.org/appengine/v2/internal/mail"
 )
 
 func TestMessageConstruction(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/appengine"
+	"google.golang.org/appengine/v2"
 )
 
 func TestValidPropertyName(t *testing.T) {

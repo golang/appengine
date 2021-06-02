@@ -13,7 +13,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	remotepb "google.golang.org/appengine/internal/remote_api"
+	remotepb "google.golang.org/appengine/v2/internal/remote_api"
 )
 
 // errorCodeMaps is a map of service name to the error code map for the service.

@@ -3,16 +3,16 @@
 // license that can be found in the LICENSE file.
 
 // Package image provides image services.
-package image // import "google.golang.org/appengine/image"
+package image // import "google.golang.org/appengine/v2/image"
 
 import (
 	"context"
 	"fmt"
 	"net/url"
 
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/internal"
-	pb "google.golang.org/appengine/internal/image"
+	"google.golang.org/appengine/v2"
+	"google.golang.org/appengine/v2/internal"
+	pb "google.golang.org/appengine/v2/internal/image"
 )
 
 type ServingURLOptions struct {

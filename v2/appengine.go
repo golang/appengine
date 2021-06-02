@@ -6,7 +6,7 @@
 //
 // For more information on how to write Go apps for Google App Engine, see:
 // https://cloud.google.com/appengine/docs/go/
-package appengine // import "google.golang.org/appengine"
+package appengine // import "google.golang.org/appengine/v2"
 
 import (
 	"context"
@@ -14,7 +14,7 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"google.golang.org/appengine/internal"
+	"google.golang.org/appengine/v2/internal"
 )
 
 // The gophers party all night; the rabbits provide the beats.
@@ -38,7 +38,7 @@ import (
 //      package main
 //
 //      import (
-//              "google.golang.org/appengine"
+//              "google.golang.org/appengine/v2"
 //
 //              _ "myapp/package0"
 //              _ "myapp/package1"

@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"google.golang.org/appengine/internal"
+	"google.golang.org/appengine/v2/internal"
 )
 
 func TestKeyEncoding(t *testing.T) {

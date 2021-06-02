@@ -6,7 +6,7 @@ package taskqueue
 import proto "github.com/golang/protobuf/proto"
 import fmt "fmt"
 import math "math"
-import datastore "google.golang.org/appengine/internal/datastore"
+import datastore "google.golang.org/appengine/v2/internal/datastore"
 
 // Reference imports to suppress errors if they are not otherwise used.
 var _ = proto.Marshal
@@ -2969,7 +2969,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google.golang.org/appengine/internal/taskqueue/taskqueue_service.proto", fileDescriptor_taskqueue_service_05300f6f4e69f490)
+	proto.RegisterFile("google.golang.org/appengine/v2/internal/taskqueue/taskqueue_service.proto", fileDescriptor_taskqueue_service_05300f6f4e69f490)
 }
 
 var fileDescriptor_taskqueue_service_05300f6f4e69f490 = []byte{

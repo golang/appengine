@@ -319,7 +319,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google.golang.org/appengine/internal/remote_api/remote_api.proto", fileDescriptor_remote_api_1978114ec33a273d)
+	proto.RegisterFile("google.golang.org/appengine/v2/internal/remote_api/remote_api.proto", fileDescriptor_remote_api_1978114ec33a273d)
 }
 
 var fileDescriptor_remote_api_1978114ec33a273d = []byte{

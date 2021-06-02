@@ -560,7 +560,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google.golang.org/appengine/internal/app_identity/app_identity_service.proto", fileDescriptor_app_identity_service_08a6e3f74b04cfa4)
+	proto.RegisterFile("google.golang.org/appengine/v2/internal/app_identity/app_identity_service.proto", fileDescriptor_app_identity_service_08a6e3f74b04cfa4)
 }
 
 var fileDescriptor_app_identity_service_08a6e3f74b04cfa4 = []byte{

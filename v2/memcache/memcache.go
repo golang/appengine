@@ -26,7 +26,7 @@
 //	if err := memcache.Set(c, item1); err != nil {
 //		return err
 //	}
-package memcache // import "google.golang.org/appengine/memcache"
+package memcache // import "google.golang.org/appengine/v2/memcache"
 
 import (
 	"bytes"
@@ -38,9 +38,9 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/internal"
-	pb "google.golang.org/appengine/internal/memcache"
+	"google.golang.org/appengine/v2"
+	"google.golang.org/appengine/v2/internal"
+	pb "google.golang.org/appengine/v2/internal/memcache"
 )
 
 var (

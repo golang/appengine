@@ -1467,7 +1467,7 @@ func init() {
 }
 
 func init() {
-	proto.RegisterFile("google.golang.org/appengine/internal/memcache/memcache_service.proto", fileDescriptor_memcache_service_e327a14e42649a60)
+	proto.RegisterFile("google.golang.org/appengine/v2/internal/memcache/memcache_service.proto", fileDescriptor_memcache_service_e327a14e42649a60)
 }
 
 var fileDescriptor_memcache_service_e327a14e42649a60 = []byte{

@@ -13,15 +13,15 @@ Example:
 		// show user a different page
 	}
 */
-package capability // import "google.golang.org/appengine/capability"
+package capability // import "google.golang.org/appengine/v2/capability"
 
 import (
 	"context"
 
-	"google.golang.org/appengine/internal"
-	"google.golang.org/appengine/log"
+	"google.golang.org/appengine/v2/internal"
+	"google.golang.org/appengine/v2/log"
 
-	pb "google.golang.org/appengine/internal/capability"
+	pb "google.golang.org/appengine/v2/internal/capability"
 )
 
 // Enabled returns whether an API's capabilities are enabled.
