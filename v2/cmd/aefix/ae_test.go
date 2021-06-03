@@ -22,8 +22,8 @@ import (
 	"net/http"
 	"time"
 
-	"appengine"
-	"appengine/datastore"
+	"appengine/v2"
+	"appengine/v2/datastore"
 )
 
 func f(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +64,7 @@ func f(w http.ResponseWriter, r *http.Request) {
 		In: `package foo
 
 import (
-	"appengine"
+	"appengine/v2"
 )
 
 func LogSomething(c2 appengine.Context) {
@@ -91,8 +91,8 @@ func LogSomething(c2 context.Context) {
 		In: `package foo
 
 import (
-	"appengine"
-	"appengine/taskqueue"
+	"appengine/v2"
+	"appengine/v2/taskqueue"
 )
 
 func f(ctx appengine.Context) {
@@ -120,7 +120,7 @@ func f(ctx context.Context) {
 		In: `package foo
 
 import (
-	"appengine"
+	"appengine/v2"
 	"io"
 )
 
