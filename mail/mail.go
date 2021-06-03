@@ -20,10 +20,10 @@ Example:
 package mail // import "google.golang.org/appengine/mail"
 
 import (
-	"context"
 	"net/mail"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
 	bpb "google.golang.org/appengine/internal/base"

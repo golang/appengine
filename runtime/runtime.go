@@ -11,8 +11,9 @@ This package does not work on App Engine "flexible environment".
 package runtime // import "google.golang.org/appengine/runtime"
 
 import (
-	"context"
 	"net/http"
+
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"

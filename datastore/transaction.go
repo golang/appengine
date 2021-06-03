@@ -5,8 +5,9 @@
 package datastore
 
 import (
-	"context"
 	"errors"
+
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/datastore"

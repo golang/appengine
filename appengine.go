@@ -9,10 +9,10 @@
 package appengine // import "google.golang.org/appengine"
 
 import (
-	"context"
 	"net/http"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
 )
@@ -132,11 +132,4 @@ func WithAPICallFunc(ctx context.Context, f APICallFunc) context.Context {
 // with WithAPICallFunc.
 func APICall(ctx context.Context, service, method string, in, out proto.Message) error {
 	return internal.Call(ctx, service, method, in, out)
-}
-
-// BackgroundContext returns a context not associated with a request.
-// This should only be used when not servicing a request.
-// This only works in App Engine "flexible environment".
-func BackgroundContext() context.Context {
-	return internal.BackgroundContext()
 }

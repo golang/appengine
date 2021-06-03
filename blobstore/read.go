@@ -5,7 +5,6 @@
 package blobstore
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +12,7 @@ import (
 	"sync"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"

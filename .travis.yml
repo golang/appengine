@@ -12,9 +12,3 @@ matrix:
   include:
     - go: 1.11.x
       env: GO111MODULE=on
-    - go: 1.12.x
-      env: GO111MODULE=on
-    - go: 1.13.x
-    - go: 1.14.x
-    - go: 1.15.x
-    - go: 1.16.x

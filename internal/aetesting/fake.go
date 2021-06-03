@@ -7,13 +7,13 @@
 package aetesting
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"reflect"
 	"testing"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
 )

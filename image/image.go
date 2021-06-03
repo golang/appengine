@@ -6,9 +6,10 @@
 package image // import "google.golang.org/appengine/image"
 
 import (
-	"context"
 	"fmt"
 	"net/url"
+
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"

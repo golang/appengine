@@ -5,7 +5,6 @@
 package runtime
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +12,7 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal/aetesting"
 	pb "google.golang.org/appengine/internal/system"

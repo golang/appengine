@@ -30,13 +30,13 @@ package memcache // import "google.golang.org/appengine/memcache"
 
 import (
 	"bytes"
-	"context"
 	"encoding/gob"
 	"encoding/json"
 	"errors"
 	"time"
 
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
