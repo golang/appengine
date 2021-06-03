@@ -1,4 +1,4 @@
-module google.golang.org/appengine/v2
+module google.golang.org/appengine
 
 go 1.11
 
