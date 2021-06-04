@@ -136,7 +136,7 @@ func aeFn(f *ast.File) bool {
 				// c.Errorf(...)
 				//   should become
 				// log.Errorf(c, ...)
-				addImport(f, mapPackage("appengine/log"))
+				addImport(f, mapPackage("appengine/v2/log"))
 				sel.X = &ast.Ident{ // ast.NewIdent doesn't preserve the position.
 					NamePos: sel.X.Pos(),
 					Name:    "log",
