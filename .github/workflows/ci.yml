@@ -22,8 +22,19 @@ jobs:
     - name: Install
       env:
         GO111MODULE: on
-      shell: bash
-      run: ./travis_install.sh
+      run: |
+        go get .
+        mkdir /tmp/sdk
+        curl -o /tmp/sdk.zip "https://storage.googleapis.com/appengine-sdks/featured/go_appengine_sdk_linux_amd64-1.9.68.zip"
+        unzip -q /tmp/sdk.zip -d /tmp/sdk
+        # NOTE: Set the following env vars in the test script:
+        # export PATH="$PATH:/tmp/sdk/go_appengine"
+        # export APPENGINE_DEV_APPSERVER=/tmp/sdk/go_appengine/dev_appserver.py
     - name: Test
       shell: bash
-      run: ./travis_test.sh
+      run: |
+        go version
+        export PATH="$PATH:/tmp/sdk/go_appengine"
+        export APPENGINE_DEV_APPSERVER=/tmp/sdk/go_appengine/dev_appserver.py
+        go test -v google.golang.org/appengine/...
+        go test -v -race google.golang.org/appengine/...
