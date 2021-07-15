@@ -1,0 +1,30 @@
+name: ci
+
+on:
+  push:
+    branches: [ master, qa ]
+  pull_request:
+    branches: [ master, qa ]
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: [ '1.11.x']
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout
+    - uses: actions/checkout@v2
+    - name: Install
+        env:
+          GO111MODULE: on
+        shell: bash
+        run: ./travis_install.sh
+    - name: Test
+      shell: bash
+      run: ./travis_test.sh
