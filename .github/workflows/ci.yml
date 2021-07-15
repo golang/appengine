@@ -21,10 +21,10 @@ jobs:
     - name: Checkout
     - uses: actions/checkout@v2
     - name: Install
-        env:
-          GO111MODULE: on
-        shell: bash
-        run: ./travis_install.sh
+      env:
+        GO111MODULE: on
+      shell: bash
+      run: ./travis_install.sh
     - name: Test
       shell: bash
       run: ./travis_test.sh
