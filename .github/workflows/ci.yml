@@ -45,7 +45,6 @@ jobs:
         GO111MODULE: off
         GOPATH: ${{ github.workspace }}
       run: |
-        export PATH=$PATH:$(go env GOPATH)/bin
         go get -u -v $(go list -f '{{join .Imports "\n"}}{{"\n"}}{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v appengine)
     - name: Test gopath
       shell: bash
