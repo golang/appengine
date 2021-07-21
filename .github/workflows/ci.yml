@@ -1,0 +1,52 @@
+name: ci
+
+on:
+  push:
+    branches: [ master, qa ]
+  pull_request:
+    branches: [ master, qa ]
+
+jobs:
+  test-gomod:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: [ '1.11.x', '1.12.x', '1.13.x', '1.14.x', '1.15.x']
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install
+      env:
+        GO111MODULE: on
+      run: |
+        go get .
+    - name: Test gomod
+      shell: bash
+      run: |
+        go test -v -race google.golang.org/appengine/...
+  test-gopath:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # GOPATH is deprecated in go 1.13.
+        go-version: [ '1.11.x', '1.12.x']
+    steps:
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: ${{ matrix.go-version }}
+    - name: Checkout
+      uses: actions/checkout@v2
+    - name: Install
+      env:
+        GO111MODULE: off
+      run: |
+        go get -u -v $(go list -f '{{join .Imports "\n"}}{{"\n"}}{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v appengine)
+    - name: Test gopath
+      shell: bash
+      run: |
+        go test -v -race google.golang.org/appengine/...
