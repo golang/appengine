@@ -43,7 +43,6 @@ jobs:
     - name: Install
       env:
         GO111MODULE: off
-      working_directory: /go/src/github.com/goccy/go-yaml
       run: |
         go get -u google.golang.org/appengine
         go get -u -v $(go list -f '{{join .Imports "\n"}}{{"\n"}}{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v appengine)
