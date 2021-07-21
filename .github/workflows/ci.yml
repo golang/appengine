@@ -24,7 +24,7 @@ jobs:
         GO111MODULE: on
       run: |
         go get .
-    - name: Test
+    - name: Test gomod
       shell: bash
       run: |
         go test -v -race google.golang.org/appengine/...
@@ -43,9 +43,11 @@ jobs:
     - name: Install
       env:
         GO111MODULE: off
+      working_directory: /go/src/github.com/goccy/go-yaml
       run: |
+        go get -u google.golang.org/appengine
         go get -u -v $(go list -f '{{join .Imports "\n"}}{{"\n"}}{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v appengine)
-    - name: Test
+    - name: Test gopath
       shell: bash
       run: |
         go test -v -race google.golang.org/appengine/...
