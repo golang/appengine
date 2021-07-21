@@ -1,6 +1,6 @@
 # Go App Engine packages
 
-[![Build Status](https://travis-ci.org/golang/appengine.svg)](https://travis-ci.org/golang/appengine)
+[![CI Status](https://github.com/golang/appengine/actions/workflows/ci.yml/badge.svg)](https://github.com/golang/appengine/actions/workflows/ci.yml)
 
 This repository supports the Go runtime on *App Engine standard*.
 It provides APIs for interacting with App Engine services.
