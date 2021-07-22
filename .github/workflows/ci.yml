@@ -17,7 +17,7 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: ${{ matrix.go-version }}
-    - name: Cache Go modules
+    - name: Cache go modules
       uses: actions/cache@v2
       with:
         path: |
