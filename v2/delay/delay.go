@@ -9,7 +9,8 @@ user request by using the taskqueue API.
 To declare a function that may be executed later, call Func
 in a top-level assignment context, passing it an arbitrary string key
 and a function whose first argument is of type context.Context.
-The key is used to look up the function so it can be called later.
+The key is the name of a function, used to look up the function
+so it can be called later.
 	var laterFunc = delay.Func("key", myFunc)
 It is also possible to use a function literal.
 	var laterFunc = delay.Func("key", func(c context.Context, x string) {
@@ -44,6 +45,11 @@ parsed according to these rules:
 There is some inherent risk of pending function invocations being lost during
 an update that contains large changes. For example, switching from using GOPATH
 to go.mod is a large change that may inadvertently cause file paths to change.
+
+To avoid depending on filepath, users can choose to use a globally unique
+function name as key by adding "unique:" as a prefix to the key.
+	var laterFunc = delay.Func("unique:myFunc", myFunc)
+This would register "myFunc" with its name as the unique key.
 
 The delay package uses the Task Queue API to create tasks that call the
 reserved application path "/_ah/queue/go/delay".
@@ -162,14 +168,18 @@ func fileKey(file string) (string, error) {
 func Func(key string, i interface{}) *Function {
 	f := &Function{fv: reflect.ValueOf(i)}
 
-	// Derive unique, somewhat stable key for this func.
+	// Derive unique, somewhat stable key for this func, unless users specify a unique key.
 	_, file, _, _ := runtime.Caller(1)
-	fk, err := fileKey(file)
-	if err != nil {
-		// Not fatal, but log the error
-		stdlog.Printf("delay: %v", err)
-	}
-	f.key = fk + ":" + key
+  if !strings.HasPrefix(key, "unique:") {
+  	fk, err := fileKey(file)
+		if err != nil {
+			// Not fatal, but log the error
+			stdlog.Printf("delay: %v", err)
+		}
+		f.key = fk + ":" + key
+  } else {
+  	f.key = strings.TrimLeft(key, "unique:")
+  }
 
 	t := f.fv.Type()
 	if t.Kind() != reflect.Func {

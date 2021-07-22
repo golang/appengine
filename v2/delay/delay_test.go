@@ -51,6 +51,13 @@ var (
 		regFuncMsg = arg
 	})
 
+	uniqueFuncRuns = 0
+	uniqueFuncMsg  = ""
+	uniqueFunc     = Func("unique:myFunc", func(c context.Context, arg string) {
+		uniqueFuncRuns++
+		uniqueFuncMsg = arg
+	})
+
 	custFuncTally = 0
 	custFunc      = Func("cust", func(c context.Context, ct *CustomType, ci CustomInterface) {
 		a, b := 2, 3
@@ -225,6 +232,39 @@ func TestRunningFunction(t *testing.T) {
 	}
 	if regFuncMsg != msg {
 		t.Errorf("regFuncMsg: got %q, want %q", regFuncMsg, msg)
+	}
+}
+
+func TestRunningFunctionWithUniqueKey(t *testing.T) {
+	c := newFakeContext()
+
+	// Fake out the adding of a task.
+	var task *taskqueue.Task
+	taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
+		if queue != "" {
+			t.Errorf(`Got queue %q, expected ""`, queue)
+		}
+		task = tk
+		return tk, nil
+	}
+
+	uniqueFuncRuns, uniqueFuncMsg = 0, "" // reset state
+	const msg = "Why, hello!"
+	uniqueFunc.Call(c.ctx, msg)
+
+	// Simulate the Task Queue service.
+	req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
+	if err != nil {
+		t.Fatalf("Failed making http.Request: %v", err)
+	}
+	rw := httptest.NewRecorder()
+	runFunc(c.ctx, rw, req)
+
+	if uniqueFuncRuns != 1 {
+		t.Errorf("uniqueFuncRuns: got %d, want 1", uniqueFuncRuns)
+	}
+	if uniqueFuncMsg != msg {
+		t.Errorf("uniqueFuncRuns: got %q, want %q", uniqueFuncRuns, msg)
 	}
 }
 
