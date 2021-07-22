@@ -36,6 +36,7 @@ jobs:
     - name: Test gomod
       run: |
         go test -v -race google.golang.org/appengine/...
+
   test-gopath:
     runs-on: ubuntu-latest
     strategy:
