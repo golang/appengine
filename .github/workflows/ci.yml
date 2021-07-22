@@ -17,6 +17,15 @@ jobs:
       uses: actions/setup-go@v2
       with:
         go-version: ${{ matrix.go-version }}
+    - name: Cache Go modules
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-${{ matrix.go-version }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.go-version }}-go-
     - name: Checkout
       uses: actions/checkout@v2
     - name: Install
@@ -25,7 +34,6 @@ jobs:
       run: |
         go get .
     - name: Test gomod
-      shell: bash
       run: |
         go test -v -race google.golang.org/appengine/...
   test-gopath:
@@ -47,6 +55,5 @@ jobs:
       run: |
         go get -u -v $(go list -f '{{join .Imports "\n"}}{{"\n"}}{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v appengine)
     - name: Test gopath
-      shell: bash
       run: |
         go test -v -race google.golang.org/appengine/...
