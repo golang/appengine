@@ -37,6 +37,8 @@ jobs:
         go get .
         gcloud components install app-engine-python app-engine-go cloud-datastore-emulator --quiet
     - name: Test gomod
+      env:
+        GO111MODULE: on
       run: |
         export APPENGINE_DEV_APPSERVER=$(which dev_appserver.py)
         go test -v -cover -race google.golang.org/appengine/...
@@ -75,6 +77,8 @@ jobs:
         go get -u google.golang.org/appengine
         gcloud components install app-engine-python app-engine-go cloud-datastore-emulator --quiet
     - name: Test gopath
+      env:
+        GO111MODULE: off
       run: |
         export APPENGINE_DEV_APPSERVER=$(which dev_appserver.py)
         go test -v -cover -race google.golang.org/appengine/...
