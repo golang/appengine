@@ -718,6 +718,9 @@ func usesImport(f *ast.File, path string) (used bool) {
 	case "<nil>":
 		// If the package name is not explicitly specified,
 		// make an educated guess. This is not guaranteed to be correct.
+		if strings.HasSuffix(path, "/v2") {
+			path = strings.TrimRight(path, "/v2")
+		}
 		lastSlash := strings.LastIndex(path, "/")
 		if lastSlash == -1 {
 			name = path
