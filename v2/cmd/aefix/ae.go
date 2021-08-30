@@ -6,7 +6,6 @@ package main
 
 import (
 	"go/ast"
-	"path"
 	"strconv"
 	"strings"
 )
@@ -15,7 +14,6 @@ const (
 	ctxPackage = "golang.org/x/net/context"
 
 	newPackageBase = "google.golang.org/"
-	stutterPackage = false
 )
 
 func init() {
@@ -38,10 +36,7 @@ var logMethod = map[string]bool{
 
 // mapPackage turns "appengine" into "google.golang.org/appengine/v2", etc.
 func mapPackage(s string) string {
-	if stutterPackage {
-		s += "/" + path.Base(s)
-	}
-	return newPackageBase + s
+	return newPackageBase + strings.Replace(s, "appengine", "appengine/v2", 1)
 }
 
 func aeFn(f *ast.File) bool {
