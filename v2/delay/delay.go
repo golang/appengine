@@ -88,6 +88,8 @@ const (
 	path = "/_ah/queue/go/delay"
 	// Use the default queue.
 	queue = ""
+	// UniqueKey is the prefix for a globally unique function key.
+	UniqueKey = "unique:"
 )
 
 type contextKey int
@@ -164,7 +166,7 @@ func Func(key string, i interface{}) *Function {
 	// Derive unique, somewhat stable key for this func, unless users specify a unique key.
 	_, file, _, _ := runtime.Caller(1)
 	f.key = key
-  if !strings.HasPrefix(key, "unique:") {
+  if !strings.HasPrefix(key, UniqueKey) {
   	fk, err := fileKey(file)
 		if err != nil {
 			// Not fatal, but log the error
