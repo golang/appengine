@@ -2,60 +2,55 @@
 // Use of this source code is governed by the Apache 2.0
 // license that can be found in the LICENSE file.
 
+
 /*
-Package delay provides a way to execute code outside the scope of a
-user request by using the taskqueue API.
-
-To declare a function that may be executed later, call Func
-in a top-level assignment context, passing it an arbitrary string key
-and a function whose first argument is of type context.Context.
-The key is the name of a function, used to look up the function
-so it can be called later.
-	var laterFunc = delay.Func("key", myFunc)
-It is also possible to use a function literal.
-	var laterFunc = delay.Func("key", func(c context.Context, x string) {
-		// ...
-	})
-
-To call a function, invoke its Call method.
-	laterFunc.Call(c, "something")
-A function may be called any number of times. If the function has any
-return arguments, and the last one is of type error, the function may
-return a non-nil error to signal that the function should be retried.
-
-The arguments to functions may be of any type that is encodable by the gob
-package. If an argument is of interface type, it is the client's responsibility
-to register with the gob package whatever concrete type may be passed for that
-argument; see http://golang.org/pkg/gob/#Register for details.
-
-Any errors during initialization or execution of a function will be
-logged to the application logs. Error logs that occur during initialization will
-be associated with the request that invoked the Call method.
-
-The state of a function invocation that has not yet successfully
-executed is preserved by combining the file name in which it is declared
-with the string key that was passed to the Func function. Updating an app
-with pending function invocations should safe as long as the relevant
-functions have the (filename, key) combination preserved. The filename is
-parsed according to these rules:
-  * Paths in package main are shortened to just the file name (github.com/foo/foo.go -> foo.go)
-  * Paths are stripped to just package paths (/go/src/github.com/foo/bar.go -> github.com/foo/bar.go)
-  * Module versions are stripped (/go/pkg/mod/github.com/foo/bar@v0.0.0-20181026220418-f595d03440dc/baz.go -> github.com/foo/bar/baz.go)
-
-There is some inherent risk of pending function invocations being lost during
-an update that contains large changes. For example, switching from using GOPATH
-to go.mod is a large change that may inadvertently cause file paths to change.
-
-To avoid depending on filepath, users can choose to use a globally unique
-function name as key by adding "unique:" as a prefix to the key.
-	var laterFunc = delay.Func("unique:myFunc", myFunc)
-This would register "myFunc" with its name as the unique key.
-
-The delay package uses the Task Queue API to create tasks that call the
-reserved application path "/_ah/queue/go/delay".
-This path must not be marked as "login: required" in app.yaml;
-it must be marked as "login: admin" or have no access restriction.
+Package delay provides a way to execute code outside of the scope of
+a user request by using the Task Queue API.
+ 
+To use a deferred function, you must register the function to be
+deferred as a top-level var. For example,
+ 
+    ```
+    var laterFunc = delay.Func("key", myFunc)
+ 
+    func myFunc(ctx context.Context, a, b string) {...}
+    ```
+ 
+You can also inline with a function literal:
+ 
+    ```
+    var laterFunc = delay.Func("key", func(ctx context.Context, a, b string) {...})
+    ```
+ 
+In the above example, "key" is a logical name for the function. To
+make the key globally unique, the SDK code will combine "key" with
+the filename of the file in which myFunc is defined
+(e.g., /some/path/myfile.go). This is convenient, but can lead to
+failed deferred tasks if you refactor your code, or change from
+GOPATH to go.mod, and then re-deploy with in-flight deferred tasks.
+ 
+To prevent these types of failures, you can indicate that you are
+using a globally-unique key though you assume the responsibility
+to ensure this key is unique across your entire application.
+To do this, you can prefix delay.UniqueKey as follows:
+ 
+    ```
+    var laterFunc = delay.Func(delay.UniqueKey + "myFuncGloballyUnique", myFunc)
+    ```
+ 
+To invoke the function in a deferred fashion, call the top-level item:
+ 
+    ```
+    laterFunc(ctx, "aaa", "bbb")
+    ```
+ 
+This will queue a task and return quickly; the function will be actually
+run in a new request. The delay package uses the Task Queue API to create
+tasks that call the reserved application path "/_ah/queue/go/delay".
+This path may only be marked as "login: admin" or have no access
+restriction; it will fail if marked as "login: required".
 */
+
 package delay // import "google.golang.org/appengine/v2/delay"
 
 import (
@@ -157,19 +152,18 @@ func fileKey(file string) (string, error) {
 	return modVersionPat.ReplaceAllString(file, ""), nil
 }
 
-// Func declares a new Function. The second argument must be a function with a
-// first argument of type context.Context.
-// This function must be called at program initialization time. That means it
-// must be called in a global variable declaration or from an init function.
-// This restriction is necessary because the instance that delays a function
-// call may not be the one that executes it. Only the code executed at program
-// initialization time is guaranteed to have been run by an instance before it
-// receives a request.
+// Func declares a new function that can be called in a deferred fashion.
+// The second argument i must be a function with the first argument of
+// type context.Context. See the package notes above for a discussion of
+// the first argument key. This function Func must be called in a global
+// scope to properly register the function with the framework. See the
+// package notes above for more details. 
 func Func(key string, i interface{}) *Function {
 	f := &Function{fv: reflect.ValueOf(i)}
 
 	// Derive unique, somewhat stable key for this func, unless users specify a unique key.
 	_, file, _, _ := runtime.Caller(1)
+	f.key = key
   if !strings.HasPrefix(key, "unique:") {
   	fk, err := fileKey(file)
 		if err != nil {
@@ -177,10 +171,7 @@ func Func(key string, i interface{}) *Function {
 			stdlog.Printf("delay: %v", err)
 		}
 		f.key = fk + ":" + key
-  } else {
-  	f.key = strings.TrimLeft(key, "unique:")
   }
-
 	t := f.fv.Type()
 	if t.Kind() != reflect.Func {
 		f.err = errors.New("not a function")
