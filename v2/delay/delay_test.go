@@ -51,11 +51,11 @@ var (
 		regFuncMsg = arg
 	})
 
-	uniqueFuncRuns = 0
-	uniqueFuncMsg  = ""
-	uniqueFunc     = Func("unique:myFunc", func(c context.Context, arg string) {
-		uniqueFuncRuns++
-		uniqueFuncMsg = arg
+	registerRuns = 0
+	registerMsg  = ""
+	uniqueFunc     = Register("myUniqueFunc", func(c context.Context, arg string) {
+		registerRuns++
+		registerMsg = arg
 	})
 
 	custFuncTally = 0
@@ -235,7 +235,7 @@ func TestRunningFunction(t *testing.T) {
 	}
 }
 
-func TestRunningFunctionWithUniqueKey(t *testing.T) {
+func TestRunningRegister(t *testing.T) {
 	c := newFakeContext()
 
 	// Fake out the adding of a task.
@@ -248,7 +248,7 @@ func TestRunningFunctionWithUniqueKey(t *testing.T) {
 		return tk, nil
 	}
 
-	uniqueFuncRuns, uniqueFuncMsg = 0, "" // reset state
+	registerRuns, registerMsg = 0, "" // reset state
 	const msg = "Why, hello!"
 	uniqueFunc.Call(c.ctx, msg)
 
@@ -260,11 +260,11 @@ func TestRunningFunctionWithUniqueKey(t *testing.T) {
 	rw := httptest.NewRecorder()
 	runFunc(c.ctx, rw, req)
 
-	if uniqueFuncRuns != 1 {
-		t.Errorf("uniqueFuncRuns: got %d, want 1", uniqueFuncRuns)
+	if registerRuns != 1 {
+		t.Errorf("uniqueFuncRuns: got %d, want 1", registerRuns)
 	}
-	if uniqueFuncMsg != msg {
-		t.Errorf("uniqueFuncRuns: got %q, want %q", uniqueFuncRuns, msg)
+	if registerMsg != msg {
+		t.Errorf("uniqueFuncRuns: got %q, want %q", registerMsg, msg)
 	}
 }
 

@@ -2,48 +2,34 @@
 // Use of this source code is governed by the Apache 2.0
 // license that can be found in the LICENSE file.
 
-
 /*
 Package delay provides a way to execute code outside of the scope of
 a user request by using the Task Queue API.
- 
+
 To use a deferred function, you must register the function to be
 deferred as a top-level var. For example,
- 
+
     ```
-    var laterFunc = delay.Func("key", myFunc)
- 
+    var laterFunc = delay.Register("key", myFunc)
+
     func myFunc(ctx context.Context, a, b string) {...}
     ```
- 
+
 You can also inline with a function literal:
- 
+
     ```
-    var laterFunc = delay.Func("key", func(ctx context.Context, a, b string) {...})
+    var laterFunc = delay.Register("key", func(ctx context.Context, a, b string) {...})
     ```
- 
-In the above example, "key" is a logical name for the function. To
-make the key globally unique, the SDK code will combine "key" with
-the filename of the file in which myFunc is defined
-(e.g., /some/path/myfile.go). This is convenient, but can lead to
-failed deferred tasks if you refactor your code, or change from
-GOPATH to go.mod, and then re-deploy with in-flight deferred tasks.
- 
-To prevent these types of failures, you can indicate that you are
-using a globally-unique key though you assume the responsibility
-to ensure this key is unique across your entire application.
-To do this, you can prefix delay.UniqueKey as follows:
- 
-    ```
-    var laterFunc = delay.Func(delay.UniqueKey + "myFuncGloballyUnique", myFunc)
-    ```
- 
+
+In the above example, "key" is a logical name for the function.
+The key needs to be globally unique across your entire application.
+
 To invoke the function in a deferred fashion, call the top-level item:
- 
+
     ```
     laterFunc(ctx, "aaa", "bbb")
     ```
- 
+
 This will queue a task and return quickly; the function will be actually
 run in a new request. The delay package uses the Task Queue API to create
 tasks that call the reserved application path "/_ah/queue/go/delay".
@@ -88,8 +74,6 @@ const (
 	path = "/_ah/queue/go/delay"
 	// Use the default queue.
 	queue = ""
-	// UniqueKey is the prefix for a globally unique function key.
-	UniqueKey = "unique:"
 )
 
 type contextKey int
@@ -156,24 +140,41 @@ func fileKey(file string) (string, error) {
 
 // Func declares a new function that can be called in a deferred fashion.
 // The second argument i must be a function with the first argument of
-// type context.Context. See the package notes above for a discussion of
-// the first argument key. This function Func must be called in a global
-// scope to properly register the function with the framework. See the
-// package notes above for more details. 
+// type context.Context.
+// To make the key globally unique, the SDK code will combine "key" with
+// the filename of the file in which myFunc is defined
+// (e.g., /some/path/myfile.go). This is convenient, but can lead to
+// failed deferred tasks if you refactor your code, or change from
+// GOPATH to go.mod, and then re-deploy with in-flight deferred tasks.
+//
+// This function Func must be called in a global scope to properly
+// register the function with the framework.
+//
+// Deprecated: Use Register instead.
 func Func(key string, i interface{}) *Function {
-	f := &Function{fv: reflect.ValueOf(i)}
-
-	// Derive unique, somewhat stable key for this func, unless users specify a unique key.
+	// Derive unique, somewhat stable key for this func.
 	_, file, _, _ := runtime.Caller(1)
+	fk, err := fileKey(file)
+	if err != nil {
+		// Not fatal, but log the error
+		stdlog.Printf("delay: %v", err)
+	}
+	key = fk + ":" + key
+	return Register(key, i)
+}
+
+// Register declares a new function that can be called in a deferred fashion.
+// The second argument i must be a function with the first argument of
+// type context.Context.
+// Register requires the key to be globally unique.
+//
+// This function Register must be called in a global scope to properly
+// register the function with the framework.
+// See the package notes above for more details.
+func Register(key string, i interface{}) *Function {
+	f := &Function{fv: reflect.ValueOf(i)}
 	f.key = key
-  if !strings.HasPrefix(key, UniqueKey) {
-  	fk, err := fileKey(file)
-		if err != nil {
-			// Not fatal, but log the error
-			stdlog.Printf("delay: %v", err)
-		}
-		f.key = fk + ":" + key
-  }
+
 	t := f.fv.Type()
 	if t.Kind() != reflect.Func {
 		f.err = errors.New("not a function")
@@ -199,7 +200,7 @@ func Func(key string, i interface{}) *Function {
 	}
 
 	if old := funcs[f.key]; old != nil {
-		old.err = fmt.Errorf("multiple functions registered for %s in %s", key, file)
+		old.err = fmt.Errorf("multiple functions registered for %s", key)
 	}
 	funcs[f.key] = f
 	return f
