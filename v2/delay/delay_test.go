@@ -42,24 +42,20 @@ func init() {
 }
 
 var (
-	invalidFunc = Func("invalid", func() {})
+	invalidFunc     = Func("invalid", func() {})
+	invalidRegister = Register("invalid", func() {})
 
-	regFuncRuns = 0
-	regFuncMsg  = ""
-	regFunc     = Func("reg", func(c context.Context, arg string) {
-		regFuncRuns++
-		regFuncMsg = arg
-	})
+	regFRuns = 0
+	regFMsg  = ""
+	regF     = func(c context.Context, arg string) {
+		regFRuns++
+		regFMsg = arg
+	}
+	regFunc     = Func("regFunc", regF)
+	regRegister = Register("regRegister", regF)
 
-	registerRuns = 0
-	registerMsg  = ""
-	uniqueFunc     = Register("myUniqueFunc", func(c context.Context, arg string) {
-		registerRuns++
-		registerMsg = arg
-	})
-
-	custFuncTally = 0
-	custFunc      = Func("cust", func(c context.Context, ct *CustomType, ci CustomInterface) {
+	custFTally = 0
+	custF      = func(c context.Context, ct *CustomType, ci CustomInterface) {
 		a, b := 2, 3
 		if ct != nil {
 			a = ct.N
@@ -67,56 +63,70 @@ var (
 		if ci != nil {
 			b = ci.N()
 		}
-		custFuncTally += a + b
+		custFTally += a + b
+	}
+	custFunc     = Func("custFunc", custF)
+	custRegister = Register("custRegister", custF)
+
+	anotherCustFunc = Func("custFunc2", func(c context.Context, n int, ct *CustomType, ci CustomInterface) {
 	})
 
-	anotherCustFunc = Func("cust2", func(c context.Context, n int, ct *CustomType, ci CustomInterface) {
-	})
-
-	varFuncMsg = ""
-	varFunc    = Func("variadic", func(c context.Context, format string, args ...int) {
+	varFMsg = ""
+	varF    = func(c context.Context, format string, args ...int) {
 		// convert []int to []interface{} for fmt.Sprintf.
 		as := make([]interface{}, len(args))
 		for i, a := range args {
 			as[i] = a
 		}
-		varFuncMsg = fmt.Sprintf(format, as...)
-	})
+		varFMsg = fmt.Sprintf(format, as...)
+	}
+	varFunc     = Func("variadicFunc", varF)
+	varRegister = Register("variadicRegister", varF)
 
-	errFuncRuns = 0
-	errFuncErr  = errors.New("error!")
-	errFunc     = Func("err", func(c context.Context) error {
-		errFuncRuns++
-		if errFuncRuns == 1 {
+	errFRuns = 0
+	errFErr  = errors.New("error!")
+	errF     = func(c context.Context) error {
+		errFRuns++
+		if errFRuns == 1 {
 			return nil
 		}
-		return errFuncErr
-	})
+		return errFErr
+	}
+	errFunc     = Func("errFunc", errF)
+	errRegister = Register("errRegister", errF)
 
 	dupeWhich = 0
-	dupe1Func = Func("dupe", func(c context.Context) {
+	dupe1F    = func(c context.Context) {
 		if dupeWhich == 0 {
 			dupeWhich = 1
 		}
-	})
-	dupe2Func = Func("dupe", func(c context.Context) {
+	}
+	dupe1Func     = Func("dupe", dupe1F)
+	dupe1Register = Register("dupe", dupe1F)
+	dupe2F        = func(c context.Context) {
 		if dupeWhich == 0 {
 			dupeWhich = 2
 		}
-	})
+	}
+	dupe2Func     = Func("dupe", dupe2F)
+	dupe2Register = Register("dupe", dupe2F)
 
-	reqFuncRuns    = 0
-	reqFuncHeaders *taskqueue.RequestHeaders
-	reqFuncErr     error
-	reqFunc        = Func("req", func(c context.Context) {
-		reqFuncRuns++
-		reqFuncHeaders, reqFuncErr = RequestHeaders(c)
-	})
+	requestFuncRuns    = 0
+	requestFuncHeaders *taskqueue.RequestHeaders
+	requestFuncErr     error
+	requestF           = func(c context.Context) {
+		requestFuncRuns++
+		requestFuncHeaders, requestFuncErr = RequestHeaders(c)
+	}
+	requestFunc     = Func("requestFunc", requestF)
+	requestRegister = Register("requestRegister", requestF)
 
 	stdCtxRuns = 0
-	stdCtxFunc = Func("stdctx", func(c stdctx.Context) {
+	stdCtxF    = func(c stdctx.Context) {
 		stdCtxRuns++
-	})
+	}
+	stdCtxFunc     = Func("stdctxFunc", stdCtxF)
+	stdCtxRegister = Register("stdctxRegister", stdCtxF)
 )
 
 type fakeContext struct {
@@ -144,14 +154,15 @@ func (f *fakeContext) logf(level int64, format string, args ...interface{}) {
 func TestInvalidFunction(t *testing.T) {
 	c := newFakeContext()
 
-	if got, want := invalidFunc.Call(c.ctx), fmt.Errorf("delay: func is invalid: %s", errFirstArg); got.Error() != want.Error() {
-		t.Errorf("Incorrect error: got %q, want %q", got, want)
+	for _, testTarget := range []*Function{invalidFunc, invalidRegister} {
+		if got, want := testTarget.Call(c.ctx), fmt.Errorf("delay: func is invalid: %s", errFirstArg); got.Error() != want.Error() {
+			t.Errorf("Incorrect error: got %q, want %q", got, want)
+		}
 	}
 }
 
 func TestVariadicFunctionArguments(t *testing.T) {
 	// Check the argument type validation for variadic functions.
-
 	c := newFakeContext()
 
 	calls := 0
@@ -160,15 +171,19 @@ func TestVariadicFunctionArguments(t *testing.T) {
 		return t, nil
 	}
 
-	varFunc.Call(c.ctx, "hi")
-	varFunc.Call(c.ctx, "%d", 12)
-	varFunc.Call(c.ctx, "%d %d %d", 3, 1, 4)
-	if calls != 3 {
-		t.Errorf("Got %d calls to taskqueueAdder, want 3", calls)
-	}
+	for _, testTarget := range []*Function{varFunc, varRegister} {
+		// reset state
+		calls = 0
+		testTarget.Call(c.ctx, "hi")
+		testTarget.Call(c.ctx, "%d", 12)
+		testTarget.Call(c.ctx, "%d %d %d", 3, 1, 4)
+		if calls != 3 {
+			t.Errorf("Got %d calls to taskqueueAdder, want 3", calls)
+		}
 
-	if got, want := varFunc.Call(c.ctx, "%d %s", 12, "a string is bad"), errors.New("delay: argument 3 has wrong type: string is not assignable to int"); got.Error() != want.Error() {
-		t.Errorf("Incorrect error: got %q, want %q", got, want)
+		if got, want := testTarget.Call(c.ctx, "%d %s", 12, "a string is bad"), errors.New("delay: argument 3 has wrong type: string is not assignable to int"); got.Error() != want.Error() {
+			t.Errorf("Incorrect error: got %q, want %q", got, want)
+		}
 	}
 }
 
@@ -194,17 +209,18 @@ func TestBadArguments(t *testing.T) {
 			wantErr: "delay: argument 1 has wrong type: int is not assignable to string",
 		},
 	}
-	for i, tc := range tests {
-		got := regFunc.Call(c.ctx, tc.args...)
-		if got.Error() != tc.wantErr {
-			t.Errorf("Call %v: got %q, want %q", i, got, tc.wantErr)
+	for _, testTarget := range []*Function{regFunc, regRegister} {
+		for i, tc := range tests {
+			got := testTarget.Call(c.ctx, tc.args...)
+			if got.Error() != tc.wantErr {
+				t.Errorf("Call %v: got %q, want %q", i, got, tc.wantErr)
+			}
 		}
 	}
 }
 
 func TestRunningFunction(t *testing.T) {
 	c := newFakeContext()
-
 	// Fake out the adding of a task.
 	var task *taskqueue.Task
 	taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
@@ -215,56 +231,25 @@ func TestRunningFunction(t *testing.T) {
 		return tk, nil
 	}
 
-	regFuncRuns, regFuncMsg = 0, "" // reset state
-	const msg = "Why, hello!"
-	regFunc.Call(c.ctx, msg)
+	for _, testTarget := range []*Function{regFunc, regRegister} {
+		regFRuns, regFMsg = 0, "" // reset state
+		const msg = "Why, hello!"
+		testTarget.Call(c.ctx, msg)
 
-	// Simulate the Task Queue service.
-	req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
-	if err != nil {
-		t.Fatalf("Failed making http.Request: %v", err)
-	}
-	rw := httptest.NewRecorder()
-	runFunc(c.ctx, rw, req)
-
-	if regFuncRuns != 1 {
-		t.Errorf("regFuncRuns: got %d, want 1", regFuncRuns)
-	}
-	if regFuncMsg != msg {
-		t.Errorf("regFuncMsg: got %q, want %q", regFuncMsg, msg)
-	}
-}
-
-func TestRunningRegister(t *testing.T) {
-	c := newFakeContext()
-
-	// Fake out the adding of a task.
-	var task *taskqueue.Task
-	taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
-		if queue != "" {
-			t.Errorf(`Got queue %q, expected ""`, queue)
+		// Simulate the Task Queue service.
+		req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
+		if err != nil {
+			t.Fatalf("Failed making http.Request: %v", err)
 		}
-		task = tk
-		return tk, nil
-	}
+		rw := httptest.NewRecorder()
+		runFunc(c.ctx, rw, req)
 
-	registerRuns, registerMsg = 0, "" // reset state
-	const msg = "Why, hello!"
-	uniqueFunc.Call(c.ctx, msg)
-
-	// Simulate the Task Queue service.
-	req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
-	if err != nil {
-		t.Fatalf("Failed making http.Request: %v", err)
-	}
-	rw := httptest.NewRecorder()
-	runFunc(c.ctx, rw, req)
-
-	if registerRuns != 1 {
-		t.Errorf("uniqueFuncRuns: got %d, want 1", registerRuns)
-	}
-	if registerMsg != msg {
-		t.Errorf("uniqueFuncRuns: got %q, want %q", registerMsg, msg)
+		if regFRuns != 1 {
+			t.Errorf("regFuncRuns: got %d, want 1", regFRuns)
+		}
+		if regFMsg != msg {
+			t.Errorf("regFuncMsg: got %q, want %q", regFMsg, msg)
+		}
 	}
 }
 
@@ -281,36 +266,38 @@ func TestCustomType(t *testing.T) {
 		return tk, nil
 	}
 
-	custFuncTally = 0 // reset state
-	custFunc.Call(c.ctx, &CustomType{N: 11}, CustomImpl(13))
+	for _, testTarget := range []*Function{custFunc, custRegister} {
+		custFTally = 0 // reset state
+		testTarget.Call(c.ctx, &CustomType{N: 11}, CustomImpl(13))
 
-	// Simulate the Task Queue service.
-	req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
-	if err != nil {
-		t.Fatalf("Failed making http.Request: %v", err)
-	}
-	rw := httptest.NewRecorder()
-	runFunc(c.ctx, rw, req)
+		// Simulate the Task Queue service.
+		req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
+		if err != nil {
+			t.Fatalf("Failed making http.Request: %v", err)
+		}
+		rw := httptest.NewRecorder()
+		runFunc(c.ctx, rw, req)
 
-	if custFuncTally != 24 {
-		t.Errorf("custFuncTally = %d, want 24", custFuncTally)
-	}
+		if custFTally != 24 {
+			t.Errorf("custFTally = %d, want 24", custFTally)
+		}
 
-	// Try the same, but with nil values; one is a nil pointer (and thus a non-nil interface value),
-	// and the other is a nil interface value.
-	custFuncTally = 0 // reset state
-	custFunc.Call(c.ctx, (*CustomType)(nil), nil)
+		// Try the same, but with nil values; one is a nil pointer (and thus a non-nil interface value),
+		// and the other is a nil interface value.
+		custFTally = 0 // reset state
+		testTarget.Call(c.ctx, (*CustomType)(nil), nil)
 
-	// Simulate the Task Queue service.
-	req, err = http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
-	if err != nil {
-		t.Fatalf("Failed making http.Request: %v", err)
-	}
-	rw = httptest.NewRecorder()
-	runFunc(c.ctx, rw, req)
+		// Simulate the Task Queue service.
+		req, err = http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
+		if err != nil {
+			t.Fatalf("Failed making http.Request: %v", err)
+		}
+		rw = httptest.NewRecorder()
+		runFunc(c.ctx, rw, req)
 
-	if custFuncTally != 5 {
-		t.Errorf("custFuncTally = %d, want 5", custFuncTally)
+		if custFTally != 5 {
+			t.Errorf("custFTally = %d, want 5", custFTally)
+		}
 	}
 }
 
@@ -327,20 +314,22 @@ func TestRunningVariadic(t *testing.T) {
 		return tk, nil
 	}
 
-	varFuncMsg = "" // reset state
-	varFunc.Call(c.ctx, "Amiga %d has %d KB RAM", 500, 512)
+	for _, testTarget := range []*Function{varFunc, varRegister} {
+		varFMsg = "" // reset state
+		testTarget.Call(c.ctx, "Amiga %d has %d KB RAM", 500, 512)
 
-	// Simulate the Task Queue service.
-	req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
-	if err != nil {
-		t.Fatalf("Failed making http.Request: %v", err)
-	}
-	rw := httptest.NewRecorder()
-	runFunc(c.ctx, rw, req)
+		// Simulate the Task Queue service.
+		req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
+		if err != nil {
+			t.Fatalf("Failed making http.Request: %v", err)
+		}
+		rw := httptest.NewRecorder()
+		runFunc(c.ctx, rw, req)
 
-	const expected = "Amiga 500 has 512 KB RAM"
-	if varFuncMsg != expected {
-		t.Errorf("varFuncMsg = %q, want %q", varFuncMsg, expected)
+		const expected = "Amiga 500 has 512 KB RAM"
+		if varFMsg != expected {
+			t.Errorf("varFMsg = %q, want %q", varFMsg, expected)
+		}
 	}
 }
 
@@ -357,34 +346,39 @@ func TestErrorFunction(t *testing.T) {
 		return tk, nil
 	}
 
-	errFunc.Call(c.ctx)
+	for _, testTarget := range []*Function{errFunc, errRegister} {
+		// reset state
+		c.logging = [][]interface{}{}
+		errFRuns = 0
+		testTarget.Call(c.ctx)
 
-	// Simulate the Task Queue service.
-	// The first call should succeed; the second call should fail.
-	{
-		req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
-		if err != nil {
-			t.Fatalf("Failed making http.Request: %v", err)
+		// Simulate the Task Queue service.
+		// The first call should succeed; the second call should fail.
+		{
+			req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
+			if err != nil {
+				t.Fatalf("Failed making http.Request: %v", err)
+			}
+			rw := httptest.NewRecorder()
+			runFunc(c.ctx, rw, req)
 		}
-		rw := httptest.NewRecorder()
-		runFunc(c.ctx, rw, req)
-	}
-	{
-		req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
-		if err != nil {
-			t.Fatalf("Failed making http.Request: %v", err)
-		}
-		rw := httptest.NewRecorder()
-		runFunc(c.ctx, rw, req)
-		if rw.Code != http.StatusInternalServerError {
-			t.Errorf("Got status code %d, want %d", rw.Code, http.StatusInternalServerError)
-		}
+		{
+			req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
+			if err != nil {
+				t.Fatalf("Failed making http.Request: %v", err)
+			}
+			rw := httptest.NewRecorder()
+			runFunc(c.ctx, rw, req)
+			if rw.Code != http.StatusInternalServerError {
+				t.Errorf("Got status code %d, want %d", rw.Code, http.StatusInternalServerError)
+			}
 
-		wantLogging := [][]interface{}{
-			{"ERROR", "delay: func failed (will retry): %v", errFuncErr},
-		}
-		if !reflect.DeepEqual(c.logging, wantLogging) {
-			t.Errorf("Incorrect logging: got %+v, want %+v", c.logging, wantLogging)
+			wantLogging := [][]interface{}{
+				{"ERROR", "delay: func failed (will retry): %v", errFErr},
+			}
+			if !reflect.DeepEqual(c.logging, wantLogging) {
+				t.Errorf("Incorrect logging: got %+v, want %+v", c.logging, wantLogging)
+			}
 		}
 	}
 }
@@ -392,86 +386,97 @@ func TestErrorFunction(t *testing.T) {
 func TestDuplicateFunction(t *testing.T) {
 	c := newFakeContext()
 
-	// Fake out the adding of a task.
-	var task *taskqueue.Task
-	taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
-		if queue != "" {
-			t.Errorf(`Got queue %q, expected ""`, queue)
+	mapping := []map[string]*Function{
+		{"dupe1": dupe1Func, "dupe2": dupe2Func},
+		{"dupe1": dupe1Register, "dupe2": dupe2Register},
+	}
+	for _, testTargets := range mapping {
+		dupe1 := testTargets["dupe1"]
+		dupe2 := testTargets["dupe2"]
+
+		// Fake out the adding of a task.
+		var task *taskqueue.Task
+		taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
+			if queue != "" {
+				t.Errorf(`Got queue %q, expected ""`, queue)
+			}
+			task = tk
+			return tk, nil
 		}
-		task = tk
-		return tk, nil
-	}
 
-	if err := dupe1Func.Call(c.ctx); err == nil {
-		t.Error("dupe1Func.Call did not return error")
-	}
-	if task != nil {
-		t.Error("dupe1Func.Call posted a task")
-	}
-	if err := dupe2Func.Call(c.ctx); err != nil {
-		t.Errorf("dupe2Func.Call error: %v", err)
-	}
-	if task == nil {
-		t.Fatalf("dupe2Func.Call did not post a task")
-	}
+		if err := dupe1.Call(c.ctx); err == nil {
+			t.Error("dupe1.Call did not return error")
+		}
+		if task != nil {
+			t.Error("dupe1.Call posted a task")
+		}
+		if err := dupe2.Call(c.ctx); err != nil {
+			t.Errorf("dupe2.Call error: %v", err)
+		}
+		if task == nil {
+			t.Fatalf("dupe2.Call did not post a task")
+		}
 
-	// Simulate the Task Queue service.
-	req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
-	if err != nil {
-		t.Fatalf("Failed making http.Request: %v", err)
-	}
-	rw := httptest.NewRecorder()
-	runFunc(c.ctx, rw, req)
+		// Simulate the Task Queue service.
+		req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
+		if err != nil {
+			t.Fatalf("Failed making http.Request: %v", err)
+		}
+		rw := httptest.NewRecorder()
+		runFunc(c.ctx, rw, req)
 
-	if dupeWhich == 1 {
-		t.Error("dupe2Func.Call used old registered function")
-	} else if dupeWhich != 2 {
-		t.Errorf("dupeWhich = %d; want 2", dupeWhich)
+		if dupeWhich == 1 {
+			t.Error("dupe2.Call used old registered function")
+		} else if dupeWhich != 2 {
+			t.Errorf("dupeWhich = %d; want 2", dupeWhich)
+		}
 	}
 }
 
 func TestGetRequestHeadersFromContext(t *testing.T) {
-	c := newFakeContext()
+	for _, testTarget := range []*Function{requestFunc, requestRegister} {
+		c := newFakeContext()
 
-	// Outside a delay.Func should return an error.
-	headers, err := RequestHeaders(c.ctx)
-	if headers != nil {
-		t.Errorf("RequestHeaders outside Func, got %v, want nil", headers)
-	}
-	if err != errOutsideDelayFunc {
-		t.Errorf("RequestHeaders outside Func err, got %v, want %v", err, errOutsideDelayFunc)
-	}
-
-	// Fake out the adding of a task.
-	var task *taskqueue.Task
-	taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
-		if queue != "" {
-			t.Errorf(`Got queue %q, expected ""`, queue)
+		// Outside a delay.Func should return an error.
+		headers, err := RequestHeaders(c.ctx)
+		if headers != nil {
+			t.Errorf("RequestHeaders outside Func, got %v, want nil", headers)
 		}
-		task = tk
-		return tk, nil
-	}
+		if err != errOutsideDelayFunc {
+			t.Errorf("RequestHeaders outside Func err, got %v, want %v", err, errOutsideDelayFunc)
+		}
 
-	reqFunc.Call(c.ctx)
+		// Fake out the adding of a task.
+		var task *taskqueue.Task
+		taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
+			if queue != "" {
+				t.Errorf(`Got queue %q, expected ""`, queue)
+			}
+			task = tk
+			return tk, nil
+		}
 
-	reqFuncRuns, reqFuncHeaders = 0, nil // reset state
-	// Simulate the Task Queue service.
-	req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
-	req.Header.Set("x-appengine-taskname", "foobar")
-	if err != nil {
-		t.Fatalf("Failed making http.Request: %v", err)
-	}
-	rw := httptest.NewRecorder()
-	runFunc(c.ctx, rw, req)
+		testTarget.Call(c.ctx)
 
-	if reqFuncRuns != 1 {
-		t.Errorf("reqFuncRuns: got %d, want 1", reqFuncRuns)
-	}
-	if reqFuncHeaders.TaskName != "foobar" {
-		t.Errorf("reqFuncHeaders.TaskName: got %v, want 'foobar'", reqFuncHeaders.TaskName)
-	}
-	if reqFuncErr != nil {
-		t.Errorf("reqFuncErr: got %v, want nil", reqFuncErr)
+		requestFuncRuns, requestFuncHeaders = 0, nil // reset state
+		// Simulate the Task Queue service.
+		req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
+		req.Header.Set("x-appengine-taskname", "foobar")
+		if err != nil {
+			t.Fatalf("Failed making http.Request: %v", err)
+		}
+		rw := httptest.NewRecorder()
+		runFunc(c.ctx, rw, req)
+
+		if requestFuncRuns != 1 {
+			t.Errorf("requestFuncRuns: got %d, want 1", requestFuncRuns)
+		}
+		if requestFuncHeaders.TaskName != "foobar" {
+			t.Errorf("requestFuncHeaders.TaskName: got %v, want 'foobar'", requestFuncHeaders.TaskName)
+		}
+		if requestFuncErr != nil {
+			t.Errorf("requestFuncErr: got %v, want nil", requestFuncErr)
+		}
 	}
 }
 
@@ -486,22 +491,24 @@ func TestStandardContext(t *testing.T) {
 		return tk, nil
 	}
 
-	c := newFakeContext()
-	stdCtxRuns = 0 // reset state
-	if err := stdCtxFunc.Call(c.ctx); err != nil {
-		t.Fatal("Function.Call:", err)
-	}
+	for _, testTarget := range []*Function{stdCtxFunc, stdCtxRegister} {
+		c := newFakeContext()
+		stdCtxRuns = 0 // reset state
+		if err := testTarget.Call(c.ctx); err != nil {
+			t.Fatal("Function.Call:", err)
+		}
 
-	// Simulate the Task Queue service.
-	req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
-	if err != nil {
-		t.Fatalf("Failed making http.Request: %v", err)
-	}
-	rw := httptest.NewRecorder()
-	runFunc(c.ctx, rw, req)
+		// Simulate the Task Queue service.
+		req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
+		if err != nil {
+			t.Fatalf("Failed making http.Request: %v", err)
+		}
+		rw := httptest.NewRecorder()
+		runFunc(c.ctx, rw, req)
 
-	if stdCtxRuns != 1 {
-		t.Errorf("stdCtxRuns: got %d, want 1", stdCtxRuns)
+		if stdCtxRuns != 1 {
+			t.Errorf("stdCtxRuns: got %d, want 1", stdCtxRuns)
+		}
 	}
 }
 
