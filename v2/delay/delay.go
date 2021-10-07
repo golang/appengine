@@ -160,7 +160,15 @@ func Func(key string, i interface{}) *Function {
 		stdlog.Printf("delay: %v", err)
 	}
 	key = fk + ":" + key
-	return Register(key, i)
+	f, err := registerFunction(key, i)
+	if err != nil {
+		return f
+	}
+	if old := funcs[f.key]; old != nil {
+		old.err = fmt.Errorf("multiple functions registered for %s", key)
+	}
+	funcs[f.key] = f
+	return f
 }
 
 // Register declares a new function that can be called in a deferred fashion.
@@ -172,17 +180,32 @@ func Func(key string, i interface{}) *Function {
 // register the function with the framework.
 // See the package notes above for more details.
 func Register(key string, i interface{}) *Function {
+	f, err := registerFunction(key, i)
+	if err != nil {
+		return f
+	}
+
+	if old := funcs[f.key]; old != nil {
+		old.err = fmt.Errorf("multiple functions registered for %s", key)
+		f.err = fmt.Errorf("multiple functions registered for %s", key)
+		return f
+	}
+	funcs[f.key] = f
+	return f
+}
+
+func registerFunction(key string, i interface{}) (*Function, error) {
 	f := &Function{fv: reflect.ValueOf(i)}
 	f.key = key
 
 	t := f.fv.Type()
 	if t.Kind() != reflect.Func {
 		f.err = errors.New("not a function")
-		return f
+		return f, f.err
 	}
 	if t.NumIn() == 0 || !isContext(t.In(0)) {
 		f.err = errFirstArg
-		return f
+		return f, errFirstArg
 	}
 
 	// Register the function's arguments with the gob package.
@@ -198,12 +221,7 @@ func Register(key string, i interface{}) *Function {
 		}
 		gob.Register(reflect.Zero(t.In(i)).Interface())
 	}
-
-	if old := funcs[f.key]; old != nil {
-		old.err = fmt.Errorf("multiple functions registered for %s", key)
-	}
-	funcs[f.key] = f
-	return f
+	return f, nil
 }
 
 type invocation struct {
