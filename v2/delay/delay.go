@@ -186,7 +186,7 @@ func MustRegister(key string, i interface{}) *Function {
 	}
 
 	if old := funcs[f.key]; old != nil {
-		panic(fmt.Sprintf("multiple functions registered for %s", key))
+		panic(fmt.Sprintf("multiple functions registered for %q", key))
 	}
 	funcs[f.key] = f
 	return f
@@ -206,9 +206,9 @@ func registerFunction(key string, i interface{}) (*Function, error) {
 		return f, errFirstArg
 	}
 
-	// MustRegister the function's arguments with the gob package.
+	// Register the function's arguments with the gob package.
 	// This is required because they are marshaled inside a []interface{}.
-	// gob.MustRegister only expects to be called during initialization;
+	// gob.Register only expects to be called during initialization;
 	// that's fine because this function expects the same.
 	for i := 0; i < t.NumIn(); i++ {
 		// Only concrete types may be registered. If the argument has
