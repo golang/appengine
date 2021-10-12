@@ -10,7 +10,7 @@ To use a deferred function, you must register the function to be
 deferred as a top-level var. For example,
 
     ```
-    var laterFunc = delay.Register("key", myFunc)
+    var laterFunc = delay.MustRegister("key", myFunc)
 
     func myFunc(ctx context.Context, a, b string) {...}
     ```
@@ -18,7 +18,7 @@ deferred as a top-level var. For example,
 You can also inline with a function literal:
 
     ```
-    var laterFunc = delay.Register("key", func(ctx context.Context, a, b string) {...})
+    var laterFunc = delay.MustRegister("key", func(ctx context.Context, a, b string) {...})
     ```
 
 In the above example, "key" is a logical name for the function.
@@ -150,7 +150,7 @@ func fileKey(file string) (string, error) {
 // This function Func must be called in a global scope to properly
 // register the function with the framework.
 //
-// Deprecated: Use Register instead.
+// Deprecated: Use MustRegister instead.
 func Func(key string, i interface{}) *Function {
 	// Derive unique, somewhat stable key for this func.
 	_, file, _, _ := runtime.Caller(1)
@@ -171,24 +171,22 @@ func Func(key string, i interface{}) *Function {
 	return f
 }
 
-// Register declares a new function that can be called in a deferred fashion.
+// MustRegister declares a new function that can be called in a deferred fashion.
 // The second argument i must be a function with the first argument of
 // type context.Context.
-// Register requires the key to be globally unique.
+// MustRegister requires the key to be globally unique.
 //
-// This function Register must be called in a global scope to properly
+// This function MustRegister must be called in a global scope to properly
 // register the function with the framework.
 // See the package notes above for more details.
-func Register(key string, i interface{}) *Function {
+func MustRegister(key string, i interface{}) *Function {
 	f, err := registerFunction(key, i)
 	if err != nil {
 		return f
 	}
 
 	if old := funcs[f.key]; old != nil {
-		old.err = fmt.Errorf("multiple functions registered for %s", key)
-		f.err = fmt.Errorf("multiple functions registered for %s", key)
-		return f
+		panic(fmt.Sprintf("multiple functions registered for %s", key))
 	}
 	funcs[f.key] = f
 	return f
@@ -208,9 +206,9 @@ func registerFunction(key string, i interface{}) (*Function, error) {
 		return f, errFirstArg
 	}
 
-	// Register the function's arguments with the gob package.
+	// MustRegister the function's arguments with the gob package.
 	// This is required because they are marshaled inside a []interface{}.
-	// gob.Register only expects to be called during initialization;
+	// gob.MustRegister only expects to be called during initialization;
 	// that's fine because this function expects the same.
 	for i := 0; i < t.NumIn(); i++ {
 		// Only concrete types may be registered. If the argument has

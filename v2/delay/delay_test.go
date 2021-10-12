@@ -43,7 +43,7 @@ func init() {
 
 var (
 	invalidFunc     = Func("invalid", func() {})
-	invalidRegister = Register("invalid", func() {})
+	invalidRegister = MustRegister("invalid", func() {})
 
 	regFRuns = 0
 	regFMsg  = ""
@@ -52,7 +52,7 @@ var (
 		regFMsg = arg
 	}
 	regFunc     = Func("regFunc", regF)
-	regRegister = Register("regRegister", regF)
+	regRegister = MustRegister("regRegister", regF)
 
 	custFTally = 0
 	custF      = func(c context.Context, ct *CustomType, ci CustomInterface) {
@@ -66,7 +66,7 @@ var (
 		custFTally += a + b
 	}
 	custFunc     = Func("custFunc", custF)
-	custRegister = Register("custRegister", custF)
+	custRegister = MustRegister("custRegister", custF)
 
 	anotherCustFunc = Func("custFunc2", func(c context.Context, n int, ct *CustomType, ci CustomInterface) {
 	})
@@ -81,7 +81,7 @@ var (
 		varFMsg = fmt.Sprintf(format, as...)
 	}
 	varFunc     = Func("variadicFunc", varF)
-	varRegister = Register("variadicRegister", varF)
+	varRegister = MustRegister("variadicRegister", varF)
 
 	errFRuns = 0
 	errFErr  = errors.New("error!")
@@ -93,7 +93,7 @@ var (
 		return errFErr
 	}
 	errFunc     = Func("errFunc", errF)
-	errRegister = Register("errRegister", errF)
+	errRegister = MustRegister("errRegister", errF)
 
 	dupeWhich = 0
 	dupe1F    = func(c context.Context) {
@@ -102,14 +102,12 @@ var (
 		}
 	}
 	dupe1Func     = Func("dupe", dupe1F)
-	dupe1Register = Register("dupe", dupe1F)
 	dupe2F        = func(c context.Context) {
 		if dupeWhich == 0 {
 			dupeWhich = 2
 		}
 	}
 	dupe2Func     = Func("dupe", dupe2F)
-	dupe2Register = Register("dupe", dupe2F)
 
 	requestFuncRuns    = 0
 	requestFuncHeaders *taskqueue.RequestHeaders
@@ -119,14 +117,14 @@ var (
 		requestFuncHeaders, requestFuncErr = RequestHeaders(c)
 	}
 	requestFunc     = Func("requestFunc", requestF)
-	requestRegister = Register("requestRegister", requestF)
+	requestRegister = MustRegister("requestRegister", requestF)
 
 	stdCtxRuns = 0
 	stdCtxF    = func(c stdctx.Context) {
 		stdCtxRuns++
 	}
 	stdCtxFunc     = Func("stdctxFunc", stdCtxF)
-	stdCtxRegister = Register("stdctxRegister", stdCtxF)
+	stdCtxRegister = MustRegister("stdctxRegister", stdCtxF)
 )
 
 type fakeContext struct {
@@ -424,31 +422,14 @@ func TestFuncDuplicateFunction(t *testing.T) {
 	}
 }
 
-func TestRegisterDuplicateFunction(t *testing.T) {
-	c := newFakeContext()
-
-	// Fake out the adding of a task.
-	var task *taskqueue.Task
-	taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
-		if queue != "" {
-			t.Errorf(`Got queue %q, expected ""`, queue)
+func TestMustRegisterDuplicateFunction(t *testing.T) {
+	MustRegister("dupe", dupe1F)
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("MustRegister did not panic")
 		}
-		task = tk
-		return tk, nil
-	}
-
-	if err := dupe1Register.Call(c.ctx); err == nil {
-		t.Error("dupe1Register.Call did not return error")
-	}
-	if task != nil {
-		t.Error("dupe1Register.Call posted a task")
-	}
-	if err := dupe2Register.Call(c.ctx); err == nil {
-		t.Error("dupe2Register.Call did not return error")
-	}
-	if task != nil {
-		t.Fatalf("dupe2Register.Call did not post a task")
-	}
+	}()
+	MustRegister("dupe", dupe2F)
 }
 
 func TestGetRequestHeadersFromContext(t *testing.T) {
