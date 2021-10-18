@@ -135,8 +135,6 @@ func APICall(ctx context.Context, service, method string, in, out proto.Message)
 }
 
 // BackgroundContext returns a context not associated with a request.
-// This should only be used when not servicing a request.
-// This only works in App Engine "flexible environment".
 func BackgroundContext() context.Context {
 	return internal.BackgroundContext()
 }
