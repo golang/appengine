@@ -182,11 +182,11 @@ func Func(key string, i interface{}) *Function {
 func MustRegister(key string, i interface{}) *Function {
 	f, err := registerFunction(key, i)
 	if err != nil {
-		return f
+		panic(err)
 	}
 
 	if old := funcs[f.key]; old != nil {
-		panic(fmt.Sprintf("multiple functions registered for %q", key))
+		panic(errors.New(fmt.Sprintf("multiple functions registered for %q", key)))
 	}
 	funcs[f.key] = f
 	return f
