@@ -186,7 +186,7 @@ func MustRegister(key string, i interface{}) *Function {
 	}
 
 	if old := funcs[f.key]; old != nil {
-		panic(errors.New(fmt.Sprintf("multiple functions registered for %q", key)))
+		panic(fmt.Errorf("multiple functions registered for %q", key))
 	}
 	funcs[f.key] = f
 	return f
