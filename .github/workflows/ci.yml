@@ -36,7 +36,7 @@ jobs:
         GO111MODULE: on
       run: |
         go get .
-        gcloud components install app-engine-python app-engine-go cloud-datastore-emulator --quiet
+        gcloud components install app-engine-python app-engine-go cloud-datastore-emulator app-engine-python-extras --quiet
     - name: Test gomod
       env:
         GO111MODULE: on
@@ -77,7 +77,7 @@ jobs:
       run: |
         go get -u -v $(go list -f '{{join .Imports "\n"}}{{"\n"}}{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v appengine)
         go get -u google.golang.org/appengine
-        gcloud components install app-engine-python app-engine-go cloud-datastore-emulator --quiet
+        gcloud components install app-engine-python app-engine-go cloud-datastore-emulator app-engine-python-extras --quiet
     - name: Test gopath
       run: |
         export APPENGINE_DEV_APPSERVER=$(which dev_appserver.py)
