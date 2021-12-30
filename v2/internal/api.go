@@ -67,7 +67,7 @@ var (
 	backgroundContextOnce sync.Once
 	backgroundContext     netcontext.Context
 
-	logStream io.Writer        = os.Stdout // For test hooks.
+	logStream io.Writer        = os.Stderr // For test hooks.
 	timeNow   func() time.Time = time.Now  // For test hooks.
 )
 

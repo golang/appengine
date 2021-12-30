@@ -437,7 +437,7 @@ func buildContextWithTraceHeaders(t *testing.T, headers []string) *context {
 		t.Fatal(err)
 	}
 	for _, h := range headers {
-		req.Header.Add("Cloud-Trace-Context", h)
+		req.Header.Add("X-Cloud-Trace-Context", h)
 	}
 	return fromContext(ContextForTesting(req))
 }
