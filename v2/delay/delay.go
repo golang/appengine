@@ -21,12 +21,14 @@ To invoke the function in a deferred fashion, call the top-level item:
     ```
     laterFunc(ctx, "aaa", "bbb")
     ```
+
 This will queue a task and return quickly; the function will be actually
 run in a new request. The delay package uses the Task Queue API to create
 tasks that call the reserved application path "/_ah/queue/go/delay".
 This path may only be marked as "login: admin" or have no access
 restriction; it will fail if marked as "login: required".
 */
+
 package delay // import "google.golang.org/appengine/v2/delay"
 
 import (
