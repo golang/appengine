@@ -44,11 +44,10 @@ type Transport struct {
 var _ http.RoundTripper = (*Transport)(nil)
 
 // Client returns an *http.Client using a default urlfetch Transport. This
-// client will have the default deadline of 5 seconds, and will check the
-// validity of SSL certificates.
+// client will check the validity of SSL certificates.
 //
-// Any deadline of the provided context will be used for requests through this client;
-// if the client does not have a deadline then a 5 second default is used.
+// Any deadline of the provided context will be used for requests through this client.
+// If the client does not have a deadline, then an App Engine default of 60 second is used.
 func Client(ctx context.Context) *http.Client {
 	return &http.Client{
 		Transport: &Transport{

@@ -144,8 +144,8 @@ func Call(ctx netcontext.Context, service, method string, in, out proto.Message)
 	return err
 }
 
-func handleHTTP(w http.ResponseWriter, r *http.Request) {
-	panic("handleHTTP called; this should be impossible")
+func Middleware(next http.Handler) http.Handler {
+	panic("Middleware called; this should be impossible")
 }
 
 func logf(c appengine.Context, level int64, format string, args ...interface{}) {
