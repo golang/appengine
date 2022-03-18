@@ -30,7 +30,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-${{ matrix.go-version }}-go-
     - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@master
+      uses: google-github-actions/setup-gcloud@v0
     - name: Install
       env:
         GO111MODULE: on
@@ -45,7 +45,7 @@ jobs:
         go test -v -cover -race google.golang.org/appengine/...
         # TestAPICallAllocations doesn't run under race detector.
         go test -v -cover google.golang.org/appengine/internal/... -run TestAPICallAllocations
-  
+
   test-gopath:
     runs-on: ubuntu-latest
     strategy:
