@@ -55,6 +55,7 @@ package delay // import "google.golang.org/appengine/delay"
 import (
 	"bytes"
 	stdctx "context"
+	"encoding/base64"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -282,9 +283,11 @@ func (f *Function) Task(args ...interface{}) (*taskqueue.Task, error) {
 	}
 
 	buf := new(bytes.Buffer)
-	if err := gob.NewEncoder(buf).Encode(inv); err != nil {
+	b64 := base64.NewEncoder(base64.StdEncoding, buf)
+	if err := gob.NewEncoder(b64).Encode(inv); err != nil {
 		return nil, fmt.Errorf("delay: gob encoding failed: %v", err)
 	}
+	b64.Close()
 
 	return &taskqueue.Task{
 		Path:    path,
@@ -315,7 +318,7 @@ func runFunc(c context.Context, w http.ResponseWriter, req *http.Request) {
 	c = context.WithValue(c, headersContextKey, taskqueue.ParseRequestHeaders(req.Header))
 
 	var inv invocation
-	if err := gob.NewDecoder(req.Body).Decode(&inv); err != nil {
+	if err := gob.NewDecoder(base64.NewDecoder(base64.StdEncoding, req.Body)).Decode(&inv); err != nil {
 		log.Errorf(c, "delay: failed decoding task payload: %v", err)
 		log.Warningf(c, "delay: dropping task")
 		return
