@@ -30,7 +30,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-${{ matrix.go-version }}-go-
     - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@master
+      uses: google-github-actions/setup-gcloud@v0
     - name: Install
       env:
         GO111MODULE: on
