@@ -49,7 +49,7 @@ jobs:
         go test -v -cover -race google.golang.org/appengine/v2/...
         # TestAPICallAllocations doesn't run under race detector.
         go test -v -cover google.golang.org/appengine/v2/internal/... -run TestAPICallAllocations
-  
+
   test-gopath-v2:
     runs-on: ubuntu-latest
     strategy:
@@ -58,7 +58,7 @@ jobs:
         go-version: [ '1.11.x', '1.12.x']
     env:
       working-directory: ./v2
-    
+
     steps:
     - name: Set up Go
       uses: actions/setup-go@v2
