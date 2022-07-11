@@ -38,7 +38,7 @@ var UserServiceError_ErrorCode_name = map[int32]string{
 	5: "OAUTH_ERROR",
 }
 var UserServiceError_ErrorCode_value = map[string]int32{
-	"OK": 0,
+	"OK":                    0,
 	"REDIRECT_URL_TOO_LONG": 1,
 	"NOT_ALLOWED":           2,
 	"OAUTH_INVALID_TOKEN":   3,

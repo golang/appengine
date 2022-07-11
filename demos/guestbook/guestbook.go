@@ -3,6 +3,7 @@
 // license that can be found in the LICENSE file.
 
 // This example only works on App Engine "flexible environment".
+//go:build !appengine
 // +build !appengine
 
 package main

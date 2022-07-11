@@ -220,10 +220,13 @@ type invocation struct {
 }
 
 // Call invokes a delayed function.
-//   err := f.Call(c, ...)
+//
+//	err := f.Call(c, ...)
+//
 // is equivalent to
-//   t, _ := f.Task(...)
-//   _, err := taskqueue.Add(c, t, "")
+//
+//	t, _ := f.Task(...)
+//	_, err := taskqueue.Add(c, t, "")
 func (f *Function) Call(c context.Context, args ...interface{}) error {
 	t, err := f.Task(args...)
 	if err != nil {
