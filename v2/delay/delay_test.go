@@ -447,7 +447,6 @@ func TestInvalidFunction_MustRegister(t *testing.T) {
 	MustRegister("invalid", func() {})
 }
 
-
 func TestGetRequestHeadersFromContext(t *testing.T) {
 	for _, testTarget := range []*Function{requestFunc, requestRegister} {
 		c := newFakeContext()

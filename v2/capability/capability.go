@@ -9,6 +9,7 @@ for specific API capabilities.
 This package does not work in App Engine "flexible environment".
 
 Example:
+
 	if !capability.Enabled(c, "datastore_v3", "write") {
 		// show user a different page
 	}

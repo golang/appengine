@@ -5,8 +5,7 @@
 /*
 Package search provides a client for App Engine's search service.
 
-
-Basic Operations
+# Basic Operations
 
 Indexes contain documents. Each index is identified by its name: a
 human-readable ASCII string.
@@ -54,8 +53,7 @@ to Get to hold the resulting document.
 		return err
 	}
 
-
-Search and Listing Documents
+# Search and Listing Documents
 
 Indexes have two methods for retrieving multiple documents at once: Search and
 List.
@@ -98,8 +96,7 @@ Call List to iterate over all documents in an index.
 		fmt.Fprintf(w, "%s -> %#v\n", id, doc)
 	}
 
-
-Fields and Facets
+# Fields and Facets
 
 A document's contents can be represented by a variety of types. These are
 typically struct pointers, but they can also be represented by any type
@@ -145,8 +142,7 @@ Example code:
 		I float64 `search:",facet" json:"i"`
 	}
 
-
-The FieldLoadSaver Interface
+# The FieldLoadSaver Interface
 
 A document's contents can also be represented by any type that implements the
 FieldLoadSaver interface. This type may be a struct pointer, but it

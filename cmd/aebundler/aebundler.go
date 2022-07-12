@@ -8,9 +8,10 @@
 // A main func is synthesized if one does not exist.
 //
 // A sample Dockerfile to be used with this bundler could look like this:
-//     FROM gcr.io/google-appengine/go-compat
-//     ADD . /app
-//     RUN GOPATH=/app/_gopath go build -tags appenginevm -o /app/_ah/exe
+//
+//	FROM gcr.io/google-appengine/go-compat
+//	ADD . /app
+//	RUN GOPATH=/app/_gopath go build -tags appenginevm -o /app/_ah/exe
 package main
 
 import (

@@ -14,18 +14,18 @@ with protocol "cloudsql" and an address of the Cloud SQL instance.
 
 A Go MySQL driver that has been tested to work well with Cloud SQL
 is the go-sql-driver:
+
 	import "database/sql"
 	import _ "github.com/go-sql-driver/mysql"
 
 	db, err := sql.Open("mysql", "user@cloudsql(project-id:instance-name)/dbname")
 
-
 Another driver that works well with Cloud SQL is the mymysql driver:
+
 	import "database/sql"
 	import _ "github.com/ziutek/mymysql/godrv"
 
 	db, err := sql.Open("mymysql", "cloudsql:instance-name*dbname/user/password")
-
 
 Using either of these drivers, you can perform a standard SQL query.
 This example assumes there is a table named 'users' with

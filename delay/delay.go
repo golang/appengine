@@ -10,14 +10,19 @@ To declare a function that may be executed later, call Func
 in a top-level assignment context, passing it an arbitrary string key
 and a function whose first argument is of type context.Context.
 The key is used to look up the function so it can be called later.
+
 	var laterFunc = delay.Func("key", myFunc)
+
 It is also possible to use a function literal.
+
 	var laterFunc = delay.Func("key", func(c context.Context, x string) {
 		// ...
 	})
 
 To call a function, invoke its Call method.
+
 	laterFunc.Call(c, "something")
+
 A function may be called any number of times. If the function has any
 return arguments, and the last one is of type error, the function may
 return a non-nil error to signal that the function should be retried.
@@ -37,9 +42,9 @@ with the string key that was passed to the Func function. Updating an app
 with pending function invocations should safe as long as the relevant
 functions have the (filename, key) combination preserved. The filename is
 parsed according to these rules:
-  * Paths in package main are shortened to just the file name (github.com/foo/foo.go -> foo.go)
-  * Paths are stripped to just package paths (/go/src/github.com/foo/bar.go -> github.com/foo/bar.go)
-  * Module versions are stripped (/go/pkg/mod/github.com/foo/bar@v0.0.0-20181026220418-f595d03440dc/baz.go -> github.com/foo/bar/baz.go)
+  - Paths in package main are shortened to just the file name (github.com/foo/foo.go -> foo.go)
+  - Paths are stripped to just package paths (/go/src/github.com/foo/bar.go -> github.com/foo/bar.go)
+  - Module versions are stripped (/go/pkg/mod/github.com/foo/bar@v0.0.0-20181026220418-f595d03440dc/baz.go -> github.com/foo/bar/baz.go)
 
 There is some inherent risk of pending function invocations being lost during
 an update that contains large changes. For example, switching from using GOPATH
@@ -208,10 +213,13 @@ type invocation struct {
 }
 
 // Call invokes a delayed function.
-//   err := f.Call(c, ...)
+//
+//	err := f.Call(c, ...)
+//
 // is equivalent to
-//   t, _ := f.Task(...)
-//   _, err := taskqueue.Add(c, t, "")
+//
+//	t, _ := f.Task(...)
+//	_, err := taskqueue.Add(c, t, "")
 func (f *Function) Call(c context.Context, args ...interface{}) error {
 	t, err := f.Task(args...)
 	if err != nil {

@@ -7,6 +7,7 @@ Package xmpp provides the means to send and receive instant messages
 to and from users of XMPP-compatible services.
 
 To send a message,
+
 	m := &xmpp.Message{
 		To:   []string{"kaylee@example.com"},
 		Body: `Hi! How's the carrot?`,
@@ -14,6 +15,7 @@ To send a message,
 	err := m.Send(c)
 
 To receive messages,
+
 	func init() {
 		xmpp.Handle(handleChat)
 	}

@@ -35,18 +35,18 @@ import (
 //
 // Main is designed so that the app's main package looks like this:
 //
-//      package main
+//	package main
 //
-//      import (
-//              "google.golang.org/appengine"
+//	import (
+//	        "google.golang.org/appengine"
 //
-//              _ "myapp/package0"
-//              _ "myapp/package1"
-//      )
+//	        _ "myapp/package0"
+//	        _ "myapp/package1"
+//	)
 //
-//      func main() {
-//              appengine.Main()
-//      }
+//	func main() {
+//	        appengine.Main()
+//	}
 //
 // The "myapp/packageX" packages are expected to register HTTP handlers
 // in their init functions.
