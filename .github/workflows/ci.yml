@@ -10,6 +10,7 @@ jobs:
   test-gomod:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         go-version: [ '1.11.x', '1.12.x', '1.13.x', '1.14.x', '1.15.x', '1.16.x']
 
@@ -49,6 +50,7 @@ jobs:
   test-gopath:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         # GOPATH is deprecated in go 1.13.
         go-version: [ '1.11.x', '1.12.x']
