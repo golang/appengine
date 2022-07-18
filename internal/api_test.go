@@ -10,6 +10,7 @@ package internal
 import (
 	"bufio"
 	"bytes"
+	netcontext "context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -18,13 +19,13 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"runtime"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	netcontext "golang.org/x/net/context"
 
 	basepb "google.golang.org/appengine/internal/base"
 	remotepb "google.golang.org/appengine/internal/remote_api"
@@ -41,6 +42,8 @@ type fakeAPIHandler struct {
 	hang chan int // used for RunSlowly RPC
 
 	LogFlushes int32 // atomic
+
+	allowMissingTicket bool
 }
 
 func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +70,7 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Bad encoded API request: %v", err), 500)
 		return
 	}
-	if *apiReq.RequestId != "s3cr3t" && *apiReq.RequestId != DefaultTicket() {
+	if *apiReq.RequestId != "s3cr3t" && !f.allowMissingTicket {
 		writeResponse(&remotepb.Response{
 			RpcError: &remotepb.RpcError{
 				Code:   proto.Int32(int32(remotepb.RpcError_SECURITY_VIOLATION)),
@@ -147,18 +150,25 @@ func setup() (f *fakeAPIHandler, c *context, cleanup func()) {
 	f = &fakeAPIHandler{}
 	srv := httptest.NewServer(f)
 	u, err := url.Parse(srv.URL + apiPath)
+	restoreAPIHost := restoreEnvVar("API_HOST")
+	restoreAPIPort := restoreEnvVar("API_HOST")
+	os.Setenv("API_HOST", u.Hostname())
+	os.Setenv("API_PORT", u.Port())
 	if err != nil {
 		panic(fmt.Sprintf("url.Parse(%q): %v", srv.URL+apiPath, err))
 	}
 	return f, &context{
-		req: &http.Request{
-			Header: http.Header{
-				ticketHeader: []string{"s3cr3t"},
-				dapperHeader: []string{"trace-001"},
+			req: &http.Request{
+				Header: http.Header{
+					ticketHeader: []string{"s3cr3t"},
+					dapperHeader: []string{"trace-001"},
+				},
 			},
-		},
-		apiURL: u,
-	}, srv.Close
+		}, func() {
+			restoreAPIHost()
+			restoreAPIPort()
+			srv.Close()
+		}
 }
 
 func restoreEnvVar(key string) (cleanup func()) {
@@ -192,8 +202,9 @@ func TestAPICall(t *testing.T) {
 func TestAPICallTicketUnavailable(t *testing.T) {
 	resetEnv := SetTestEnv()
 	defer resetEnv()
-	_, c, cleanup := setup()
+	f, c, cleanup := setup()
 	defer cleanup()
+	f.allowMissingTicket = true
 
 	c.req.Header.Set(ticketHeader, "")
 	req := &basepb.StringProto{
@@ -243,13 +254,9 @@ func TestAPICallRPCFailure(t *testing.T) {
 func TestAPICallDialFailure(t *testing.T) {
 	// See what happens if the API host is unresponsive.
 	// This should time out quickly, not hang forever.
-	_, c, cleanup := setup()
-	defer cleanup()
-	// Reset the URL to the production address so that dialing fails.
-	c.apiURL = apiURL()
-
+	// We intentially don't set up the fakeAPIHandler for this test to cause the dail failure.
 	start := time.Now()
-	err := Call(toContext(c), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{})
+	err := Call(netcontext.Background(), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{})
 	const max = 1 * time.Second
 	if taken := time.Since(start); taken > max {
 		t.Errorf("Dial hang took too long: %v > %v", taken, max)
@@ -282,7 +289,6 @@ func TestDelayedLogFlushing(t *testing.T) {
 
 			http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 				logC := WithContext(netcontext.Background(), r)
-				fromContext(logC).apiURL = c.apiURL // Otherwise it will try to use the default URL.
 				Logf(logC, 1, "It's a lovely day.")
 				w.WriteHeader(200)
 				time.Sleep(1200 * time.Millisecond)
@@ -344,7 +350,6 @@ func TestLogFlushing(t *testing.T) {
 			path := "/quick_log_" + tc.logToLogservice
 			http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
 				logC := WithContext(netcontext.Background(), r)
-				fromContext(logC).apiURL = c.apiURL // Otherwise it will try to use the default URL.
 				Logf(logC, 1, "It's a lovely day.")
 				w.WriteHeader(200)
 				w.Write(make([]byte, 100<<10)) // write 100 KB to force HTTP flush
@@ -435,7 +440,8 @@ func TestAPICallAllocations(t *testing.T) {
 	}
 
 	// Run the test API server in a subprocess so we aren't counting its allocations.
-	u, cleanup := launchHelperProcess(t)
+	cleanup := launchHelperProcess(t)
+
 	defer cleanup()
 	c := &context{
 		req: &http.Request{
@@ -444,7 +450,6 @@ func TestAPICallAllocations(t *testing.T) {
 				dapperHeader: []string{"trace-001"},
 			},
 		},
-		apiURL: u,
 	}
 
 	req := &basepb.StringProto{
@@ -463,13 +468,18 @@ func TestAPICallAllocations(t *testing.T) {
 	}
 
 	// Lots of room for improvement...
-	const min, max float64 = 60, 86
+	var min, max float64 = 60, 86
+	if strings.HasPrefix(runtime.Version(), "go1.11.") || strings.HasPrefix(runtime.Version(), "go1.12.") {
+		// add a bit more overhead for versions before go1.13
+		// see https://go.dev/doc/go1.13#compilers
+		max = 90
+	}
 	if avg < min || max < avg {
 		t.Errorf("Allocations per API call = %g, want in [%g,%g]", avg, min, max)
 	}
 }
 
-func launchHelperProcess(t *testing.T) (apiURL *url.URL, cleanup func()) {
+func launchHelperProcess(t *testing.T) (cleanup func()) {
 	cmd := exec.Command(os.Args[0], "-test.run=TestHelperProcess")
 	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
 	stdin, err := cmd.StdinPipe()
@@ -504,7 +514,13 @@ func launchHelperProcess(t *testing.T) (apiURL *url.URL, cleanup func()) {
 		t.Fatal("Helper process never reported")
 	}
 
-	return u, func() {
+	restoreAPIHost := restoreEnvVar("API_HOST")
+	restoreAPIPort := restoreEnvVar("API_HOST")
+	os.Setenv("API_HOST", u.Hostname())
+	os.Setenv("API_PORT", u.Port())
+	return func() {
+		restoreAPIHost()
+		restoreAPIPort()
 		stdin.Close()
 		if err := cmd.Wait(); err != nil {
 			t.Errorf("Helper process did not exit cleanly: %v", err)
@@ -528,21 +544,4 @@ func TestHelperProcess(*testing.T) {
 
 	// Wait for stdin to be closed.
 	io.Copy(ioutil.Discard, os.Stdin)
-}
-
-func TestBackgroundContext(t *testing.T) {
-	resetEnv := SetTestEnv()
-	defer resetEnv()
-
-	ctx, key := fromContext(BackgroundContext()), "X-Magic-Ticket-Header"
-	if g, w := ctx.req.Header.Get(key), "my-app-id/default.20150612t184001.0"; g != w {
-		t.Errorf("%v = %q, want %q", key, g, w)
-	}
-
-	// Check that using the background context doesn't panic.
-	req := &basepb.StringProto{
-		Value: proto.String("Doctor Who"),
-	}
-	res := &basepb.StringProto{}
-	Call(BackgroundContext(), "actordb", "LookupActor", req, res) // expected to fail
 }
