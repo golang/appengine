@@ -145,7 +145,7 @@ func setup() (f *fakeAPIHandler, c *context, cleanup func()) {
 	f = &fakeAPIHandler{}
 	srv := httptest.NewServer(f)
 	u, err := url.Parse(srv.URL + apiPath)
-	revertAPIHost := restoreEnvVar("API_HOST")
+	restoreAPIHost := restoreEnvVar("API_HOST")
 	restoreAPIPort := restoreEnvVar("API_HOST")
 	os.Setenv("API_HOST", u.Hostname())
 	os.Setenv("API_PORT", u.Port())
@@ -160,7 +160,7 @@ func setup() (f *fakeAPIHandler, c *context, cleanup func()) {
 				},
 			},
 		}, func() {
-			revertAPIHost()
+			restoreAPIHost()
 			restoreAPIPort()
 			srv.Close()
 		}
