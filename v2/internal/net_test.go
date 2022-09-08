@@ -26,7 +26,7 @@ func TestDialLimit(t *testing.T) {
 		}
 	}()
 
-	f, c, cleanup := setup() // setup is in api_test.go
+	f, r, cleanup := setup() // setup is in api_test.go
 	defer cleanup()
 	f.hang = make(chan int)
 
@@ -37,12 +37,12 @@ func TestDialLimit(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		go func() {
 			defer wg.Done()
-			Call(toContext(c), "errors", "RunSlowly", &basepb.VoidProto{}, &basepb.VoidProto{})
+			Call(r.Context(), "errors", "RunSlowly", &basepb.VoidProto{}, &basepb.VoidProto{})
 		}()
 	}
 	time.Sleep(50 * time.Millisecond) // let those two RPCs start
 
-	ctx, _ := netcontext.WithTimeout(toContext(c), 50*time.Millisecond)
+	ctx, _ := netcontext.WithTimeout(r.Context(), 50*time.Millisecond)
 	err := Call(ctx, "errors", "Non200", &basepb.VoidProto{}, &basepb.VoidProto{})
 	if err != errTimeout {
 		t.Errorf("Non200 RPC returned with err %v, want errTimeout", err)

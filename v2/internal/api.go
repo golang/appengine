@@ -248,9 +248,8 @@ func WithContext(parent netcontext.Context, req *http.Request) netcontext.Contex
 }
 
 // RegisterTestRequest registers the HTTP request req for testing, such that
-// any API calls are sent to the provided URL. It returns a closure to delete
-// the registration.
-// It should only be used by aetest package.
+// any API calls are sent to the provided URL.
+// It should only be used by test code or test helpers like aetest.
 func RegisterTestRequest(req *http.Request, apiURL *url.URL, appID string) *http.Request {
 	ctx := req.Context()
 	ctx = withAPIHostOverride(ctx, apiURL.Hostname())

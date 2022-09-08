@@ -141,51 +141,35 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func setup() (f *fakeAPIHandler, c *context, cleanup func()) {
+func makeTestRequest(apiURL *url.URL) *http.Request {
+	req := &http.Request{
+		Header: http.Header{
+			ticketHeader: []string{"s3cr3t"},
+			dapperHeader: []string{"trace-001"},
+		},
+	}
+	return RegisterTestRequest(req, apiURL, "")
+}
+
+func setup() (f *fakeAPIHandler, r *http.Request, cleanup func()) {
 	f = &fakeAPIHandler{}
 	srv := httptest.NewServer(f)
-	u, err := url.Parse(srv.URL + apiPath)
-	restoreAPIHost := restoreEnvVar("API_HOST")
-	restoreAPIPort := restoreEnvVar("API_HOST")
-	os.Setenv("API_HOST", u.Hostname())
-	os.Setenv("API_PORT", u.Port())
+	apiURL, err := url.Parse(srv.URL + apiPath)
 	if err != nil {
 		panic(fmt.Sprintf("url.Parse(%q): %v", srv.URL+apiPath, err))
 	}
-	return f, &context{
-			req: &http.Request{
-				Header: http.Header{
-					ticketHeader: []string{"s3cr3t"},
-					dapperHeader: []string{"trace-001"},
-				},
-			},
-		}, func() {
-			restoreAPIHost()
-			restoreAPIPort()
-			srv.Close()
-		}
-}
-
-func restoreEnvVar(key string) (cleanup func()) {
-	oldval, ok := os.LookupEnv(key)
-	return func() {
-		if ok {
-			os.Setenv(key, oldval)
-		} else {
-			os.Unsetenv(key)
-		}
-	}
+	return f, makeTestRequest(apiURL), srv.Close
 }
 
 func TestAPICall(t *testing.T) {
-	_, c, cleanup := setup()
+	_, r, cleanup := setup()
 	defer cleanup()
 
 	req := &basepb.StringProto{
 		Value: proto.String("Doctor Who"),
 	}
 	res := &basepb.StringProto{}
-	err := Call(toContext(c), "actordb", "LookupActor", req, res)
+	err := Call(r.Context(), "actordb", "LookupActor", req, res)
 	if err != nil {
 		t.Fatalf("API call failed: %v", err)
 	}
@@ -195,18 +179,16 @@ func TestAPICall(t *testing.T) {
 }
 
 func TestAPICallTicketUnavailable(t *testing.T) {
-	resetEnv := SetTestEnv()
-	defer resetEnv()
-	f, c, cleanup := setup()
+	f, r, cleanup := setup()
 	defer cleanup()
 	f.allowMissingTicket = true
 
-	c.req.Header.Set(ticketHeader, "")
+	r.Header.Set(ticketHeader, "")
 	req := &basepb.StringProto{
 		Value: proto.String("Doctor Who"),
 	}
 	res := &basepb.StringProto{}
-	err := Call(toContext(c), "actordb", "LookupActor", req, res)
+	err := Call(r.Context(), "actordb", "LookupActor", req, res)
 	if err != nil {
 		t.Fatalf("API call failed: %v", err)
 	}
@@ -216,7 +198,7 @@ func TestAPICallTicketUnavailable(t *testing.T) {
 }
 
 func TestAPICallRPCFailure(t *testing.T) {
-	f, c, cleanup := setup()
+	f, r, cleanup := setup()
 	defer cleanup()
 
 	testCases := []struct {
@@ -230,7 +212,7 @@ func TestAPICallRPCFailure(t *testing.T) {
 	}
 	f.hang = make(chan int) // only for RunSlowly
 	for _, tc := range testCases {
-		ctx, _ := netcontext.WithTimeout(toContext(c), 100*time.Millisecond)
+		ctx, _ := netcontext.WithTimeout(r.Context(), 100*time.Millisecond)
 		err := Call(ctx, "errors", tc.method, &basepb.VoidProto{}, &basepb.VoidProto{})
 		ce, ok := err.(*CallError)
 		if !ok {
@@ -247,9 +229,7 @@ func TestAPICallRPCFailure(t *testing.T) {
 }
 
 func TestAPICallDialFailure(t *testing.T) {
-	// See what happens if the API host is unresponsive.
-	// This should time out quickly, not hang forever.
-	// We intentially don't set up the fakeAPIHandler for this test to cause the dail failure.
+	// we intentially don't set up the fakeAPIHandler for this test to cause the dail failure
 	start := time.Now()
 	err := Call(netcontext.Background(), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{})
 	const max = 1 * time.Second
@@ -323,16 +303,10 @@ func TestAPICallAllocations(t *testing.T) {
 	}
 
 	// Run the test API server in a subprocess so we aren't counting its allocations.
-	cleanup := launchHelperProcess(t)
+	apiURL, cleanup := launchHelperProcess(t)
 	defer cleanup()
-	c := &context{
-		req: &http.Request{
-			Header: http.Header{
-				ticketHeader: []string{"s3cr3t"},
-				dapperHeader: []string{"trace-001"},
-			},
-		},
-	}
+
+	r := makeTestRequest(apiURL)
 
 	req := &basepb.StringProto{
 		Value: proto.String("Doctor Who"),
@@ -340,7 +314,7 @@ func TestAPICallAllocations(t *testing.T) {
 	res := &basepb.StringProto{}
 	var apiErr error
 	avg := testing.AllocsPerRun(100, func() {
-		ctx, _ := netcontext.WithTimeout(toContext(c), 100*time.Millisecond)
+		ctx, _ := netcontext.WithTimeout(r.Context(), 100*time.Millisecond)
 		if err := Call(ctx, "actordb", "LookupActor", req, res); err != nil && apiErr == nil {
 			apiErr = err // get the first error only
 		}
@@ -356,7 +330,7 @@ func TestAPICallAllocations(t *testing.T) {
 	}
 }
 
-func launchHelperProcess(t *testing.T) (cleanup func()) {
+func launchHelperProcess(t *testing.T) (apiURL *url.URL, cleanup func()) {
 	cmd := exec.Command(os.Args[0], "-test.run=TestHelperProcess")
 	cmd.Env = []string{"GO_WANT_HELPER_PROCESS=1"}
 	stdin, err := cmd.StdinPipe()
@@ -391,13 +365,7 @@ func launchHelperProcess(t *testing.T) (cleanup func()) {
 		t.Fatal("Helper process never reported")
 	}
 
-	restoreAPIHost := restoreEnvVar("API_HOST")
-	restoreAPIPort := restoreEnvVar("API_HOST")
-	os.Setenv("API_HOST", u.Hostname())
-	os.Setenv("API_PORT", u.Port())
-	return func() {
-		restoreAPIHost()
-		restoreAPIPort()
+	return u, func() {
 		stdin.Close()
 		if err := cmd.Wait(); err != nil {
 			t.Errorf("Helper process did not exit cleanly: %v", err)
