@@ -84,53 +84,63 @@ func apiURL(ctx netcontext.Context) *url.URL {
 	}
 }
 
-func handleHTTP(w http.ResponseWriter, r *http.Request) {
-	c := &context{
-		req:       r,
-		outHeader: w.Header(),
-	}
-	r = r.WithContext(withContext(r.Context(), c))
-	c.req = r
-
-	// Patch up RemoteAddr so it looks reasonable.
-	if addr := r.Header.Get(userIPHeader); addr != "" {
-		r.RemoteAddr = addr
-	} else if addr = r.Header.Get(remoteAddrHeader); addr != "" {
-		r.RemoteAddr = addr
-	} else {
-		// Should not normally reach here, but pick a sensible default anyway.
-		r.RemoteAddr = "127.0.0.1"
-	}
-	// The address in the headers will most likely be of these forms:
-	//	123.123.123.123
-	//	2001:db8::1
-	// net/http.Request.RemoteAddr is specified to be in "IP:port" form.
-	if _, _, err := net.SplitHostPort(r.RemoteAddr); err != nil {
-		// Assume the remote address is only a host; add a default port.
-		r.RemoteAddr = net.JoinHostPort(r.RemoteAddr, "80")
-	}
-
-	executeRequestSafely(c, r)
-	c.outHeader = nil // make sure header changes aren't respected any more
-
-	// Avoid nil Write call if c.Write is never called.
-	if c.outCode != 0 {
-		w.WriteHeader(c.outCode)
-	}
-	if c.outBody != nil {
-		w.Write(c.outBody)
-	}
+// Middleware wraps an http handler so that it can make GAE API calls
+func Middleware(next http.Handler) http.Handler {
+	return handleHTTPMiddleware(executeRequestSafelyMiddleware(next))
 }
 
-func executeRequestSafely(c *context, r *http.Request) {
-	defer func() {
-		if x := recover(); x != nil {
-			logf(c, 4, "%s", renderPanic(x)) // 4 == critical
-			c.outCode = 500
+func handleHTTPMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		c := &context{
+			req:       r,
+			outHeader: w.Header(),
 		}
-	}()
+		r = r.WithContext(withContext(r.Context(), c))
+		c.req = r
 
-	http.DefaultServeMux.ServeHTTP(c, r)
+		// Patch up RemoteAddr so it looks reasonable.
+		if addr := r.Header.Get(userIPHeader); addr != "" {
+			r.RemoteAddr = addr
+		} else if addr = r.Header.Get(remoteAddrHeader); addr != "" {
+			r.RemoteAddr = addr
+		} else {
+			// Should not normally reach here, but pick a sensible default anyway.
+			r.RemoteAddr = "127.0.0.1"
+		}
+		// The address in the headers will most likely be of these forms:
+		//	123.123.123.123
+		//	2001:db8::1
+		// net/http.Request.RemoteAddr is specified to be in "IP:port" form.
+		if _, _, err := net.SplitHostPort(r.RemoteAddr); err != nil {
+			// Assume the remote address is only a host; add a default port.
+			r.RemoteAddr = net.JoinHostPort(r.RemoteAddr, "80")
+		}
+
+		next.ServeHTTP(c, r)
+		c.outHeader = nil // make sure header changes aren't respected any more
+
+		// Avoid nil Write call if c.Write is never called.
+		if c.outCode != 0 {
+			w.WriteHeader(c.outCode)
+		}
+		if c.outBody != nil {
+			w.Write(c.outBody)
+		}
+	})
+}
+
+func executeRequestSafelyMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if x := recover(); x != nil {
+				c := w.(*context)
+				logf(c, 4, "%s", renderPanic(x)) // 4 == critical
+				c.outCode = 500
+			}
+		}()
+
+		next.ServeHTTP(w, r)
+	})
 }
 
 func renderPanic(x interface{}) string {
