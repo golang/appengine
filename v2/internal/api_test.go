@@ -292,7 +292,7 @@ func TestRemoteAddr(t *testing.T) {
 			Header: tc.headers,
 			Body:   ioutil.NopCloser(bytes.NewReader(nil)),
 		}
-		handleHTTP(httptest.NewRecorder(), r)
+		Middleware(http.DefaultServeMux).ServeHTTP(httptest.NewRecorder(), r)
 		if addr != tc.addr {
 			t.Errorf("Header %v, got %q, want %q", tc.headers, addr, tc.addr)
 		}
@@ -309,7 +309,7 @@ func TestPanickingHandler(t *testing.T) {
 		Body:   ioutil.NopCloser(bytes.NewReader(nil)),
 	}
 	rec := httptest.NewRecorder()
-	handleHTTP(rec, r)
+	Middleware(http.DefaultServeMux).ServeHTTP(rec, r)
 	if rec.Code != 500 {
 		t.Errorf("Panicking handler returned HTTP %d, want HTTP %d", rec.Code, 500)
 	}
