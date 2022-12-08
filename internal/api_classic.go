@@ -8,7 +8,7 @@
 package internal
 
 import (
-	stdctx "context"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -25,13 +25,13 @@ var contextKey = "holds an appengine.Context"
 
 // fromContext returns the App Engine context or nil if ctx is not
 // derived from an App Engine context.
-func fromContext(ctx stdctx.Context) appengine.Context {
+func fromContext(ctx context.Context) appengine.Context {
 	c, _ := ctx.Value(&contextKey).(appengine.Context)
 	return c
 }
 
 // This is only for classic App Engine adapters.
-func ClassicContextFromContext(ctx stdctx.Context) (appengine.Context, error) {
+func ClassicContextFromContext(ctx context.Context) (appengine.Context, error) {
 	c := fromContext(ctx)
 	if c == nil {
 		return nil, errNotAppEngineContext
@@ -39,8 +39,8 @@ func ClassicContextFromContext(ctx stdctx.Context) (appengine.Context, error) {
 	return c, nil
 }
 
-func withContext(parent stdctx.Context, c appengine.Context) stdctx.Context {
-	ctx := stdctx.WithValue(parent, &contextKey, c)
+func withContext(parent context.Context, c appengine.Context) context.Context {
+	ctx := context.WithValue(parent, &contextKey, c)
 
 	s := &basepb.StringProto{}
 	c.Call("__go__", "GetNamespace", &basepb.VoidProto{}, s, nil)
@@ -51,7 +51,7 @@ func withContext(parent stdctx.Context, c appengine.Context) stdctx.Context {
 	return ctx
 }
 
-func IncomingHeaders(ctx stdctx.Context) http.Header {
+func IncomingHeaders(ctx context.Context) http.Header {
 	if c := fromContext(ctx); c != nil {
 		if req, ok := c.Request().(*http.Request); ok {
 			return req.Header
@@ -60,11 +60,11 @@ func IncomingHeaders(ctx stdctx.Context) http.Header {
 	return nil
 }
 
-func ReqContext(req *http.Request) stdctx.Context {
-	return WithContext(stdctx.Background(), req)
+func ReqContext(req *http.Request) context.Context {
+	return WithContext(context.Background(), req)
 }
 
-func WithContext(parent stdctx.Context, req *http.Request) stdctx.Context {
+func WithContext(parent context.Context, req *http.Request) context.Context {
 	c := appengine.NewContext(req)
 	return withContext(parent, c)
 }
@@ -84,11 +84,11 @@ func (t *testingContext) Call(service, method string, _, _ appengine_internal.Pr
 }
 func (t *testingContext) Request() interface{} { return t.req }
 
-func ContextForTesting(req *http.Request) stdctx.Context {
-	return withContext(stdctx.Background(), &testingContext{req: req})
+func ContextForTesting(req *http.Request) context.Context {
+	return withContext(context.Background(), &testingContext{req: req})
 }
 
-func Call(ctx stdctx.Context, service, method string, in, out proto.Message) error {
+func Call(ctx context.Context, service, method string, in, out proto.Message) error {
 	if ns := NamespaceFromContext(ctx); ns != "" {
 		if fn, ok := NamespaceMods[service]; ok {
 			fn(in, ns)

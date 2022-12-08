@@ -8,7 +8,7 @@
 package internal
 
 import (
-	stdctx "context"
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -24,7 +24,7 @@ const (
 	hDatacenter             = "X-AppEngine-Datacenter"
 )
 
-func ctxHeaders(ctx stdctx.Context) http.Header {
+func ctxHeaders(ctx context.Context) http.Header {
 	c := fromContext(ctx)
 	if c == nil {
 		return nil
@@ -32,15 +32,15 @@ func ctxHeaders(ctx stdctx.Context) http.Header {
 	return c.Request().Header
 }
 
-func DefaultVersionHostname(ctx stdctx.Context) string {
+func DefaultVersionHostname(ctx context.Context) string {
 	return ctxHeaders(ctx).Get(hDefaultVersionHostname)
 }
 
-func RequestID(ctx stdctx.Context) string {
+func RequestID(ctx context.Context) string {
 	return ctxHeaders(ctx).Get(hRequestLogId)
 }
 
-func Datacenter(ctx stdctx.Context) string {
+func Datacenter(ctx context.Context) string {
 	if dc := ctxHeaders(ctx).Get(hDatacenter); dc != "" {
 		return dc
 	}
@@ -71,7 +71,7 @@ func ServerSoftware() string {
 
 // TODO(dsymonds): Remove the metadata fetches.
 
-func ModuleName(_ stdctx.Context) string {
+func ModuleName(_ context.Context) string {
 	if s := os.Getenv("GAE_MODULE_NAME"); s != "" {
 		return s
 	}
@@ -81,7 +81,7 @@ func ModuleName(_ stdctx.Context) string {
 	return string(mustGetMetadata("instance/attributes/gae_backend_name"))
 }
 
-func VersionID(_ stdctx.Context) string {
+func VersionID(_ context.Context) string {
 	if s1, s2 := os.Getenv("GAE_MODULE_VERSION"), os.Getenv("GAE_MINOR_VERSION"); s1 != "" && s2 != "" {
 		return s1 + "." + s2
 	}
@@ -112,7 +112,7 @@ func partitionlessAppID() string {
 	return string(mustGetMetadata("instance/attributes/gae_project"))
 }
 
-func fullyQualifiedAppID(_ stdctx.Context) string {
+func fullyQualifiedAppID(_ context.Context) string {
 	if s := os.Getenv("GAE_APPLICATION"); s != "" {
 		return s
 	}

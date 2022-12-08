@@ -6,7 +6,7 @@ package internal
 
 import (
 	"bytes"
-	stdctx "context"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -63,7 +63,7 @@ var (
 	timeNow   func() time.Time = time.Now  // For test hooks.
 )
 
-func apiURL(ctx stdctx.Context) *url.URL {
+func apiURL(ctx context.Context) *url.URL {
 	host, port := "appengine.googleapis.internal", "10001"
 	if h := os.Getenv("API_HOST"); h != "" {
 		host = h
@@ -91,7 +91,7 @@ func Middleware(next http.Handler) http.Handler {
 
 func handleHTTPMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		c := &context{
+		c := &aeContext{
 			req:       r,
 			outHeader: w.Header(),
 		}
@@ -133,7 +133,7 @@ func executeRequestSafelyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		defer func() {
 			if x := recover(); x != nil {
-				c := w.(*context)
+				c := w.(*aeContext)
 				logf(c, 4, "%s", renderPanic(x)) // 4 == critical
 				c.outCode = 500
 			}
@@ -182,9 +182,9 @@ func renderPanic(x interface{}) string {
 	return string(buf)
 }
 
-// context represents the context of an in-flight HTTP request.
+// aeContext represents the context of an in-flight HTTP request.
 // It implements the appengine.Context and http.ResponseWriter interfaces.
-type context struct {
+type aeContext struct {
 	req *http.Request
 
 	outCode   int
@@ -197,8 +197,8 @@ var contextKey = "holds a *context"
 // jointContext joins two contexts in a superficial way.
 // It takes values and timeouts from a base context, and only values from another context.
 type jointContext struct {
-	base       stdctx.Context
-	valuesOnly stdctx.Context
+	base       context.Context
+	valuesOnly context.Context
 }
 
 func (c jointContext) Deadline() (time.Time, bool) {
@@ -222,35 +222,35 @@ func (c jointContext) Value(key interface{}) interface{} {
 
 // fromContext returns the App Engine context or nil if ctx is not
 // derived from an App Engine context.
-func fromContext(ctx stdctx.Context) *context {
-	c, _ := ctx.Value(&contextKey).(*context)
+func fromContext(ctx context.Context) *aeContext {
+	c, _ := ctx.Value(&contextKey).(*aeContext)
 	return c
 }
 
-func withContext(parent stdctx.Context, c *context) stdctx.Context {
-	ctx := stdctx.WithValue(parent, &contextKey, c)
+func withContext(parent context.Context, c *aeContext) context.Context {
+	ctx := context.WithValue(parent, &contextKey, c)
 	if ns := c.req.Header.Get(curNamespaceHeader); ns != "" {
 		ctx = withNamespace(ctx, ns)
 	}
 	return ctx
 }
 
-func toContext(c *context) stdctx.Context {
-	return withContext(stdctx.Background(), c)
+func toContext(c *aeContext) context.Context {
+	return withContext(context.Background(), c)
 }
 
-func IncomingHeaders(ctx stdctx.Context) http.Header {
+func IncomingHeaders(ctx context.Context) http.Header {
 	if c := fromContext(ctx); c != nil {
 		return c.req.Header
 	}
 	return nil
 }
 
-func ReqContext(req *http.Request) stdctx.Context {
+func ReqContext(req *http.Request) context.Context {
 	return req.Context()
 }
 
-func WithContext(parent stdctx.Context, req *http.Request) stdctx.Context {
+func WithContext(parent context.Context, req *http.Request) context.Context {
 	return jointContext{
 		base:       parent,
 		valuesOnly: req.Context(),
@@ -268,7 +268,7 @@ func RegisterTestRequest(req *http.Request, apiURL *url.URL, appID string) *http
 	ctx = WithAppIDOverride(ctx, appID)
 
 	// use the unregistered request as a placeholder so that withContext can read the headers
-	c := &context{req: req}
+	c := &aeContext{req: req}
 	c.req = req.WithContext(withContext(ctx, c))
 	return c.req
 }
@@ -279,7 +279,7 @@ var errTimeout = &CallError{
 	Timeout: true,
 }
 
-func (c *context) Header() http.Header { return c.outHeader }
+func (c *aeContext) Header() http.Header { return c.outHeader }
 
 // Copied from $GOROOT/src/pkg/net/http/transfer.go. Some response status
 // codes do not permit a response body (nor response entity headers such as
@@ -296,7 +296,7 @@ func bodyAllowedForStatus(status int) bool {
 	return true
 }
 
-func (c *context) Write(b []byte) (int, error) {
+func (c *aeContext) Write(b []byte) (int, error) {
 	if c.outCode == 0 {
 		c.WriteHeader(http.StatusOK)
 	}
@@ -307,7 +307,7 @@ func (c *context) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
-func (c *context) WriteHeader(code int) {
+func (c *aeContext) WriteHeader(code int) {
 	if c.outCode != 0 {
 		logf(c, 3, "WriteHeader called multiple times on request.") // error level
 		return
@@ -315,7 +315,7 @@ func (c *context) WriteHeader(code int) {
 	c.outCode = code
 }
 
-func post(ctx stdctx.Context, body []byte, timeout time.Duration) (b []byte, err error) {
+func post(ctx context.Context, body []byte, timeout time.Duration) (b []byte, err error) {
 	apiURL := apiURL(ctx)
 	hreq := &http.Request{
 		Method: "POST",
@@ -379,7 +379,7 @@ func post(ctx stdctx.Context, body []byte, timeout time.Duration) (b []byte, err
 	return hrespBody, nil
 }
 
-func Call(ctx stdctx.Context, service, method string, in, out proto.Message) error {
+func Call(ctx context.Context, service, method string, in, out proto.Message) error {
 	if ns := NamespaceFromContext(ctx); ns != "" {
 		if fn, ok := NamespaceMods[service]; ok {
 			fn(in, ns)
@@ -473,10 +473,10 @@ func Call(ctx stdctx.Context, service, method string, in, out proto.Message) err
 	return proto.Unmarshal(res.Response, out)
 }
 
-func (c *context) Request() *http.Request {
+func (c *aeContext) Request() *http.Request {
 	return c.req
 }
 
-func ContextForTesting(req *http.Request) stdctx.Context {
-	return toContext(&context{req: req})
+func ContextForTesting(req *http.Request) context.Context {
+	return toContext(&aeContext{req: req})
 }

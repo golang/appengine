@@ -430,7 +430,7 @@ func overrideMaxLogMessage(t *testing.T, max int) func() {
 	return func() { maxLogMessage = old }
 }
 
-func buildContextWithTraceHeaders(t *testing.T, headers []string) *context {
+func buildContextWithTraceHeaders(t *testing.T, headers []string) *aeContext {
 	t.Helper()
 	req, err := http.NewRequest("GET", "/", nil)
 	if err != nil {

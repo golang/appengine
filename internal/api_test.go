@@ -10,7 +10,7 @@ package internal
 import (
 	"bufio"
 	"bytes"
-	stdctx "context"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -146,7 +146,7 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func setup() (f *fakeAPIHandler, c *context, cleanup func()) {
+func setup() (f *fakeAPIHandler, c *aeContext, cleanup func()) {
 	f = &fakeAPIHandler{}
 	srv := httptest.NewServer(f)
 	u, err := url.Parse(srv.URL + apiPath)
@@ -157,7 +157,7 @@ func setup() (f *fakeAPIHandler, c *context, cleanup func()) {
 	if err != nil {
 		panic(fmt.Sprintf("url.Parse(%q): %v", srv.URL+apiPath, err))
 	}
-	return f, &context{
+	return f, &aeContext{
 			req: &http.Request{
 				Header: http.Header{
 					ticketHeader: []string{"s3cr3t"},
@@ -235,7 +235,7 @@ func TestAPICallRPCFailure(t *testing.T) {
 	}
 	f.hang = make(chan int) // only for RunSlowly
 	for _, tc := range testCases {
-		ctx, _ := stdctx.WithTimeout(toContext(c), 100*time.Millisecond)
+		ctx, _ := context.WithTimeout(toContext(c), 100*time.Millisecond)
 		err := Call(ctx, "errors", tc.method, &basepb.VoidProto{}, &basepb.VoidProto{})
 		ce, ok := err.(*CallError)
 		if !ok {
@@ -256,7 +256,7 @@ func TestAPICallDialFailure(t *testing.T) {
 	// This should time out quickly, not hang forever.
 	// We intentially don't set up the fakeAPIHandler for this test to cause the dail failure.
 	start := time.Now()
-	err := Call(stdctx.Background(), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{})
+	err := Call(context.Background(), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{})
 	const max = 1 * time.Second
 	if taken := time.Since(start); taken > max {
 		t.Errorf("Dial hang took too long: %v > %v", taken, max)
@@ -288,7 +288,7 @@ func TestDelayedLogFlushing(t *testing.T) {
 			path := "/slow_log_" + tc.logToLogservice
 
 			http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-				logC := WithContext(stdctx.Background(), r)
+				logC := WithContext(context.Background(), r)
 				Logf(logC, 1, "It's a lovely day.")
 				w.WriteHeader(200)
 				time.Sleep(1200 * time.Millisecond)
@@ -349,7 +349,7 @@ func TestLogFlushing(t *testing.T) {
 
 			path := "/quick_log_" + tc.logToLogservice
 			http.HandleFunc(path, func(w http.ResponseWriter, r *http.Request) {
-				logC := WithContext(stdctx.Background(), r)
+				logC := WithContext(context.Background(), r)
 				Logf(logC, 1, "It's a lovely day.")
 				w.WriteHeader(200)
 				w.Write(make([]byte, 100<<10)) // write 100 KB to force HTTP flush
@@ -443,7 +443,7 @@ func TestAPICallAllocations(t *testing.T) {
 	cleanup := launchHelperProcess(t)
 
 	defer cleanup()
-	c := &context{
+	c := &aeContext{
 		req: &http.Request{
 			Header: http.Header{
 				ticketHeader: []string{"s3cr3t"},
@@ -458,7 +458,7 @@ func TestAPICallAllocations(t *testing.T) {
 	res := &basepb.StringProto{}
 	var apiErr error
 	avg := testing.AllocsPerRun(100, func() {
-		ctx, _ := stdctx.WithTimeout(toContext(c), 100*time.Millisecond)
+		ctx, _ := context.WithTimeout(toContext(c), 100*time.Millisecond)
 		if err := Call(ctx, "actordb", "LookupActor", req, res); err != nil && apiErr == nil {
 			apiErr = err // get the first error only
 		}
