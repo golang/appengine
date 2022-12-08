@@ -6,7 +6,7 @@ package internal
 
 import (
 	"bytes"
-	netcontext "context"
+	stdctx "context"
 	"errors"
 	"fmt"
 	"io"
@@ -63,7 +63,7 @@ var (
 	timeNow   func() time.Time = time.Now  // For test hooks.
 )
 
-func apiURL(ctx netcontext.Context) *url.URL {
+func apiURL(ctx stdctx.Context) *url.URL {
 	host, port := "appengine.googleapis.internal", "10001"
 	if h := os.Getenv("API_HOST"); h != "" {
 		host = h
@@ -197,8 +197,8 @@ var contextKey = "holds a *context"
 // jointContext joins two contexts in a superficial way.
 // It takes values and timeouts from a base context, and only values from another context.
 type jointContext struct {
-	base       netcontext.Context
-	valuesOnly netcontext.Context
+	base       stdctx.Context
+	valuesOnly stdctx.Context
 }
 
 func (c jointContext) Deadline() (time.Time, bool) {
@@ -222,35 +222,35 @@ func (c jointContext) Value(key interface{}) interface{} {
 
 // fromContext returns the App Engine context or nil if ctx is not
 // derived from an App Engine context.
-func fromContext(ctx netcontext.Context) *context {
+func fromContext(ctx stdctx.Context) *context {
 	c, _ := ctx.Value(&contextKey).(*context)
 	return c
 }
 
-func withContext(parent netcontext.Context, c *context) netcontext.Context {
-	ctx := netcontext.WithValue(parent, &contextKey, c)
+func withContext(parent stdctx.Context, c *context) stdctx.Context {
+	ctx := stdctx.WithValue(parent, &contextKey, c)
 	if ns := c.req.Header.Get(curNamespaceHeader); ns != "" {
 		ctx = withNamespace(ctx, ns)
 	}
 	return ctx
 }
 
-func toContext(c *context) netcontext.Context {
-	return withContext(netcontext.Background(), c)
+func toContext(c *context) stdctx.Context {
+	return withContext(stdctx.Background(), c)
 }
 
-func IncomingHeaders(ctx netcontext.Context) http.Header {
+func IncomingHeaders(ctx stdctx.Context) http.Header {
 	if c := fromContext(ctx); c != nil {
 		return c.req.Header
 	}
 	return nil
 }
 
-func ReqContext(req *http.Request) netcontext.Context {
+func ReqContext(req *http.Request) stdctx.Context {
 	return req.Context()
 }
 
-func WithContext(parent netcontext.Context, req *http.Request) netcontext.Context {
+func WithContext(parent stdctx.Context, req *http.Request) stdctx.Context {
 	return jointContext{
 		base:       parent,
 		valuesOnly: req.Context(),
@@ -315,7 +315,7 @@ func (c *context) WriteHeader(code int) {
 	c.outCode = code
 }
 
-func post(ctx netcontext.Context, body []byte, timeout time.Duration) (b []byte, err error) {
+func post(ctx stdctx.Context, body []byte, timeout time.Duration) (b []byte, err error) {
 	apiURL := apiURL(ctx)
 	hreq := &http.Request{
 		Method: "POST",
@@ -379,7 +379,7 @@ func post(ctx netcontext.Context, body []byte, timeout time.Duration) (b []byte,
 	return hrespBody, nil
 }
 
-func Call(ctx netcontext.Context, service, method string, in, out proto.Message) error {
+func Call(ctx stdctx.Context, service, method string, in, out proto.Message) error {
 	if ns := NamespaceFromContext(ctx); ns != "" {
 		if fn, ok := NamespaceMods[service]; ok {
 			fn(in, ns)
@@ -477,6 +477,6 @@ func (c *context) Request() *http.Request {
 	return c.req
 }
 
-func ContextForTesting(req *http.Request) netcontext.Context {
+func ContextForTesting(req *http.Request) stdctx.Context {
 	return toContext(&context{req: req})
 }

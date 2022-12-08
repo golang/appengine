@@ -6,7 +6,7 @@ package delay
 
 import (
 	"bytes"
-	stdctx "context"
+	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
-	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/v2/internal"
 	"google.golang.org/appengine/v2/taskqueue"
@@ -116,12 +115,12 @@ var (
 	requestFunc     = Func("requestFunc", requestF)
 	requestRegister = MustRegister("requestRegister", requestF)
 
-	stdCtxRuns = 0
-	stdCtxF    = func(c stdctx.Context) {
-		stdCtxRuns++
+	contextRuns = 0
+	contextF    = func(c context.Context) {
+		contextRuns++
 	}
-	stdCtxFunc     = Func("stdctxFunc", stdCtxF)
-	stdCtxRegister = MustRegister("stdctxRegister", stdCtxF)
+	contextFunc     = Func("contextFunc", contextF)
+	contextRegister = MustRegister("contextRegister", contextF)
 )
 
 type fakeContext struct {
@@ -505,9 +504,9 @@ func TestStandardContext(t *testing.T) {
 		return tk, nil
 	}
 
-	for _, testTarget := range []*Function{stdCtxFunc, stdCtxRegister} {
+	for _, testTarget := range []*Function{contextFunc, contextRegister} {
 		c := newFakeContext()
-		stdCtxRuns = 0 // reset state
+		contextRuns = 0 // reset state
 		if err := testTarget.Call(c.ctx); err != nil {
 			t.Fatal("Function.Call:", err)
 		}
@@ -520,8 +519,8 @@ func TestStandardContext(t *testing.T) {
 		rw := httptest.NewRecorder()
 		runFunc(c.ctx, rw, req)
 
-		if stdCtxRuns != 1 {
-			t.Errorf("stdCtxRuns: got %d, want 1", stdCtxRuns)
+		if contextRuns != 1 {
+			t.Errorf("contextRuns: got %d, want 1", contextRuns)
 		}
 	}
 }

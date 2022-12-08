@@ -5,9 +5,8 @@
 package internal
 
 import (
+	stdctx "context"
 	"os"
-
-	netcontext "golang.org/x/net/context"
 )
 
 var (
@@ -23,7 +22,7 @@ var (
 
 // AppID is the implementation of the wrapper function of the same name in
 // ../identity.go. See that file for commentary.
-func AppID(c netcontext.Context) string {
+func AppID(c stdctx.Context) string {
 	return appID(FullyQualifiedAppID(c))
 }
 

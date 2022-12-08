@@ -1,11 +1,11 @@
 package aetest
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/appengine"
 )
 

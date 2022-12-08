@@ -7,7 +7,7 @@ package internal
 // This file implements hooks for applying datastore transactions.
 
 import (
-	netcontext "context"
+	stdctx "context"
 	"errors"
 	"reflect"
 
@@ -38,13 +38,13 @@ func applyTransaction(pb proto.Message, t *pb.Transaction) {
 
 var transactionKey = "used for *Transaction"
 
-func transactionFromContext(ctx netcontext.Context) *transaction {
+func transactionFromContext(ctx stdctx.Context) *transaction {
 	t, _ := ctx.Value(&transactionKey).(*transaction)
 	return t
 }
 
-func withTransaction(ctx netcontext.Context, t *transaction) netcontext.Context {
-	return netcontext.WithValue(ctx, &transactionKey, t)
+func withTransaction(ctx stdctx.Context, t *transaction) stdctx.Context {
+	return stdctx.WithValue(ctx, &transactionKey, t)
 }
 
 type transaction struct {
@@ -54,7 +54,7 @@ type transaction struct {
 
 var ErrConcurrentTransaction = errors.New("internal: concurrent transaction")
 
-func RunTransactionOnce(c netcontext.Context, f func(netcontext.Context) error, xg bool, readOnly bool, previousTransaction *pb.Transaction) (*pb.Transaction, error) {
+func RunTransactionOnce(c stdctx.Context, f func(stdctx.Context) error, xg bool, readOnly bool, previousTransaction *pb.Transaction) (*pb.Transaction, error) {
 	if transactionFromContext(c) != nil {
 		return nil, errors.New("nested transactions are not supported")
 	}

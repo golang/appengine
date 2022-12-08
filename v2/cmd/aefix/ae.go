@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	ctxPackage = "golang.org/x/net/context"
+	ctxPackage = "context"
 
 	newPackageBase = "google.golang.org/"
 )

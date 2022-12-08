@@ -8,10 +8,9 @@
 package socket
 
 import (
+	"context"
 	"net"
 	"time"
-
-	"golang.org/x/net/context"
 )
 
 // Dial connects to the address addr on the network protocol.
