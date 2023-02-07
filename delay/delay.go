@@ -300,7 +300,7 @@ func (f *Function) Task(args ...interface{}) (*taskqueue.Task, error) {
 	}, nil
 }
 
-// Request returns the special task-queue HTTP request headers for the current
+// RequestHeaders returns the special task-queue HTTP request headers for the current
 // task queue handler. Returns an error if called from outside a delay.Func.
 func RequestHeaders(c context.Context) (*taskqueue.RequestHeaders, error) {
 	if ret, ok := c.Value(headersContextKey).(*taskqueue.RequestHeaders); ok {

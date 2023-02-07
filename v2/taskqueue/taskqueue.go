@@ -62,7 +62,7 @@ type RetryOptions struct {
 	ApplyZeroMaxDoublings bool
 }
 
-// toRetryParameter converts RetryOptions to pb.TaskQueueRetryParameters.
+// toRetryParameters converts RetryOptions to pb.TaskQueueRetryParameters.
 func (opt *RetryOptions) toRetryParameters() *pb.TaskQueueRetryParameters {
 	params := &pb.TaskQueueRetryParameters{}
 	if opt.RetryLimit > 0 {
