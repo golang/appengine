@@ -51,7 +51,7 @@ code importing `appengine/datastore` will now need to import `google.golang.org/
 Most App Engine services are available with exactly the same API.
 A few APIs were cleaned up, and there are some differences:
 
-* `appengine.Context` has been replaced with the `Context` type from `golang.org/x/net/context`.
+* `appengine.Context` has been replaced with the `Context` type from `context`.
 * Logging methods that were on `appengine.Context` are now functions in `google.golang.org/appengine/log`.
 * `appengine.Timeout` has been removed. Use `context.WithTimeout` instead.
 * `appengine.Datacenter` now takes a `context.Context` argument.

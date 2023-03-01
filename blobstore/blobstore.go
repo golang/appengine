@@ -9,6 +9,7 @@ package blobstore // import "google.golang.org/appengine/blobstore"
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -23,7 +24,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"golang.org/x/net/context"
 	"golang.org/x/text/encoding/htmlindex"
 
 	"google.golang.org/appengine"

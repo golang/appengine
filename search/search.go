@@ -11,6 +11,7 @@ package search // import "google.golang.org/appengine/search"
 // time.Time)? _MAXIMUM_STRING_LENGTH?
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math"
@@ -22,7 +23,6 @@ import (
 	"unicode/utf8"
 
 	"github.com/golang/protobuf/proto"
-	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"

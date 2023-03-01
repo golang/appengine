@@ -33,7 +33,7 @@ package delay // import "google.golang.org/appengine/v2/delay"
 
 import (
 	"bytes"
-	stdctx "context"
+	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -45,8 +45,6 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-
-	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/v2"
 	"google.golang.org/appengine/v2/internal"
@@ -83,12 +81,11 @@ var (
 
 	// context keys
 	headersContextKey contextKey = 0
-	stdContextType               = reflect.TypeOf((*stdctx.Context)(nil)).Elem()
-	netContextType               = reflect.TypeOf((*context.Context)(nil)).Elem()
+	stdContextType               = reflect.TypeOf((*context.Context)(nil)).Elem()
 )
 
 func isContext(t reflect.Type) bool {
-	return t == stdContextType || t == netContextType
+	return t == stdContextType
 }
 
 var modVersionPat = regexp.MustCompile("@v[^/]+")

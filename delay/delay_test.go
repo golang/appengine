@@ -6,7 +6,7 @@ package delay
 
 import (
 	"bytes"
-	stdctx "context"
+	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -18,7 +18,6 @@ import (
 	"testing"
 
 	"github.com/golang/protobuf/proto"
-	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/internal"
 	"google.golang.org/appengine/taskqueue"
@@ -107,7 +106,7 @@ var (
 	})
 
 	stdCtxRuns = 0
-	stdCtxFunc = Func("stdctx", func(c stdctx.Context) {
+	stdCtxFunc = Func("stdctx", func(c context.Context) {
 		stdCtxRuns++
 	})
 )
