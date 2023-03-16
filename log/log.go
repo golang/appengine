@@ -245,10 +245,10 @@ func makeRequest(params *Query, appID, versionID string) (*pb.LogReadRequest, er
 	req := &pb.LogReadRequest{}
 	req.AppId = &appID
 	if !params.StartTime.IsZero() {
-		req.StartTime = proto.Int64(params.StartTime.UnixMicro())
+		req.StartTime = proto.Int64(params.StartTime.UnixNano() / 1e3)
 	}
 	if !params.EndTime.IsZero() {
-		req.EndTime = proto.Int64(params.EndTime.UnixMicro())
+		req.EndTime = proto.Int64(params.EndTime.UnixNano() / 1e3)
 	}
 	if len(params.Offset) > 0 {
 		var offset pb.LogOffset
