@@ -216,7 +216,7 @@ func newAddReq(c context.Context, task *Task, queueName string) (*pb.TaskQueueAd
 	req := &pb.TaskQueueAddRequest{
 		QueueName: []byte(queueName),
 		TaskName:  []byte(task.Name),
-		EtaUsec:   proto.Int64(eta.UnixNano() / 1e3),
+		EtaUsec:   proto.Int64(eta.UnixMicro()),
 	}
 	method := task.method()
 	if method == "PULL" {
@@ -467,7 +467,7 @@ func ModifyLease(c context.Context, task *Task, queueName string, leaseTime int)
 	req := &pb.TaskQueueModifyTaskLeaseRequest{
 		QueueName:    []byte(queueName),
 		TaskName:     []byte(task.Name),
-		EtaUsec:      proto.Int64(task.ETA.UnixNano() / 1e3), // Used to verify ownership.
+		EtaUsec:      proto.Int64(task.ETA.UnixMicro()), // Used to verify ownership.
 		LeaseSeconds: proto.Float64(float64(leaseTime)),
 	}
 	res := &pb.TaskQueueModifyTaskLeaseResponse{}
