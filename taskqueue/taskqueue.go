@@ -17,6 +17,7 @@ taskqueue operation is to add a single POST task, NewPOSTTask makes it easy.
 package taskqueue // import "google.golang.org/appengine/taskqueue"
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -25,7 +26,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/proto"
-	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
@@ -62,7 +62,7 @@ type RetryOptions struct {
 	ApplyZeroMaxDoublings bool
 }
 
-// toRetryParameter converts RetryOptions to pb.TaskQueueRetryParameters.
+// toRetryParameters converts RetryOptions to pb.TaskQueueRetryParameters.
 func (opt *RetryOptions) toRetryParameters() *pb.TaskQueueRetryParameters {
 	params := &pb.TaskQueueRetryParameters{}
 	if opt.RetryLimit > 0 {

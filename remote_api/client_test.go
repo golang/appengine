@@ -5,11 +5,11 @@
 package remote_api
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"testing"
 
-	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
 )
 

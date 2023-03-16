@@ -5,7 +5,7 @@
 package internal
 
 import (
-	netcontext "context"
+	"context"
 	"sync"
 	"testing"
 	"time"
@@ -42,7 +42,7 @@ func TestDialLimit(t *testing.T) {
 	}
 	time.Sleep(50 * time.Millisecond) // let those two RPCs start
 
-	ctx, _ := netcontext.WithTimeout(r.Context(), 50*time.Millisecond)
+	ctx, _ := context.WithTimeout(r.Context(), 50*time.Millisecond)
 	err := Call(ctx, "errors", "Non200", &basepb.VoidProto{}, &basepb.VoidProto{})
 	if err != errTimeout {
 		t.Errorf("Non200 RPC returned with err %v, want errTimeout", err)

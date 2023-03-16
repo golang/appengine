@@ -7,7 +7,7 @@ package internal
 import (
 	"bufio"
 	"bytes"
-	netcontext "context"
+	"context"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -212,7 +212,7 @@ func TestAPICallRPCFailure(t *testing.T) {
 	}
 	f.hang = make(chan int) // only for RunSlowly
 	for _, tc := range testCases {
-		ctx, _ := netcontext.WithTimeout(r.Context(), 100*time.Millisecond)
+		ctx, _ := context.WithTimeout(r.Context(), 100*time.Millisecond)
 		err := Call(ctx, "errors", tc.method, &basepb.VoidProto{}, &basepb.VoidProto{})
 		ce, ok := err.(*CallError)
 		if !ok {
@@ -231,7 +231,7 @@ func TestAPICallRPCFailure(t *testing.T) {
 func TestAPICallDialFailure(t *testing.T) {
 	// we intentially don't set up the fakeAPIHandler for this test to cause the dail failure
 	start := time.Now()
-	err := Call(netcontext.Background(), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{})
+	err := Call(context.Background(), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{})
 	const max = 1 * time.Second
 	if taken := time.Since(start); taken > max {
 		t.Errorf("Dial hang took too long: %v > %v", taken, max)
@@ -314,7 +314,7 @@ func TestAPICallAllocations(t *testing.T) {
 	res := &basepb.StringProto{}
 	var apiErr error
 	avg := testing.AllocsPerRun(100, func() {
-		ctx, _ := netcontext.WithTimeout(r.Context(), 100*time.Millisecond)
+		ctx, _ := context.WithTimeout(r.Context(), 100*time.Millisecond)
 		if err := Call(ctx, "actordb", "LookupActor", req, res); err != nil && apiErr == nil {
 			apiErr = err // get the first error only
 		}

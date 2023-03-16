@@ -17,7 +17,7 @@ Example:
 package capability // import "google.golang.org/appengine/capability"
 
 import (
-	"golang.org/x/net/context"
+	"context"
 
 	"google.golang.org/appengine/internal"
 	"google.golang.org/appengine/log"

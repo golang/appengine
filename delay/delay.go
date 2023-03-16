@@ -59,7 +59,7 @@ package delay // import "google.golang.org/appengine/delay"
 
 import (
 	"bytes"
-	stdctx "context"
+	"context"
 	"encoding/gob"
 	"errors"
 	"fmt"
@@ -71,8 +71,6 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
-
-	"golang.org/x/net/context"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
@@ -109,12 +107,11 @@ var (
 
 	// context keys
 	headersContextKey contextKey = 0
-	stdContextType               = reflect.TypeOf((*stdctx.Context)(nil)).Elem()
-	netContextType               = reflect.TypeOf((*context.Context)(nil)).Elem()
+	stdContextType               = reflect.TypeOf((*context.Context)(nil)).Elem()
 )
 
 func isContext(t reflect.Type) bool {
-	return t == stdContextType || t == netContextType
+	return t == stdContextType
 }
 
 var modVersionPat = regexp.MustCompile("@v[^/]+")
@@ -300,7 +297,7 @@ func (f *Function) Task(args ...interface{}) (*taskqueue.Task, error) {
 	}, nil
 }
 
-// Request returns the special task-queue HTTP request headers for the current
+// RequestHeaders returns the special task-queue HTTP request headers for the current
 // task queue handler. Returns an error if called from outside a delay.Func.
 func RequestHeaders(c context.Context) (*taskqueue.RequestHeaders, error) {
 	if ret, ok := c.Value(headersContextKey).(*taskqueue.RequestHeaders); ok {

@@ -4,7 +4,7 @@
 
 package datastore
 
-import "golang.org/x/net/context"
+import "context"
 
 // Datastore kinds for the metadata entities.
 const (

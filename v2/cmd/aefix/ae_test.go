@@ -38,10 +38,10 @@ func f(w http.ResponseWriter, r *http.Request) {
 		Out: `package foo
 
 import (
+	"context"
 	"net/http"
 	"time"
 
-	"golang.org/x/net/context"
 	"google.golang.org/appengine/v2"
 	"google.golang.org/appengine/v2/datastore"
 	"google.golang.org/appengine/v2/log"
@@ -74,7 +74,7 @@ func LogSomething(c2 appengine.Context) {
 		Out: `package foo
 
 import (
-	"golang.org/x/net/context"
+	"context"
 	"google.golang.org/appengine/v2/log"
 )
 
@@ -102,7 +102,7 @@ func f(ctx appengine.Context) {
 		Out: `package foo
 
 import (
-	"golang.org/x/net/context"
+	"context"
 	"google.golang.org/appengine/v2/taskqueue"
 )
 
@@ -131,7 +131,7 @@ func f(ctx appengine.Context, w io.Writer) {
 		Out: `package foo
 
 import (
-	"golang.org/x/net/context"
+	"context"
 	"google.golang.org/appengine/v2"
 	"io"
 )
