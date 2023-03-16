@@ -550,7 +550,7 @@ func logf(c *aeContext, level int64, format string, args ...interface{}) {
 	s = strings.TrimRight(s, "\n") // Remove any trailing newline characters.
 	if logToLogservice() {
 		c.addLogLine(&logpb.UserAppLogLine{
-			TimestampUsec: proto.Int64(time.Now().UnixMicro()),
+			TimestampUsec: proto.Int64(time.Now().UnixNano() / 1e3),
 			Level:         &level,
 			Message:       &s,
 		})

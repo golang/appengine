@@ -977,7 +977,7 @@ func fieldsToProto(src []Field) ([]*pb.Field, error) {
 			}
 			timeFields[f.Name] = true
 			fieldValue.Type = pb.FieldValue_DATE.Enum()
-			fieldValue.StringValue = proto.String(strconv.FormatInt(x.UnixMilli(), 10))
+			fieldValue.StringValue = proto.String(strconv.FormatInt(x.UnixNano()/1e6, 10))
 		case float64:
 			if numericFields[f.Name] {
 				return nil, fmt.Errorf("search: duplicate numeric field %q", f.Name)
