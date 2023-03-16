@@ -34,7 +34,7 @@ func IsStandard() bool {
 	return appengineStandard || IsSecondGen()
 }
 
-// IsStandard is the implementation of the wrapper function of the same name in
+// IsSecondGen is the implementation of the wrapper function of the same name in
 // ../appengine.go. See that file for commentary.
 func IsSecondGen() bool {
 	// Second-gen runtimes set $GAE_ENV so we use that to check if we're on a second-gen runtime.
