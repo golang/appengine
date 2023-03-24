@@ -4,6 +4,13 @@ on:
   schedule:
   # Run every day at 10AM.
   - cron: '0 10 * * *'
+  workflow_dispatch:
+    branches:
+    - master
+
+permissions:
+  repository-projects: write
+  pull-requests: write
 
 jobs:
   update-go-versions:
