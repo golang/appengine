@@ -13,7 +13,6 @@ import (
 	"mime/quotedprintable"
 	"net/http"
 	"net/textproto"
-	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -89,9 +88,9 @@ var readerTest = []struct {
 		{"Read", 1, 0, 0, "e", nil},
 		{"Read", 2, 0, 0, "fg", nil},
 		// Test Seek.
-		{"Seek", 0, 2, os.SEEK_SET, "2", nil},
+		{"Seek", 0, 2, io.SeekStart, "2", nil},
 		{"Read", 5, 0, 0, "cdefg", nil},
-		{"Seek", 0, 2, os.SEEK_CUR, "9", nil},
+		{"Seek", 0, 2, io.SeekCurrent, "9", nil},
 		{"Read", 1, 0, 0, "j", nil},
 		// Test reads up to and past EOF.
 		{"Read", 5, 0, 0, "klmno", nil},
@@ -106,7 +105,7 @@ var readerTest = []struct {
 	}},
 	{"a14p.1", []step{
 		// Test Seek before any reads.
-		{"Seek", 0, 2, os.SEEK_SET, "2", nil},
+		{"Seek", 0, 2, io.SeekStart, "2", nil},
 		{"Read", 1, 0, 0, "c", nil},
 		// Test that ReadAt doesn't affect the Read offset.
 		{"ReadAt", 3, 9, 0, "jkl", nil},
@@ -120,11 +119,11 @@ var readerTest = []struct {
 		// Test basic read.
 		{"Read", 1, 0, 0, "A", nil},
 		// Test that Read returns early when the buffer is exhausted.
-		{"Seek", 0, rbs - 2, os.SEEK_SET, strconv.Itoa(rbs - 2), nil},
+		{"Seek", 0, rbs - 2, io.SeekStart, strconv.Itoa(rbs - 2), nil},
 		{"Read", 5, 0, 0, "AA", nil},
 		{"Read", 3, 0, 0, "BBB", nil},
 		// Test that what we just read is still in the buffer.
-		{"Seek", 0, rbs - 2, os.SEEK_SET, strconv.Itoa(rbs - 2), nil},
+		{"Seek", 0, rbs - 2, io.SeekStart, strconv.Itoa(rbs - 2), nil},
 		{"Read", 5, 0, 0, "AABBB", nil},
 		// Test ReadAt.
 		{"ReadAt", 3, rbs - 4, 0, "AAA", nil},
@@ -133,7 +132,7 @@ var readerTest = []struct {
 		{"ReadAt", 5, rbs - 4, 0, "AAAAB", nil},
 		{"ReadAt", 2, rbs - 4, 0, "AA", nil},
 		// Test seeking backwards from the Read offset.
-		{"Seek", 0, 2*rbs - 8, os.SEEK_SET, strconv.Itoa(2*rbs - 8), nil},
+		{"Seek", 0, 2*rbs - 8, io.SeekStart, strconv.Itoa(2*rbs - 8), nil},
 		{"Read", 1, 0, 0, "B", nil},
 		{"Read", 1, 0, 0, "B", nil},
 		{"Read", 1, 0, 0, "B", nil},
