@@ -3,9 +3,9 @@
 // license that can be found in the LICENSE file.
 
 syntax = "proto2";
-option go_package = "search";
+option go_package = "google.golang.org/appengine/v2/internal/search";
 
-package search;
+package search.v2;
 
 message Scope {
   enum Type {
