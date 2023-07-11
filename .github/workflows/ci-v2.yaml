@@ -17,10 +17,11 @@ jobs:
       working-directory: ./v2
 
     steps:
-    - name: Update base image and install Python2
+    - name: Update base image, intall Python2 and Python3
       run:  |
        sudo apt-get update
-       sudo apt-get install -y python2 
+       sudo apt-get install -y python2
+       sudo apt-get install -y python3
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
@@ -51,6 +52,7 @@ jobs:
       working-directory: ${{env.working-directory}}
       run: |
         export APPENGINE_DEV_APPSERVER=$(which dev_appserver.py)
+        export CLOUDSDK_PYTHON="python3"
         go test -v -cover -race google.golang.org/appengine/v2/...
         # TestAPICallAllocations doesn't run under race detector.
         go test -v -cover google.golang.org/appengine/v2/internal/... -run TestAPICallAllocations
@@ -64,12 +66,13 @@ jobs:
         go-version: [ '1.11.x', '1.12.x']
     env:
       working-directory: ./v2
-    
+
     steps:
-    - name: Update base image and intall Python2
+    - name: Update base image, intall Python2 and Python3
       run:  |
        sudo apt-get update
-       sudo apt-get install -y python2     
+       sudo apt-get install -y python2
+       sudo apt-get install -y python3
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
@@ -99,6 +102,7 @@ jobs:
       working-directory: ${{env.working-directory}}
       run: |
         export APPENGINE_DEV_APPSERVER=$(which dev_appserver.py)
+        export CLOUDSDK_PYTHON="python3"
         go test -v -cover -race google.golang.org/appengine/v2/...
         # TestAPICallAllocations doesn't run under race detector.
         go test -v -cover google.golang.org/appengine/v2/internal/... -run TestAPICallAllocations
