@@ -167,7 +167,7 @@ func fileExists(path string) bool {
 }
 
 func findPython() (path string, err error) {
-	for _, name := range []string{"python2.7", "python"} {
+	for _, name := range []string{"python3"} {
 		path, err = exec.LookPath(name)
 		if err == nil {
 			return
