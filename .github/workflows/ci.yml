@@ -19,6 +19,7 @@ jobs:
       run:  |
        sudo apt-get update
        sudo apt-get install -y python3
+       export CLOUDSDK_PYTHON="python3"
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
@@ -65,6 +66,7 @@ jobs:
       run:  |
        sudo apt-get update
        sudo apt-get install -y python3
+       export CLOUDSDK_PYTHON="python3"
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
