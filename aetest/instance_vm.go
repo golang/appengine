@@ -145,7 +145,7 @@ func (i *instance) startChild() (err error) {
 			return err
 		}
 	}
-	executable := os.Getenv("APPENGINE_DEV_APPSERVER_BINARY")
+	executable := os.Getenv("APPENGINE_DEV_APPSERVER")
 	var appserverArgs []string
 	if len(executable) == 0 {
 		executable, err = findPython()
