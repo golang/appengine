@@ -1,7 +1,7 @@
 syntax = "proto2";
-option go_package = "image";
+option go_package = "google.golang.org/appengine/v2/internal/image";
 
-package appengine;
+package appengine.v2;
 
 message ImagesServiceError {
   enum ErrorCode {

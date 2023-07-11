@@ -1,9 +1,9 @@
 syntax = "proto2";
-option go_package = "taskqueue";
+option go_package = "google.golang.org/appengine/v2/internal/taskqueue";
 
-import "google.golang.org/appengine/v2/internal/datastore/datastore_v3.proto";
+import "internal/datastore/datastore_v3.proto";
 
-package appengine;
+package appengine.v2;
 
 message TaskQueueServiceError {
   enum ErrorCode {
