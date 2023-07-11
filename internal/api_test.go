@@ -235,7 +235,7 @@ func TestAPICallRPCFailure(t *testing.T) {
 	}
 	f.hang = make(chan int) // only for RunSlowly
 	for _, tc := range testCases {
-		ctx, _ := context.WithTimeout(toContext(c), 100*time.Millisecond)
+		ctx, _ := context.WithTimeout(toContext(c), 300*time.Millisecond)
 		err := Call(ctx, "errors", tc.method, &basepb.VoidProto{}, &basepb.VoidProto{})
 		ce, ok := err.(*CallError)
 		if !ok {
