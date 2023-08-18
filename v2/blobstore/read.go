@@ -113,11 +113,11 @@ func (r *reader) Seek(offset int64, whence int) (ret int64, err error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	switch whence {
-	case os.SEEK_SET:
+	case io.SeekStart:
 		ret = offset
-	case os.SEEK_CUR:
+	case io.SeekCurrent:
 		ret = r.off + int64(r.r) + offset
-	case os.SEEK_END:
+	case io.SeekEnd:
 		return 0, errors.New("seeking relative to the end of a blob isn't supported")
 	default:
 		return 0, fmt.Errorf("invalid Seek whence value: %d", whence)
