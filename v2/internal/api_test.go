@@ -229,7 +229,7 @@ func TestAPICallRPCFailure(t *testing.T) {
 }
 
 func TestAPICallDialFailure(t *testing.T) {
-	// we intentially don't set up the fakeAPIHandler for this test to cause the dail failure
+	// we intentionally don't set up the fakeAPIHandler for this test to cause the dial failure
 	start := time.Now()
 	err := Call(context.Background(), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{})
 	const max = 1 * time.Second

@@ -254,7 +254,7 @@ func TestAPICallRPCFailure(t *testing.T) {
 func TestAPICallDialFailure(t *testing.T) {
 	// See what happens if the API host is unresponsive.
 	// This should time out quickly, not hang forever.
-	// We intentially don't set up the fakeAPIHandler for this test to cause the dail failure.
+	// We intentionally don't set up the fakeAPIHandler for this test to cause the dial failure.
 	start := time.Now()
 	err := Call(context.Background(), "foo", "bar", &basepb.VoidProto{}, &basepb.VoidProto{})
 	const max = 1 * time.Second

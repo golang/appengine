@@ -54,9 +54,9 @@ jobs:
         # Remove the last comma and space
         versions_str=${versions_str%, *}
 
-        # Only replace the first occurance
+        # Only replace the first occurrence
         sed -i "0,/^        go-version: \[.*/s//        go-version: \[$versions_str\]/" .github/workflows/ci-v2.yaml
-  
+
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v4
       with:

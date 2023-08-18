@@ -153,7 +153,7 @@ type fieldCodec struct {
 	// omitEmpty indicates that the field should be omitted on save
 	// if empty.
 	omitEmpty bool
-	// structCodec is the codec fot the struct field at index 'path',
+	// structCodec is the codec for the struct field at index 'path',
 	// or nil if the field is not a struct.
 	structCodec *structCodec
 }

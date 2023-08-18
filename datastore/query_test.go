@@ -546,7 +546,7 @@ func TestQueryToProto(t *testing.T) {
 		{
 			desc:  "empty filter",
 			query: NewQuery("kind").Filter("=", 17),
-			err:   "empty query filter field nam",
+			err:   "empty query filter field name",
 		},
 		{
 			desc:  "bad filter type",

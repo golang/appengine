@@ -658,7 +658,7 @@ type SortExpression struct {
 	// Reverse causes the documents to be sorted in ascending order.
 	Reverse bool
 
-	// The default value to use when no field is present or the expresion
+	// The default value to use when no field is present or the expression
 	// cannot be calculated for a document. For text sorts, Default must
 	// be of type string; for numeric sorts, float64.
 	Default interface{}

@@ -189,7 +189,7 @@ func Func(key string, i interface{}) *Function {
 	// that's fine because this function expects the same.
 	for i := 0; i < t.NumIn(); i++ {
 		// Only concrete types may be registered. If the argument has
-		// interface type, the client is resposible for registering the
+		// interface type, the client is responsible for registering the
 		// concrete types it will hold.
 		if t.In(i).Kind() == reflect.Interface {
 			continue
