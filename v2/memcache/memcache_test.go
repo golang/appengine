@@ -261,3 +261,52 @@ func TestGetMultiEmpty(t *testing.T) {
 		t.Error("Service was called but should not have been")
 	}
 }
+
+func TestPeekRequest(t *testing.T) {
+	serviceCalled := false
+	key := "lyric"
+	value := "Where the buffalo roam"
+	t1, t2 := int64(1690570000), int64(1690564666)
+
+	c := aetesting.FakeSingleContext(t, "memcache", "Get", func(req *pb.MemcacheGetRequest, res *pb.MemcacheGetResponse) error {
+		// Test request.
+		if n := len(req.Key); n != 1 {
+			t.Errorf("got %d want 1", n)
+			return nil
+		}
+		if k := string(req.Key[0]); k != key {
+			t.Errorf("got %q want %q", k, key)
+		}
+
+		// Response
+		res.Item = []*pb.MemcacheGetResponse_Item{
+			{
+				Key:   []byte(key),
+				Value: []byte(value),
+				Timestamps: &pb.ItemTimestamps{
+					ExpirationTimeSec: &t1,
+					LastAccessTimeSec: &t2,
+				},
+			},
+		}
+		serviceCalled = true
+		return nil
+	})
+
+	item, err := Peek(c, key)
+	if !serviceCalled {
+		t.Error("Service was not called as expected")
+	}
+	if err != nil {
+		t.Errorf("got %v want nil", err)
+	}
+	if item == nil || item.Key != key || string(item.Value) != value {
+		t.Errorf("got %q, %q want {%q,%q}, nil", item, err, key, value)
+	}
+	if item.Timestamps.Expiration.Unix() != t1 {
+		t.Errorf("got %d, want %d", item.Timestamps.Expiration.Unix(), t1)
+	}
+	if item.Timestamps.LastAccess.Unix() != t2 {
+		t.Errorf("got %d, want %d", item.Timestamps.LastAccess.Unix(), t2)
+	}
+}
