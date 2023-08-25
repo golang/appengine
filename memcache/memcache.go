@@ -105,7 +105,7 @@ const (
 
 // protoToItem converts a protocol buffer item to a Go struct.
 func protoToItem(p *pb.MemcacheGetResponse_Item) *Item {
-	if p.IsDeleteLocked != nil && *p.IsDeleteLocked {
+	if p.GetIsDeleteLocked() {
 		// "delete lock" for a duration is not a feature available in the Go lib.
 		// Such items may exist in memcache though, e.g. created by the Java lib.
 		// In this case, nil is more appropriate than an item with empty value.
@@ -118,8 +118,8 @@ func protoToItem(p *pb.MemcacheGetResponse_Item) *Item {
 		Flags: p.GetFlags(),
 		casID: p.GetCasId(),
 		Timestamps: ItemTimestamps{
-			Expiration: timeSecToTime(p.Timestamps.GetExpirationTimeSec()),
-			LastAccess: timeSecToTime(p.Timestamps.GetLastAccessTimeSec()),
+			Expiration: timeSecToTime(p.GetTimestamps().GetExpirationTimeSec()),
+			LastAccess: timeSecToTime(p.GetTimestamps().GetLastAccessTimeSec()),
 		},
 	}
 }
