@@ -31,7 +31,7 @@ jobs:
         # Get all supported Go versions and pass the space-separated versions
         # string to the next step
         versions=$(gcloud functions runtimes list --format="value(NAME)" --project=gae-runtimes-private --region=us-west1 | grep ^go | tr '\n' ' ' | xargs)
-        echo "::set-output name=versions::$versions"
+        echo "versions=$versions" >> $GITHUB_OUTPUT
       id: get_versions
 
     - name: Checkout appengine repo
