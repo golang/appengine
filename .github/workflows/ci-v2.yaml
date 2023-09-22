@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ master, qa ]
 
+permissions:
+  contents: read
+
 jobs:
   test-gomod-v2:
     runs-on: ubuntu-latest
