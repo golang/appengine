@@ -15,8 +15,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"google.golang.org/appengine/internal"
+	"google.golang.org/protobuf/proto"
 
 	pb "google.golang.org/appengine/internal/socket"
 )
