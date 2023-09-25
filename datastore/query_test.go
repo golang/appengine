@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/internal"
 	"google.golang.org/appengine/internal/aetesting"

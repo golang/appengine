@@ -21,7 +21,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"golang.org/x/net/context"
 
 	"google.golang.org/appengine/v2"

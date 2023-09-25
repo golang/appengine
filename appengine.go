@@ -12,7 +12,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/internal"
 )

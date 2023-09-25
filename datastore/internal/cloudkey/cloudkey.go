@@ -12,7 +12,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	cloudpb "google.golang.org/appengine/datastore/internal/cloudpb"
 )
 

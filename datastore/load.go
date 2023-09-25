@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/appengine"
 	pb "google.golang.org/appengine/internal/datastore"
 )

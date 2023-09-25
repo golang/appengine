@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"testing"
 
-	proto "github.com/golang/protobuf/proto"
+	proto "google.golang.org/protobuf/proto"
 	pb "google.golang.org/appengine/internal/datastore"
 )
 
