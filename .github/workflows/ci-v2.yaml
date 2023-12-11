@@ -25,21 +25,13 @@ jobs:
        sudo apt-get update
        sudo apt-get install -y python2
        sudo apt-get install -y python3
+    - name: Checkout
+      uses: actions/checkout@v3
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v4
       with:
         go-version: ${{ matrix.go-version }}
-    - name: Checkout
-      uses: actions/checkout@v2
-    - name: Cache go modules
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/go/pkg/mod
-        key: ${{ runner.os }}-${{ matrix.go-version }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.go-version }}-go-
+        use-latest: true
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v0
     - name: Install
@@ -76,21 +68,13 @@ jobs:
        sudo apt-get update
        sudo apt-get install -y python2
        sudo apt-get install -y python3
+    - name: Checkout
+      uses: actions/checkout@v3
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v4
       with:
         go-version: ${{ matrix.go-version }}
-    - name: Checkout
-      uses: actions/checkout@v2
-    - name: Cache go modules
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/go/pkg/mod
-        key: ${{ runner.os }}-${{ matrix.go-version }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.go-version }}-go-
+        use-latest: true
     - name: Set up Cloud SDK
       uses: google-github-actions/setup-gcloud@v0
     - name: Install

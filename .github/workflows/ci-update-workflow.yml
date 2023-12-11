@@ -35,7 +35,7 @@ jobs:
       id: get_versions
 
     - name: Checkout appengine repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     # Sign the commit.
     # https://www.chainguard.dev/unchained/keyless-git-commit-signing-with-gitsign-and-github-actions
