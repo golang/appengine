@@ -19,12 +19,12 @@ jobs:
       id-token: write # Enable OIDC
     steps:
     - id: 'auth'
-      uses: 'google-github-actions/auth@v1'
+      uses: google-github-actions/auth@3a3c4c57d294ef65efaaee4ff17b22fa88dd3c69 # v1.3.0
       with:
         credentials_json: '${{ secrets.GCP_CREDENTIALS }}'
 
     - name: 'Set up Cloud SDK'
-      uses: 'google-github-actions/setup-gcloud@v1'
+      uses: google-github-actions/setup-gcloud@e30db14379863a8c79331b04a9969f4c1e225e0b # v1.1.1
 
     - name: Get available Go versions
       run: |
@@ -35,11 +35,11 @@ jobs:
       id: get_versions
 
     - name: Checkout appengine repo
-      uses: actions/checkout@v2
+      uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5 # v2.7.0
 
     # Sign the commit.
     # https://www.chainguard.dev/unchained/keyless-git-commit-signing-with-gitsign-and-github-actions
-    - uses: chainguard-dev/actions/setup-gitsign@main
+    - uses: chainguard-dev/actions/setup-gitsign@e74da3cd82dab55e35736f1ef031a12fa5b95299 # main
 
     - name: Update Go versions
       run: |
@@ -58,7 +58,7 @@ jobs:
         sed -i "0,/^        go-version: \[.*/s//        go-version: \[$versions_str\]/" .github/workflows/ci-v2.yaml
   
     - name: Create Pull Request
-      uses: peter-evans/create-pull-request@v4
+      uses: peter-evans/create-pull-request@38e0b6e68b4c852a5500a94740f0e535e0d7ba54 # v4.2.4
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         commit-message: Update go-version matrix
