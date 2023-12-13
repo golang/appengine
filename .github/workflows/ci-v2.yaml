@@ -26,13 +26,13 @@ jobs:
        sudo apt-get install -y python2
        sudo apt-get install -y python3
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Cache go modules
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           ~/.cache/go-build
@@ -41,7 +41,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-${{ matrix.go-version }}-go-
     - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0
+      uses: google-github-actions/setup-gcloud@v2
     - name: Install
       working-directory: ${{env.working-directory}}
       env:
@@ -77,13 +77,13 @@ jobs:
        sudo apt-get install -y python2
        sudo apt-get install -y python3
     - name: Set up Go
-      uses: actions/setup-go@v2
+      uses: actions/setup-go@v5
       with:
         go-version: ${{ matrix.go-version }}
     - name: Checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: Cache go modules
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: |
           ~/.cache/go-build
@@ -92,7 +92,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-${{ matrix.go-version }}-go-
     - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0
+      uses: google-github-actions/setup-gcloud@v2
     - name: Install
       working-directory: ${{env.working-directory}}
       env:
