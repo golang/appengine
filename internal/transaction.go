@@ -11,7 +11,7 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	basepb "google.golang.org/appengine/internal/base"
 	pb "google.golang.org/appengine/internal/datastore"

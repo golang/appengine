@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	pb "google.golang.org/appengine/internal/log"
 )

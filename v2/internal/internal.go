@@ -11,7 +11,7 @@ package internal
 import (
 	"fmt"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	remotepb "google.golang.org/appengine/v2/internal/remote_api"
 )

@@ -13,7 +13,7 @@ package module // import "google.golang.org/appengine/v2/module"
 import (
 	"context"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/v2/internal"
 	pb "google.golang.org/appengine/v2/internal/modules"

@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	proto "github.com/golang/protobuf/proto"
 	pb "google.golang.org/appengine/internal/datastore"
+	proto "google.golang.org/protobuf/proto"
 )
 
 type Simple struct {

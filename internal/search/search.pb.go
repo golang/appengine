@@ -3,7 +3,7 @@
 
 package search
 
-import proto "github.com/golang/protobuf/proto"
+import proto "google.golang.org/protobuf/proto"
 import fmt "fmt"
 import math "math"
 
