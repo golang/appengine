@@ -1452,7 +1452,7 @@ var testCases = []testCase{
 func checkErr(want string, err error) string {
 	if err != nil {
 		got := err.Error()
-		if want == "" || strings.Index(got, want) == -1 {
+		if want == "" || !strings.Contains(got, want) {
 			return got
 		}
 	} else if want != "" {
