@@ -48,6 +48,9 @@ func (e *ErrFieldMismatch) Error() string {
 func protoToKey(r *pb.Reference) (k *Key, err error) {
 	appID := r.GetApp()
 	namespace := r.GetNameSpace()
+	if r.Path == nil {
+		return nil, fmt.Errorf("path is empty: %w", ErrInvalidKey)
+	}
 	for _, e := range r.Path.Element {
 		k = &Key{
 			kind:      e.GetType(),

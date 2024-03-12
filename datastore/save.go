@@ -48,7 +48,7 @@ func valueToProto(defaultAppID, name string, v reflect.Value, multiple bool) (p 
 	case reflect.Bool:
 		pv.BooleanValue = proto.Bool(v.Bool())
 	case reflect.String:
-		pv.StringValue = v.Bytes()
+		pv.StringValue = []byte(v.String())
 	case reflect.Float32, reflect.Float64:
 		pv.DoubleValue = proto.Float64(v.Float())
 	case reflect.Ptr:
