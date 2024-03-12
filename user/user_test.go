@@ -77,14 +77,14 @@ func TestBasicUserAPI(t *testing.T) {
 
 func TestLoginURL(t *testing.T) {
 	expectedQuery := &pb.CreateLoginURLRequest{
-		DestinationUrl: proto.String("/destination"),
+		DestinationUrl: "/destination",
 	}
 	const expectedDest = "/redir/dest"
 	c := aetesting.FakeSingleContext(t, "user", "CreateLoginURL", func(req *pb.CreateLoginURLRequest, res *pb.CreateLoginURLResponse) error {
 		if !proto.Equal(req, expectedQuery) {
 			return fmt.Errorf("got %v, want %v", req, expectedQuery)
 		}
-		res.LoginUrl = proto.String(expectedDest)
+		res.LoginUrl = expectedDest
 		return nil
 	})
 

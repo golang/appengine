@@ -8,7 +8,7 @@ message Action{}
 message PropertyValue {
   optional int64 int64Value = 1;
   optional bool booleanValue = 2;
-  optional string stringValue = 3;
+  bytes stringValue = 3;
   optional double doubleValue = 4;
 
   message PointValueType {

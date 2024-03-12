@@ -48,5 +48,5 @@ func OAuthConsumerKey(c context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return *res.OauthConsumerKey, err
+	return res.OauthConsumerKey, err
 }

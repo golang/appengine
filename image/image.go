@@ -55,7 +55,7 @@ func ServingURL(c context.Context, key appengine.BlobKey, opts *ServingURLOption
 // DeleteServingURL deletes the serving URL for an image.
 func DeleteServingURL(c context.Context, key appengine.BlobKey) error {
 	req := &pb.ImagesDeleteUrlBaseRequest{
-		BlobKey: (*string)(&key),
+		BlobKey: (string)(key),
 	}
 	res := &pb.ImagesDeleteUrlBaseResponse{}
 	return internal.Call(c, "images", "DeleteUrlBase", req, res)

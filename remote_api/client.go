@@ -21,6 +21,7 @@ import (
 	"strings"
 	"time"
 
+	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/internal"
@@ -105,8 +106,8 @@ func (c *Client) call(ctx context.Context, service, method string, in, out proto
 	}
 
 	remReq := &pb.Request{
-		ServiceName: proto.String(service),
-		Method:      proto.String(method),
+		ServiceName: service,
+		Method:      method,
 		Request:     req,
 		// NOTE(djd): RequestId is unused in the server.
 	}
@@ -144,7 +145,7 @@ func (c *Client) call(ctx context.Context, service, method string, in, out proto
 	}
 
 	if remResp.Response == nil {
-		return fmt.Errorf("unexpected response: %s", proto.MarshalTextString(remResp))
+		return fmt.Errorf("unexpected response: %s", prototext.Format(remResp))
 	}
 
 	return proto.Unmarshal(remResp.Response, out)

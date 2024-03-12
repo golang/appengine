@@ -65,18 +65,18 @@ func TestAddErrors(t *testing.T) {
 
 func TestAddMulti(t *testing.T) {
 	c := aetesting.FakeSingleContext(t, "taskqueue", "BulkAdd", func(req *pb.TaskQueueBulkAddRequest, res *pb.TaskQueueBulkAddResponse) error {
-		res.Taskresult = []*pb.TaskQueueBulkAddResponse_TaskResult{
+		res.TaskResult = []*pb.TaskQueueBulkAddResponse_TaskResultType{
 			{
-				Result: pb.TaskQueueServiceError_OK.Enum(),
+				Result: pb.TaskQueueServiceError_OK,
 			},
 			{
-				Result: pb.TaskQueueServiceError_TASK_ALREADY_EXISTS.Enum(),
+				Result: pb.TaskQueueServiceError_TASK_ALREADY_EXISTS,
 			},
 			{
-				Result: pb.TaskQueueServiceError_TOMBSTONED_TASK.Enum(),
+				Result: pb.TaskQueueServiceError_TOMBSTONED_TASK,
 			},
 			{
-				Result: pb.TaskQueueServiceError_INTERNAL_ERROR.Enum(),
+				Result: pb.TaskQueueServiceError_INTERNAL_ERROR,
 			},
 		}
 		return nil

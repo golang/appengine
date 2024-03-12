@@ -99,7 +99,7 @@ func Handle(f func(c context.Context, m *Message)) {
 func (m *Message) Send(c context.Context) error {
 	req := &pb.XmppMessageRequest{
 		Jid:    m.To,
-		Body:   &m.Body,
+		Body:   m.Body,
 		RawXml: &m.RawXML,
 	}
 	if m.Type != "" && m.Type != "chat" {
@@ -133,7 +133,7 @@ func (m *Message) Send(c context.Context) error {
 // the default (yourapp@appspot.com/bot) will be used.
 func Invite(c context.Context, to, from string) error {
 	req := &pb.XmppInviteRequest{
-		Jid: &to,
+		Jid: to,
 	}
 	if from != "" {
 		req.FromJid = &from
@@ -145,7 +145,7 @@ func Invite(c context.Context, to, from string) error {
 // Send sends a presence update.
 func (p *Presence) Send(c context.Context) error {
 	req := &pb.XmppSendPresenceRequest{
-		Jid: &p.To,
+		Jid: p.To,
 	}
 	if p.State != "" {
 		req.Show = &p.State
@@ -178,7 +178,7 @@ var presenceMap = map[pb.PresenceResponse_SHOW]string{
 // ErrPresenceUnavailable is returned if the presence is unavailable.
 func GetPresence(c context.Context, to string, from string) (string, error) {
 	req := &pb.PresenceRequest{
-		Jid: &to,
+		Jid: to,
 	}
 	if from != "" {
 		req.FromJid = &from
@@ -187,7 +187,7 @@ func GetPresence(c context.Context, to string, from string) (string, error) {
 	if err := internal.Call(c, "xmpp", "GetPresence", req, res); err != nil {
 		return "", err
 	}
-	if !*res.IsAvailable || res.Presence == nil {
+	if !res.IsAvailable || res.Presence == nil {
 		return "", ErrPresenceUnavailable
 	}
 	presence, ok := presenceMap[*res.Presence]
@@ -230,7 +230,7 @@ func GetPresenceMulti(c context.Context, to []string, from string) ([]string, er
 			addResult("", ErrInvalidJID)
 			continue
 		}
-		if !*subres.IsAvailable || subres.Presence == nil {
+		if !subres.IsAvailable || subres.Presence == nil {
 			anyErr = true
 			addResult("", ErrPresenceUnavailable)
 			continue
