@@ -30,10 +30,10 @@ func CurrentOAuth(c context.Context, scopes ...string) (*User, error) {
 		return nil, err
 	}
 	return &User{
-		Email:      *res.Email,
-		AuthDomain: *res.AuthDomain,
+		Email:      res.Email,
+		AuthDomain: res.AuthDomain,
 		Admin:      res.GetIsAdmin(),
-		ID:         *res.UserId,
+		ID:         res.UserId,
 		ClientID:   res.GetClientId(),
 	}, nil
 }

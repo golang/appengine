@@ -1,10 +1,11 @@
-syntax = "proto2";
-option go_package = "socket";
+syntax = "proto3";
+option go_package = "google.golang.org/appengine/internal/socket";
 
 package appengine;
 
 message RemoteSocketServiceError {
   enum ErrorCode {
+    NONE = 0;
     SYSTEM_ERROR = 1;
     GAI_ERROR = 2;
     FAILURE = 4;
@@ -15,7 +16,6 @@ message RemoteSocketServiceError {
 
   enum SystemError {
     option allow_alias = true;
-
     SYS_SUCCESS = 0;
     SYS_EPERM = 1;
     SYS_ENOENT = 2;
@@ -147,17 +147,16 @@ message RemoteSocketServiceError {
     SYS_EKEYEXPIRED = 127;
     SYS_EKEYREVOKED = 128;
     SYS_EKEYREJECTED = 129;
-    SYS_EOWNERDEAD = 130;
     SYS_ENOTRECOVERABLE = 131;
     SYS_ERFKILL = 132;
   }
 
-  optional int32 system_error = 1 [default=0];
+  optional int32 system_error = 1 ;
   optional string error_detail = 2;
 }
 
 message AddressPort {
-  required int32 port = 1;
+  int32 port = 1;
   optional bytes packed_address = 2;
 
   optional string hostname_hint = 3;
@@ -167,23 +166,25 @@ message AddressPort {
 
 message CreateSocketRequest {
   enum SocketFamily {
+    NONE = 0;
     IPv4 = 1;
     IPv6 = 2;
   }
 
   enum SocketProtocol {
+    SP_NONE = 0;
     TCP = 1;
     UDP = 2;
   }
 
-  required SocketFamily family = 1;
-  required SocketProtocol protocol = 2;
+  SocketFamily family = 1;
+  SocketProtocol protocol = 2;
 
   repeated SocketOption socket_options = 3;
 
   optional AddressPort proxy_external_ip = 4;
 
-  optional int32 listen_backlog = 5 [default=0];
+  optional int32 listen_backlog = 5 ;
 
   optional AddressPort remote_ip = 6;
 
@@ -199,14 +200,13 @@ message CreateSocketReply {
 
   optional AddressPort proxy_external_ip = 4;
 
-  extensions 1000 to max;
 }
 
 
 
 message BindRequest {
-  required string socket_descriptor = 1;
-  required AddressPort proxy_external_ip = 2;
+  string socket_descriptor = 1;
+  AddressPort proxy_external_ip = 2;
 }
 
 message BindReply {
@@ -216,7 +216,7 @@ message BindReply {
 
 
 message GetSocketNameRequest {
-  required string socket_descriptor = 1;
+  string socket_descriptor = 1;
 }
 
 message GetSocketNameReply {
@@ -226,7 +226,7 @@ message GetSocketNameReply {
 
 
 message GetPeerNameRequest {
-  required string socket_descriptor = 1;
+  string socket_descriptor = 1;
 }
 
 message GetPeerNameReply {
@@ -246,6 +246,7 @@ message SocketOption {
   enum SocketOptionName {
     option allow_alias = true;
 
+    SOP_NONE = 0;
     SOCKET_SO_DEBUG = 1;
     SOCKET_SO_REUSEADDR = 2;
     SOCKET_SO_TYPE = 3;
@@ -279,14 +280,14 @@ message SocketOption {
     SOCKET_TCP_QUICKACK = 12;
   }
 
-  required SocketOptionLevel level = 1;
-  required SocketOptionName option = 2;
-  required bytes value = 3;
+  SocketOptionLevel level = 1;
+ SocketOptionName option = 2;
+ bytes value = 3;
 }
 
 
 message SetSocketOptionsRequest {
-  required string socket_descriptor = 1;
+ string socket_descriptor = 1;
   repeated SocketOption options = 2;
 }
 
@@ -294,7 +295,7 @@ message SetSocketOptionsReply {
 }
 
 message GetSocketOptionsRequest {
-  required string socket_descriptor = 1;
+ string socket_descriptor = 1;
   repeated SocketOption options = 2;
 }
 
@@ -304,21 +305,19 @@ message GetSocketOptionsReply {
 
 
 message ConnectRequest {
-  required string socket_descriptor = 1;
-  required AddressPort remote_ip = 2;
-  optional double timeout_seconds = 3 [default=-1];
+ string socket_descriptor = 1;
+ AddressPort remote_ip = 2;
+  optional double timeout_seconds = 3 ;
 }
 
 message ConnectReply {
   optional AddressPort proxy_external_ip = 1;
-
-  extensions 1000 to max;
 }
 
 
 message ListenRequest {
-  required string socket_descriptor = 1;
-  required int32 backlog = 2;
+ string socket_descriptor = 1;
+ int32 backlog = 2;
 }
 
 message ListenReply {
@@ -326,8 +325,8 @@ message ListenReply {
 
 
 message AcceptRequest {
-  required string socket_descriptor = 1;
-  optional double timeout_seconds = 2 [default=-1];
+ string socket_descriptor = 1;
+  optional double timeout_seconds = 2 ;
 }
 
 message AcceptReply {
@@ -339,13 +338,14 @@ message AcceptReply {
 
 message ShutDownRequest {
   enum How {
+    NONE = 0;
     SOCKET_SHUT_RD = 1;
     SOCKET_SHUT_WR = 2;
     SOCKET_SHUT_RDWR = 3;
   }
-  required string socket_descriptor = 1;
-  required How how = 2;
-  required int64 send_offset = 3;
+ string socket_descriptor = 1;
+ How how = 2;
+ int64 send_offset = 3;
 }
 
 message ShutDownReply {
@@ -354,8 +354,8 @@ message ShutDownReply {
 
 
 message CloseRequest {
-  required string socket_descriptor = 1;
-  optional int64 send_offset = 2 [default=-1];
+ string socket_descriptor = 1;
+  optional int64 send_offset = 2 ;
 }
 
 message CloseReply {
@@ -364,12 +364,12 @@ message CloseReply {
 
 
 message SendRequest {
-  required string socket_descriptor = 1;
-  required bytes data = 2 [ctype=CORD];
-  required int64 stream_offset = 3;
-  optional int32 flags = 4 [default=0];
+ string socket_descriptor = 1;
+ bytes data = 2 [ctype=CORD];
+ int64 stream_offset = 3;
+  optional int32 flags = 4 ;
   optional AddressPort send_to = 5;
-  optional double timeout_seconds = 6 [default=-1];
+  optional double timeout_seconds = 6 ;
 }
 
 message SendReply {
@@ -379,13 +379,14 @@ message SendReply {
 
 message ReceiveRequest {
   enum Flags {
+    NONE = 0;
     MSG_OOB = 1;
     MSG_PEEK = 2;
   }
-  required string socket_descriptor = 1;
-  required int32 data_size = 2;
-  optional int32 flags = 3 [default=0];
-  optional double timeout_seconds = 5 [default=-1];
+ string socket_descriptor = 1;
+ int32 data_size = 2;
+  optional int32 flags = 3 ;
+  optional double timeout_seconds = 5 ;
 }
 
 message ReceiveReply {
@@ -416,14 +417,14 @@ message PollEvent {
     SOCKET_POLLRDHUP = 8192;
   };
 
-  required string socket_descriptor = 1;
-  required int32 requested_events = 2;
-  required int32 observed_events = 3;
+ string socket_descriptor = 1;
+ int32 requested_events = 2;
+ int32 observed_events = 3;
 }
 
 message PollRequest {
   repeated PollEvent events = 1;
-  optional double timeout_seconds = 2 [default=-1];
+  optional double timeout_seconds = 2 ;
 }
 
 message PollReply {
@@ -431,12 +432,13 @@ message PollReply {
 }
 
 message ResolveRequest {
-  required string name = 1;
+ string name = 1;
   repeated CreateSocketRequest.SocketFamily address_families = 2;
 }
 
 message ResolveReply {
   enum ErrorCode {
+    NONE = 0;
     SOCKET_EAI_ADDRFAMILY = 1;
     SOCKET_EAI_AGAIN = 2;
     SOCKET_EAI_BADFLAGS = 3;

@@ -50,7 +50,7 @@ func ModuleHostname(c context.Context, module, version, instance string) (string
 	if err := internal.Call(c, "modules", "GetHostname", req, res); err != nil {
 		return "", err
 	}
-	return *res.Hostname, nil
+	return res.Hostname, nil
 }
 
 // VersionID returns the version ID for the current application.
