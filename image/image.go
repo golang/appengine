@@ -29,7 +29,7 @@ type ServingURLOptions struct {
 // ServingURL returns a URL that will serve an image from Blobstore.
 func ServingURL(c context.Context, key appengine.BlobKey, opts *ServingURLOptions) (*url.URL, error) {
 	req := &pb.ImagesGetUrlBaseRequest{
-		BlobKey: (*string)(&key),
+		BlobKey: (string)(key),
 	}
 	if opts != nil && opts.Secure {
 		req.CreateSecureUrl = &opts.Secure
@@ -42,7 +42,7 @@ func ServingURL(c context.Context, key appengine.BlobKey, opts *ServingURLOption
 	// The URL may have suffixes added to dynamically resize or crop:
 	// - adding "=s32" will serve the image resized to 32 pixels, preserving the aspect ratio.
 	// - adding "=s32-c" is the same as "=s32" except it will be cropped.
-	u := *res.Url
+	u := res.Url
 	if opts != nil && opts.Size > 0 {
 		u += fmt.Sprintf("=s%d", opts.Size)
 		if opts.Crop {
@@ -55,7 +55,7 @@ func ServingURL(c context.Context, key appengine.BlobKey, opts *ServingURLOption
 // DeleteServingURL deletes the serving URL for an image.
 func DeleteServingURL(c context.Context, key appengine.BlobKey) error {
 	req := &pb.ImagesDeleteUrlBaseRequest{
-		BlobKey: (*string)(&key),
+		BlobKey: (string)(key),
 	}
 	res := &pb.ImagesDeleteUrlBaseResponse{}
 	return internal.Call(c, "images", "DeleteUrlBase", req, res)

@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal/aetesting"
@@ -18,14 +18,14 @@ import (
 
 func newPresenceResponse(isAvailable bool, presence pb.PresenceResponse_SHOW, valid bool) *pb.PresenceResponse {
 	return &pb.PresenceResponse{
-		IsAvailable: proto.Bool(isAvailable),
+		IsAvailable: isAvailable,
 		Presence:    presence.Enum(),
 		Valid:       proto.Bool(valid),
 	}
 }
 
 func setPresenceResponse(m *pb.PresenceResponse, isAvailable bool, presence pb.PresenceResponse_SHOW, valid bool) {
-	m.IsAvailable = &isAvailable
+	m.IsAvailable = isAvailable
 	m.Presence = presence.Enum()
 	m.Valid = &valid
 }

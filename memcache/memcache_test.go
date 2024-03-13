@@ -49,7 +49,7 @@ func TestGetResponseHit(t *testing.T) {
 	value := "Where the buffalo roam"
 
 	c := aetesting.FakeSingleContext(t, "memcache", "Get", func(_ *pb.MemcacheGetRequest, res *pb.MemcacheGetResponse) error {
-		res.Item = []*pb.MemcacheGetResponse_Item{
+		res.Item = []*pb.MemcacheGetResponse_ItemType{
 			{Key: []byte(key), Value: []byte(value)},
 		}
 		return nil
@@ -279,7 +279,7 @@ func TestPeekRequest(t *testing.T) {
 		}
 
 		// Response
-		res.Item = []*pb.MemcacheGetResponse_Item{
+		res.Item = []*pb.MemcacheGetResponse_ItemType{
 			{
 				Key:   []byte(key),
 				Value: []byte(value),

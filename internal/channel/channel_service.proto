@@ -1,5 +1,5 @@
-syntax = "proto2";
-option go_package = "channel";
+syntax = "proto3";
+option go_package = "google.golang.org/appengine/internal/channel";
 
 package appengine;
 
@@ -15,7 +15,7 @@ message ChannelServiceError {
 }
 
 message CreateChannelRequest {
-  required string application_key = 1;
+  string application_key = 1;
   optional int32 duration_minutes = 2;
 }
 
@@ -25,6 +25,6 @@ message CreateChannelResponse {
 }
 
 message SendMessageRequest {
-  required string application_key = 1;
-  required string message = 2;
+  string application_key = 1;
+  string message = 2;
 }

@@ -1,10 +1,10 @@
-syntax = "proto2";
-option go_package = "capability";
+syntax = "proto3";
+option go_package = "google.golang.org/appengine/internal/capability";
 
 package appengine;
 
 message IsEnabledRequest {
-  required string package = 1;
+  string package = 1;
   repeated string capability = 2;
   repeated string call = 3;
 }

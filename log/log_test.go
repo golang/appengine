@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	pb "google.golang.org/appengine/internal/log"
 )
@@ -24,7 +24,7 @@ func TestQueryToRequest(t *testing.T) {
 			desc:  "Empty",
 			query: &Query{},
 			want: &pb.LogReadRequest{
-				AppId:     proto.String("s~fake"),
+				AppId:     "s~fake",
 				VersionId: []string{"v12"},
 			},
 		},
@@ -34,7 +34,7 @@ func TestQueryToRequest(t *testing.T) {
 				Versions: []string{"alpha", "backend:beta"},
 			},
 			want: &pb.LogReadRequest{
-				AppId: proto.String("s~fake"),
+				AppId: "s~fake",
 				ModuleVersion: []*pb.LogModuleVersion{
 					{
 						VersionId: proto.String("alpha"),
@@ -63,21 +63,21 @@ func TestQueryToRequest(t *testing.T) {
 func TestProtoToRecord(t *testing.T) {
 	// We deliberately leave ModuleId and other optional fields unset.
 	p := &pb.RequestLog{
-		AppId:        proto.String("s~fake"),
-		VersionId:    proto.String("1"),
+		AppId:        "s~fake",
+		VersionId:    "1",
 		RequestId:    []byte("deadbeef"),
-		Ip:           proto.String("127.0.0.1"),
-		StartTime:    proto.Int64(431044244000000),
-		EndTime:      proto.Int64(431044724000000),
-		Latency:      proto.Int64(480000000),
-		Mcycles:      proto.Int64(7),
-		Method:       proto.String("GET"),
-		Resource:     proto.String("/app"),
-		HttpVersion:  proto.String("1.1"),
-		Status:       proto.Int32(418),
-		ResponseSize: proto.Int64(1337),
-		UrlMapEntry:  proto.String("_go_app"),
-		Combined:     proto.String("apache log"),
+		Ip:           "127.0.0.1",
+		StartTime:    431044244000000,
+		EndTime:      431044724000000,
+		Latency:      480000000,
+		Mcycles:      7,
+		Method:       "GET",
+		Resource:     "/app",
+		HttpVersion:  "1.1",
+		Status:       418,
+		ResponseSize: 1337,
+		UrlMapEntry:  "_go_app",
+		Combined:     "apache log",
 	}
 	// Sanity check that all required fields are set.
 	if _, err := proto.Marshal(p); err != nil {
@@ -85,7 +85,7 @@ func TestProtoToRecord(t *testing.T) {
 	}
 	want := &Record{
 		AppID:        "s~fake",
-		ModuleID:     "default",
+		ModuleID:     "",
 		VersionID:    "1",
 		RequestID:    []byte("deadbeef"),
 		IP:           "127.0.0.1",
@@ -100,7 +100,7 @@ func TestProtoToRecord(t *testing.T) {
 		ResponseSize: 1337,
 		URLMapEntry:  "_go_app",
 		Combined:     "apache log",
-		Finished:     true,
+		Finished:     false,
 		AppLogs:      []AppLog{},
 	}
 	got := protoToRecord(p)

@@ -17,7 +17,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/v2/internal"
 	"google.golang.org/appengine/v2/taskqueue"

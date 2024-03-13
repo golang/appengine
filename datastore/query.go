@@ -13,7 +13,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/datastore"
@@ -29,12 +29,12 @@ const (
 	greaterThan
 )
 
-var operatorToProto = map[operator]*pb.Query_Filter_Operator{
-	lessThan:    pb.Query_Filter_LESS_THAN.Enum(),
-	lessEq:      pb.Query_Filter_LESS_THAN_OR_EQUAL.Enum(),
-	equal:       pb.Query_Filter_EQUAL.Enum(),
-	greaterEq:   pb.Query_Filter_GREATER_THAN_OR_EQUAL.Enum(),
-	greaterThan: pb.Query_Filter_GREATER_THAN.Enum(),
+var operatorToProto = map[operator]*pb.Query_FilterType_Operator{
+	lessThan:    pb.Query_FilterType_LESS_THAN.Enum(),
+	lessEq:      pb.Query_FilterType_LESS_THAN_OR_EQUAL.Enum(),
+	equal:       pb.Query_FilterType_EQUAL.Enum(),
+	greaterEq:   pb.Query_FilterType_GREATER_THAN_OR_EQUAL.Enum(),
+	greaterThan: pb.Query_FilterType_GREATER_THAN.Enum(),
 }
 
 // filter is a conditional filter on query results.
@@ -51,9 +51,9 @@ const (
 	descending
 )
 
-var sortDirectionToProto = map[sortDirection]*pb.Query_Order_Direction{
-	ascending:  pb.Query_Order_ASCENDING.Enum(),
-	descending: pb.Query_Order_DESCENDING.Enum(),
+var sortDirectionToProto = map[sortDirection]*pb.Query_OrderType_Direction{
+	ascending:  pb.Query_OrderType_ASCENDING.Enum(),
+	descending: pb.Query_OrderType_DESCENDING.Enum(),
 }
 
 // order is a sort order on query results.
@@ -297,7 +297,7 @@ func (q *Query) toProto(dst *pb.Query, appID string) error {
 		return errors.New("datastore: query cannot be both distinct and distinct-on")
 	}
 	dst.Reset()
-	dst.App = proto.String(appID)
+	dst.App = appID
 	if q.kind != "" {
 		dst.Kind = proto.String(q.kind)
 	}
@@ -328,11 +328,11 @@ func (q *Query) toProto(dst *pb.Query, appID string) error {
 		if errStr != "" {
 			return errors.New("datastore: bad query filter value type: " + errStr)
 		}
-		xf := &pb.Query_Filter{
-			Op:       operatorToProto[qf.Op],
+		xf := &pb.Query_FilterType{
+			Op:       *operatorToProto[qf.Op],
 			Property: []*pb.Property{p},
 		}
-		if xf.Op == nil {
+		if xf.Op == pb.Query_FilterType_NONE {
 			return errors.New("datastore: unknown query filter operator")
 		}
 		dst.Filter = append(dst.Filter, xf)
@@ -341,8 +341,8 @@ func (q *Query) toProto(dst *pb.Query, appID string) error {
 		if qo.FieldName == "" {
 			return errors.New("datastore: empty query order field name")
 		}
-		xo := &pb.Query_Order{
-			Property:  proto.String(qo.FieldName),
+		xo := &pb.Query_OrderType{
+			Property:  qo.FieldName,
 			Direction: sortDirectionToProto[qo.Direction],
 		}
 		if xo.Direction == nil {

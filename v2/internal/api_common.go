@@ -9,7 +9,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 )
 
 type ctxKey string

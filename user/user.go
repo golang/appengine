@@ -9,7 +9,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/user"
@@ -54,7 +54,7 @@ func LoginURL(c context.Context, dest string) (string, error) {
 // LoginURLFederated is like LoginURL but accepts a user's OpenID identifier.
 func LoginURLFederated(c context.Context, dest, identity string) (string, error) {
 	req := &pb.CreateLoginURLRequest{
-		DestinationUrl: proto.String(dest),
+		DestinationUrl: dest,
 	}
 	if identity != "" {
 		req.FederatedIdentity = proto.String(identity)
@@ -63,20 +63,20 @@ func LoginURLFederated(c context.Context, dest, identity string) (string, error)
 	if err := internal.Call(c, "user", "CreateLoginURL", req, res); err != nil {
 		return "", err
 	}
-	return *res.LoginUrl, nil
+	return res.LoginUrl, nil
 }
 
 // LogoutURL returns a URL that, when visited, signs the user out,
 // then redirects the user to the URL specified by dest.
 func LogoutURL(c context.Context, dest string) (string, error) {
 	req := &pb.CreateLogoutURLRequest{
-		DestinationUrl: proto.String(dest),
+		DestinationUrl: dest,
 	}
 	res := &pb.CreateLogoutURLResponse{}
 	if err := internal.Call(c, "user", "CreateLogoutURL", req, res); err != nil {
 		return "", err
 	}
-	return *res.LogoutUrl, nil
+	return res.LogoutUrl, nil
 }
 
 func init() {

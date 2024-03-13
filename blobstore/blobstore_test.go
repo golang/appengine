@@ -40,9 +40,9 @@ func min(x, y int) int {
 }
 
 func fakeFetchData(req *pb.FetchDataRequest, res *pb.FetchDataResponse) error {
-	i0 := int(*req.StartIndex)
-	i1 := int(*req.EndIndex + 1) // Blobstore's end-indices are inclusive; Go's are exclusive.
-	bk := *req.BlobKey
+	i0 := int(req.StartIndex)
+	i1 := int(req.EndIndex + 1) // Blobstore's end-indices are inclusive; Go's are exclusive.
+	bk := req.BlobKey
 	if i := strings.Index(bk, "."); i != -1 {
 		// Strip everything past the ".".
 		bk = bk[:i]

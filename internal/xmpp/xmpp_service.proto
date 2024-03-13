@@ -1,10 +1,11 @@
-syntax = "proto2";
-option go_package = "xmpp";
+syntax = "proto3";
+option go_package = "google.golang.org/appengine/internal/xmpp";
 
 package appengine;
 
 message XmppServiceError {
   enum ErrorCode {
+    NONE = 0;
     UNSPECIFIED_ERROR = 1;
     INVALID_JID = 2;
     NO_BODY = 3;
@@ -18,7 +19,7 @@ message XmppServiceError {
 }
 
 message PresenceRequest {
-  required string jid = 1;
+  string jid = 1;
   optional string from_jid = 2;
 }
 
@@ -31,7 +32,7 @@ message PresenceResponse {
     EXTENDED_AWAY = 4;
   }
 
-  required bool is_available = 1;
+  bool is_available = 1;
   optional SHOW presence = 2;
   optional bool valid = 3;
 }
@@ -47,9 +48,9 @@ message BulkPresenceResponse {
 
 message XmppMessageRequest {
   repeated string jid = 1;
-  required string body = 2;
-  optional bool raw_xml = 3 [ default = false ];
-  optional string type = 4 [ default = "chat" ];
+  string body = 2;
+  optional bool raw_xml = 3;
+  optional string type = 4;
   optional string from_jid = 5;
 }
 
@@ -64,7 +65,7 @@ message XmppMessageResponse {
 }
 
 message XmppSendPresenceRequest {
-  required string jid = 1;
+  string jid = 1;
   optional string type = 2;
   optional string show = 3;
   optional string status = 4;
@@ -75,7 +76,7 @@ message XmppSendPresenceResponse {
 }
 
 message XmppInviteRequest {
-  required string jid = 1;
+  string jid = 1;
   optional string from_jid = 2;
 }
 

@@ -1,5 +1,5 @@
-syntax = "proto2";
-option go_package = "modules";
+syntax = "proto3";
+option go_package = "google.golang.org/appengine/internal/modules";
 
 package appengine;
 
@@ -34,7 +34,7 @@ message GetDefaultVersionRequest {
 }
 
 message GetDefaultVersionResponse {
-  required string version = 1;
+  string version = 1;
 }
 
 message GetNumInstancesRequest {
@@ -43,20 +43,20 @@ message GetNumInstancesRequest {
 }
 
 message GetNumInstancesResponse {
-  required int64 instances = 1;
+  int64 instances = 1;
 }
 
 message SetNumInstancesRequest {
   optional string module = 1;
   optional string version = 2;
-  required int64 instances = 3;
+  int64 instances = 3;
 }
 
 message SetNumInstancesResponse {}
 
 message StartModuleRequest {
-  required string module = 1;
-  required string version = 2;
+  string module = 1;
+  string version = 2;
 }
 
 message StartModuleResponse {}
@@ -75,6 +75,6 @@ message GetHostnameRequest {
 }
 
 message GetHostnameResponse {
-  required string hostname = 1;
+  string hostname = 1;
 }
 

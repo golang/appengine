@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/urlfetch"
@@ -132,8 +132,8 @@ func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	method := pb.URLFetchRequest_RequestMethod(methNum)
 
 	freq := &pb.URLFetchRequest{
-		Method:                        &method,
-		Url:                           proto.String(urlString(req.URL)),
+		Method:                        method,
+		Url:                           urlString(req.URL),
 		FollowRedirects:               proto.Bool(false), // http.Client's responsibility
 		MustValidateServerCertificate: proto.Bool(!t.AllowInvalidServerCertificate),
 	}
@@ -143,9 +143,9 @@ func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 
 	for k, vals := range req.Header {
 		for _, val := range vals {
-			freq.Header = append(freq.Header, &pb.URLFetchRequest_Header{
-				Key:   proto.String(k),
-				Value: proto.String(val),
+			freq.Header = append(freq.Header, &pb.URLFetchRequest_HeaderType{
+				Key:   k,
+				Value: val,
 			})
 		}
 	}
@@ -170,7 +170,7 @@ func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	}
 
 	res = &http.Response{}
-	res.StatusCode = int(*fres.StatusCode)
+	res.StatusCode = int(fres.StatusCode)
 	res.Status = fmt.Sprintf("%d %s", res.StatusCode, statusCodeToText(res.StatusCode))
 	res.Header = make(http.Header)
 	res.Request = req
@@ -182,8 +182,8 @@ func (t *Transport) RoundTrip(req *http.Request) (res *http.Response, err error)
 	res.Close = true
 
 	for _, h := range fres.Header {
-		hkey := http.CanonicalHeaderKey(*h.Key)
-		hval := *h.Value
+		hkey := http.CanonicalHeaderKey(h.Key)
+		hval := h.Value
 		if hkey == "Content-Length" {
 			// Will get filled in below for all but HEAD requests.
 			if req.Method == "HEAD" {

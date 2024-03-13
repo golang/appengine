@@ -13,8 +13,6 @@ package module // import "google.golang.org/appengine/module"
 import (
 	"context"
 
-	"github.com/golang/protobuf/proto"
-
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/modules"
 )
@@ -42,7 +40,7 @@ func NumInstances(c context.Context, module, version string) (int, error) {
 	if err := internal.Call(c, "modules", "GetNumInstances", req, res); err != nil {
 		return 0, err
 	}
-	return int(*res.Instances), nil
+	return int(res.Instances), nil
 }
 
 // SetNumInstances sets the number of instances of the given module.version to the
@@ -56,7 +54,7 @@ func SetNumInstances(c context.Context, module, version string, instances int) e
 	if version != "" {
 		req.Version = &version
 	}
-	req.Instances = proto.Int64(int64(instances))
+	req.Instances = int64(instances)
 	res := &pb.SetNumInstancesResponse{}
 	return internal.Call(c, "modules", "SetNumInstances", req, res)
 }
@@ -90,10 +88,10 @@ func DefaultVersion(c context.Context, module string) (string, error) {
 func Start(c context.Context, module, version string) error {
 	req := &pb.StartModuleRequest{}
 	if module != "" {
-		req.Module = &module
+		req.Module = module
 	}
 	if version != "" {
-		req.Version = &version
+		req.Version = version
 	}
 	res := &pb.StartModuleResponse{}
 	return internal.Call(c, "modules", "StartModule", req, res)

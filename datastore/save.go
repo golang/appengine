@@ -11,7 +11,7 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine"
 	pb "google.golang.org/appengine/internal/datastore"
@@ -48,13 +48,13 @@ func valueToProto(defaultAppID, name string, v reflect.Value, multiple bool) (p 
 	case reflect.Bool:
 		pv.BooleanValue = proto.Bool(v.Bool())
 	case reflect.String:
-		pv.StringValue = proto.String(v.String())
+		pv.StringValue = []byte(v.String())
 	case reflect.Float32, reflect.Float64:
 		pv.DoubleValue = proto.Float64(v.Float())
 	case reflect.Ptr:
 		if k, ok := v.Interface().(*Key); ok {
 			if k != nil {
-				pv.Referencevalue = keyToReferenceValue(defaultAppID, k)
+				pv.ReferenceValue = keyToReferenceValue(defaultAppID, k)
 			}
 		} else {
 			unsupported = true
@@ -71,13 +71,13 @@ func valueToProto(defaultAppID, name string, v reflect.Value, multiple bool) (p 
 				return nil, "invalid GeoPoint value"
 			}
 			// NOTE: Strangely, latitude maps to X, longitude to Y.
-			pv.Pointvalue = &pb.PropertyValue_PointValue{X: &t.Lat, Y: &t.Lng}
+			pv.PointValue = &pb.PropertyValue_PointValueType{X: t.Lat, Y: t.Lng}
 		default:
 			unsupported = true
 		}
 	case reflect.Slice:
 		if b, ok := v.Interface().([]byte); ok {
-			pv.StringValue = proto.String(string(b))
+			pv.StringValue = b
 		} else {
 			// nvToProto should already catch slice values.
 			// If we get here, we have a slice of slice values.
@@ -90,9 +90,9 @@ func valueToProto(defaultAppID, name string, v reflect.Value, multiple bool) (p 
 		return nil, "unsupported datastore value type: " + v.Type().String()
 	}
 	p = &pb.Property{
-		Name:     proto.String(name),
+		Name:     name,
 		Value:    &pv,
-		Multiple: proto.Bool(multiple),
+		Multiple: multiple,
 	}
 	if v.IsValid() {
 		switch v.Interface().(type) {
@@ -243,9 +243,9 @@ func propertiesToProto(defaultAppID string, key *Key, props []Property) (*pb.Ent
 		}
 
 		x := &pb.Property{
-			Name:     proto.String(p.Name),
+			Name:     p.Name,
 			Value:    new(pb.PropertyValue),
-			Multiple: proto.Bool(p.Multiple),
+			Multiple: p.Multiple,
 		}
 		switch v := p.Value.(type) {
 		case int64:
@@ -253,7 +253,7 @@ func propertiesToProto(defaultAppID string, key *Key, props []Property) (*pb.Ent
 		case bool:
 			x.Value.BooleanValue = proto.Bool(v)
 		case string:
-			x.Value.StringValue = proto.String(v)
+			x.Value.StringValue = []byte(v)
 			if p.NoIndex {
 				x.Meaning = pb.Property_TEXT.Enum()
 			}
@@ -261,7 +261,7 @@ func propertiesToProto(defaultAppID string, key *Key, props []Property) (*pb.Ent
 			x.Value.DoubleValue = proto.Float64(v)
 		case *Key:
 			if v != nil {
-				x.Value.Referencevalue = keyToReferenceValue(defaultAppID, v)
+				x.Value.ReferenceValue = keyToReferenceValue(defaultAppID, v)
 			}
 		case time.Time:
 			if v.Before(minTime) || v.After(maxTime) {
@@ -270,23 +270,23 @@ func propertiesToProto(defaultAppID string, key *Key, props []Property) (*pb.Ent
 			x.Value.Int64Value = proto.Int64(toUnixMicro(v))
 			x.Meaning = pb.Property_GD_WHEN.Enum()
 		case appengine.BlobKey:
-			x.Value.StringValue = proto.String(string(v))
+			x.Value.StringValue = []byte(v)
 			x.Meaning = pb.Property_BLOBKEY.Enum()
 		case appengine.GeoPoint:
 			if !v.Valid() {
 				return nil, fmt.Errorf("datastore: invalid GeoPoint value")
 			}
 			// NOTE: Strangely, latitude maps to X, longitude to Y.
-			x.Value.Pointvalue = &pb.PropertyValue_PointValue{X: &v.Lat, Y: &v.Lng}
+			x.Value.PointValue = &pb.PropertyValue_PointValueType{X: v.Lat, Y: v.Lng}
 			x.Meaning = pb.Property_GEORSS_POINT.Enum()
 		case []byte:
-			x.Value.StringValue = proto.String(string(v))
+			x.Value.StringValue = v
 			x.Meaning = pb.Property_BLOB.Enum()
 			if !p.NoIndex {
 				return nil, fmt.Errorf("datastore: cannot index a []byte valued Property with Name %q", p.Name)
 			}
 		case ByteString:
-			x.Value.StringValue = proto.String(string(v))
+			x.Value.StringValue = v
 			x.Meaning = pb.Property_BYTESTRING.Enum()
 		default:
 			if p.Value != nil {

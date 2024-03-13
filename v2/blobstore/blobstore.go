@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"golang.org/x/text/encoding/htmlindex"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/v2"
 	"google.golang.org/appengine/v2/datastore"

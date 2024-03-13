@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/internal"
 	"google.golang.org/appengine/internal/aetesting"
@@ -20,21 +20,21 @@ import (
 
 var (
 	path1 = &pb.Path{
-		Element: []*pb.Path_Element{
+		Element: []*pb.Path_ElementType{
 			{
-				Type: proto.String("Gopher"),
+				Type: "Gopher",
 				Id:   proto.Int64(6),
 			},
 		},
 	}
 	path2 = &pb.Path{
-		Element: []*pb.Path_Element{
+		Element: []*pb.Path_ElementType{
 			{
-				Type: proto.String("Gopher"),
+				Type: "Gopher",
 				Id:   proto.Int64(6),
 			},
 			{
-				Type: proto.String("Gopher"),
+				Type: "Gopher",
 				Id:   proto.Int64(8),
 			},
 		},
@@ -43,7 +43,7 @@ var (
 
 func fakeRunQuery(in *pb.Query, out *pb.QueryResult) error {
 	expectedIn := &pb.Query{
-		App:     proto.String("dev~fake-app"),
+		App:     "dev~fake-app",
 		Kind:    proto.String("Gopher"),
 		Compile: proto.Bool(true),
 	}
@@ -54,20 +54,20 @@ func fakeRunQuery(in *pb.Query, out *pb.QueryResult) error {
 		Result: []*pb.EntityProto{
 			{
 				Key: &pb.Reference{
-					App:  proto.String("s~test-app"),
+					App:  "s~test-app",
 					Path: path1,
 				},
 				EntityGroup: path1,
 				Property: []*pb.Property{
 					{
 						Meaning: pb.Property_TEXT.Enum(),
-						Name:    proto.String("Name"),
+						Name:    "Name",
 						Value: &pb.PropertyValue{
-							StringValue: proto.String("George"),
+							StringValue: []byte("George"),
 						},
 					},
 					{
-						Name: proto.String("Height"),
+						Name: "Height",
 						Value: &pb.PropertyValue{
 							Int64Value: proto.Int64(32),
 						},
@@ -76,23 +76,23 @@ func fakeRunQuery(in *pb.Query, out *pb.QueryResult) error {
 			},
 			{
 				Key: &pb.Reference{
-					App:  proto.String("s~test-app"),
+					App:  "s~test-app",
 					Path: path2,
 				},
 				EntityGroup: path1, // ancestor is George
 				Property: []*pb.Property{
 					{
 						Meaning: pb.Property_TEXT.Enum(),
-						Name:    proto.String("Name"),
+						Name:    "Name",
 						Value: &pb.PropertyValue{
-							StringValue: proto.String("Rufus"),
+							StringValue: []byte("Rufus"),
 						},
 					},
 					// No height for Rufus.
 				},
 			},
 		},
-		MoreResults: proto.Bool(false),
+		MoreResults: false,
 	}
 	return nil
 }
@@ -467,32 +467,32 @@ func TestQueryToProto(t *testing.T) {
 			query: NewQuery("kind").Order("-I").Filter("I >", 17).Filter("U =", "Dave").Limit(7).Offset(42).BatchSize(5),
 			want: &pb.Query{
 				Kind: proto.String("kind"),
-				Filter: []*pb.Query_Filter{
+				Filter: []*pb.Query_FilterType{
 					{
-						Op: pb.Query_Filter_GREATER_THAN.Enum(),
+						Op: pb.Query_FilterType_GREATER_THAN,
 						Property: []*pb.Property{
 							{
-								Name:     proto.String("I"),
+								Name:     "I",
 								Value:    &pb.PropertyValue{Int64Value: proto.Int64(17)},
-								Multiple: proto.Bool(false),
+								Multiple: false,
 							},
 						},
 					},
 					{
-						Op: pb.Query_Filter_EQUAL.Enum(),
+						Op: pb.Query_FilterType_EQUAL,
 						Property: []*pb.Property{
 							{
-								Name:     proto.String("U"),
-								Value:    &pb.PropertyValue{StringValue: proto.String("Dave")},
-								Multiple: proto.Bool(false),
+								Name:     "U",
+								Value:    &pb.PropertyValue{StringValue: []byte("Dave")},
+								Multiple: false,
 							},
 						},
 					},
 				},
-				Order: []*pb.Query_Order{
+				Order: []*pb.Query_OrderType{
 					{
-						Property:  proto.String("I"),
-						Direction: pb.Query_Order_DESCENDING.Enum(),
+						Property:  "I",
+						Direction: pb.Query_OrderType_DESCENDING.Enum(),
 					},
 				},
 				Limit:  proto.Int32(7),
@@ -505,9 +505,9 @@ func TestQueryToProto(t *testing.T) {
 			query: NewQuery("").Ancestor(NewKey(c, "kind", "Mummy", 0, nil)),
 			want: &pb.Query{
 				Ancestor: &pb.Reference{
-					App: proto.String("dev~fake-app"),
+					App: "dev~fake-app",
 					Path: &pb.Path{
-						Element: []*pb.Path_Element{{Type: proto.String("kind"), Name: proto.String("Mummy")}},
+						Element: []*pb.Path_ElementType{{Type: "kind", Name: proto.String("Mummy")}},
 					},
 				},
 			},
@@ -583,7 +583,7 @@ func TestQueryToProto(t *testing.T) {
 			continue
 		}
 		// Fields that are common to all protos.
-		tt.want.App = proto.String("dev~fake-app")
+		tt.want.App = "dev~fake-app"
 		tt.want.Compile = proto.Bool(true)
 		if !proto.Equal(got, tt.want) {
 			t.Errorf("%s:\ngot  %v\nwant %v", tt.desc, got, tt.want)

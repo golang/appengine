@@ -25,7 +25,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	basepb "google.golang.org/appengine/internal/base"
 	logpb "google.golang.org/appengine/internal/log"
@@ -469,8 +469,8 @@ func Call(ctx context.Context, service, method string, in, out proto.Message) er
 		}
 	}
 	req := &remotepb.Request{
-		ServiceName: &service,
-		Method:      &method,
+		ServiceName: service,
+		Method:      method,
 		Request:     data,
 		RequestId:   &ticket,
 	}
@@ -491,7 +491,7 @@ func Call(ctx context.Context, service, method string, in, out proto.Message) er
 	if res.RpcError != nil {
 		ce := &CallError{
 			Detail: res.RpcError.GetDetail(),
-			Code:   *res.RpcError.Code,
+			Code:   res.RpcError.Code,
 		}
 		switch remotepb.RpcError_ErrorCode(ce.Code) {
 		case remotepb.RpcError_CANCELLED, remotepb.RpcError_DEADLINE_EXCEEDED:
@@ -501,9 +501,9 @@ func Call(ctx context.Context, service, method string, in, out proto.Message) er
 	}
 	if res.ApplicationError != nil {
 		return &APIError{
-			Service: *req.ServiceName,
+			Service: req.ServiceName,
 			Detail:  res.ApplicationError.GetDetail(),
-			Code:    *res.ApplicationError.Code,
+			Code:    res.ApplicationError.Code,
 		}
 	}
 	if res.Exception != nil || res.JavaException != nil {
@@ -524,9 +524,10 @@ func (c *aeContext) addLogLine(ll *logpb.UserAppLogLine) {
 	// Truncate long log lines.
 	// TODO(dsymonds): Check if this is still necessary.
 	const lim = 8 << 10
-	if len(*ll.Message) > lim {
-		suffix := fmt.Sprintf("...(length %d)", len(*ll.Message))
-		ll.Message = proto.String((*ll.Message)[:lim-len(suffix)] + suffix)
+	if len(ll.Message) > lim {
+		suffix := fmt.Sprintf("...(length %d)", len(ll.Message))
+		value := (ll.Message)[:lim-len(suffix)] + suffix
+		ll.Message = *proto.String(value)
 	}
 
 	c.pendingLogs.Lock()
@@ -550,9 +551,9 @@ func logf(c *aeContext, level int64, format string, args ...interface{}) {
 	s = strings.TrimRight(s, "\n") // Remove any trailing newline characters.
 	if logToLogservice() {
 		c.addLogLine(&logpb.UserAppLogLine{
-			TimestampUsec: proto.Int64(time.Now().UnixNano() / 1e3),
-			Level:         &level,
-			Message:       &s,
+			TimestampUsec: time.Now().UnixNano() / 1e3,
+			Level:         level,
+			Message:       s,
 		})
 	}
 	// Log to stdout if not deployed

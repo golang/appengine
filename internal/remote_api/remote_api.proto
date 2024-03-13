@@ -1,18 +1,18 @@
-syntax = "proto2";
-option go_package = "remote_api";
+syntax = "proto3";
+option go_package = "google.golang.org/appengine/internal/remote_api";
 
 package remote_api;
 
 message Request {
-  required string service_name = 2;
-  required string method = 3;
-  required bytes request = 4;
+  string service_name = 2;
+  string method = 3;
+ bytes request = 4;
   optional string request_id = 5;
 }
 
 message ApplicationError {
-  required int32 code = 1;
-  required string detail = 2;
+ int32 code = 1;
+ string detail = 2;
 }
 
 message RpcError {
@@ -31,7 +31,7 @@ message RpcError {
     REPLAY_ERROR = 11;
     DEADLINE_EXCEEDED = 12;
   }
-  required int32 code = 1;
+ int32 code = 1;
   optional string detail = 2;
 }
 

@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal/aetesting"
@@ -83,11 +83,11 @@ var (
 		newStringValueField("HTML", testString, pb.FieldValue_HTML),
 		newStringValueField("Float", floatOut, pb.FieldValue_NUMBER),
 		{
-			Name: proto.String("Location"),
+			Name: "Location",
 			Value: &pb.FieldValue{
-				Geo: &pb.FieldValue_Geo{
-					Lat: proto.Float64(latitude),
-					Lng: proto.Float64(longitude),
+				Geo: &pb.FieldValue_GeoType{
+					Lat: latitude,
+					Lng: longitude,
 				},
 				Type: pb.FieldValue_GEO.Enum(),
 			},
@@ -99,7 +99,7 @@ var (
 func init() {
 	for _, f := range searchFields {
 		if f.Name == "String" || f.Name == "HTML" {
-			f.Language = "en"
+			f.Language = ""
 		}
 		searchFieldsWithLang = append(searchFieldsWithLang, f)
 	}
@@ -107,7 +107,7 @@ func init() {
 
 func newStringValueField(name, value string, valueType pb.FieldValue_ContentType) *pb.Field {
 	return &pb.Field{
-		Name: proto.String(name),
+		Name: name,
 		Value: &pb.FieldValue{
 			StringValue: proto.String(value),
 			Type:        valueType.Enum(),
@@ -117,7 +117,7 @@ func newStringValueField(name, value string, valueType pb.FieldValue_ContentType
 
 func newFacet(name, value string, valueType pb.FacetValue_ContentType) *pb.Facet {
 	return &pb.Facet{
-		Name: proto.String(name),
+		Name: name,
 		Value: &pb.FacetValue{
 			StringValue: proto.String(value),
 			Type:        valueType.Enum(),
@@ -193,7 +193,7 @@ func TestLoadFieldList(t *testing.T) {
 
 func TestLangFields(t *testing.T) {
 	fl := &FieldList{
-		{Name: "Foo", Value: "I am English", Language: "en"},
+		{Name: "Foo", Value: "I am English", Language: ""},
 		{Name: "Bar", Value: "私は日本人だ", Language: "ja"},
 	}
 	var got FieldList
@@ -491,8 +491,8 @@ func TestLimit(t *testing.T) {
 		if req.Params.Limit != nil {
 			limit = int(*req.Params.Limit)
 		}
-		res.Status = &pb.RequestStatus{Code: pb.SearchServiceError_OK.Enum()}
-		res.MatchedCount = proto.Int64(int64(limit))
+		res.Status = &pb.RequestStatus{Code: pb.SearchServiceError_OK}
+		res.MatchedCount = int64(limit)
 		for i := 0; i < limit; i++ {
 			res.Result = append(res.Result, &pb.SearchResult{Document: &pb.Document{}})
 			res.Cursor = proto.String("moreresults")
@@ -541,7 +541,7 @@ func TestPut(t *testing.T) {
 					{Field: protoFields, OrderId: proto.Int32(42), OrderIdSource: pb.Document_SUPPLIED.Enum()},
 				},
 				IndexSpec: &pb.IndexSpec{
-					Name: proto.String("Doc"),
+					Name: "Doc",
 				},
 			},
 		}
@@ -550,7 +550,7 @@ func TestPut(t *testing.T) {
 		}
 		*out = pb.IndexDocumentResponse{
 			Status: []*pb.RequestStatus{
-				{Code: pb.SearchServiceError_OK.Enum()},
+				{Code: pb.SearchServiceError_OK},
 			},
 			DocId: []string{
 				"doc_id",
@@ -587,7 +587,7 @@ func TestPutAutoOrderID(t *testing.T) {
 		}
 		*out = pb.IndexDocumentResponse{
 			Status: []*pb.RequestStatus{
-				{Code: pb.SearchServiceError_OK.Enum()},
+				{Code: pb.SearchServiceError_OK},
 			},
 			DocId: []string{
 				"doc_id",
@@ -611,7 +611,7 @@ func TestPutBadStatus(t *testing.T) {
 		*out = pb.IndexDocumentResponse{
 			Status: []*pb.RequestStatus{
 				{
-					Code:        pb.SearchServiceError_INVALID_REQUEST.Enum(),
+					Code:        pb.SearchServiceError_INVALID_REQUEST,
 					ErrorDetail: proto.String("insufficient gophers"),
 				},
 			},
@@ -641,7 +641,7 @@ func TestPutMultiNilIDSlice(t *testing.T) {
 		}
 		*out = pb.IndexDocumentResponse{
 			Status: []*pb.RequestStatus{
-				{Code: pb.SearchServiceError_OK.Enum()},
+				{Code: pb.SearchServiceError_OK},
 			},
 			DocId: []string{
 				"doc_id",
@@ -664,8 +664,8 @@ func TestPutMultiError(t *testing.T) {
 	c := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(in *pb.IndexDocumentRequest, out *pb.IndexDocumentResponse) error {
 		*out = pb.IndexDocumentResponse{
 			Status: []*pb.RequestStatus{
-				{Code: pb.SearchServiceError_OK.Enum()},
-				{Code: pb.SearchServiceError_PERMISSION_DENIED.Enum(), ErrorDetail: proto.String("foo")},
+				{Code: pb.SearchServiceError_OK},
+				{Code: pb.SearchServiceError_PERMISSION_DENIED, ErrorDetail: proto.String("foo")},
 			},
 			DocId: []string{
 				"id1",
@@ -751,10 +751,10 @@ func TestSortOptions(t *testing.T) {
 				Scorer: MatchScorer,
 			},
 			wantSort: []*pb.SortSpec{
-				{SortExpression: proto.String("dog")},
-				{SortExpression: proto.String("cat"), SortDescending: proto.Bool(false)},
-				{SortExpression: proto.String("gopher"), DefaultValueText: proto.String("blue")},
-				{SortExpression: proto.String("fish"), DefaultValueNumeric: proto.Float64(2)},
+				{SortExpression: "dog"},
+				{SortExpression: "cat", SortDescending: proto.Bool(false)},
+				{SortExpression: "gopher", DefaultValueText: proto.String("blue")},
+				{SortExpression: "fish", DefaultValueNumeric: proto.Float64(2)},
 			},
 			wantScorer: &pb.ScorerSpec{
 				Limit:  proto.Int32(42),
@@ -835,9 +835,9 @@ func TestFieldSpec(t *testing.T) {
 				},
 			},
 			want: &pb.FieldSpec{
-				Expression: []*pb.FieldSpec_Expression{
-					{Name: proto.String("one"), Expression: proto.String("price * quantity")},
-					{Name: proto.String("two"), Expression: proto.String("min(daily_use, 10) * rate")},
+				Expression: []*pb.FieldSpec_ExpressionType{
+					{Name: "one", Expression: "price * quantity"},
+					{Name: "two", Expression: "min(daily_use, 10) * rate"},
 				},
 			},
 		},
@@ -931,11 +931,11 @@ func TestBasicSearchOpts(t *testing.T) {
 			},
 			want: &pb.SearchParams{
 				IncludeFacet: []*pb.FacetRequest{
-					{Name: proto.String("colour")},
-					{Name: proto.String("size"), Params: &pb.FacetRequestParam{
+					{Name: "colour"},
+					{Name: "size", Params: &pb.FacetRequestParam{
 						ValueConstraint: []string{"M", "L"},
 					}},
-					{Name: proto.String("price"), Params: &pb.FacetRequestParam{
+					{Name: "price", Params: &pb.FacetRequestParam{
 						Range: []*pb.FacetRange{
 							{End: proto.String("7e+00")},
 							{Start: proto.String("7e+00"), End: proto.String("1.4e+01")},
@@ -1002,8 +1002,8 @@ func TestBasicSearchOpts(t *testing.T) {
 				return nil
 			}
 			// Set default fields.
-			tt.want.Query = proto.String("gopher")
-			tt.want.IndexSpec = &pb.IndexSpec{Name: proto.String("Doc")}
+			tt.want.Query = "gopher"
+			tt.want.IndexSpec = &pb.IndexSpec{Name: "Doc"}
 			tt.want.CursorType = pb.SearchParams_PER_RESULT.Enum()
 			tt.want.FieldSpec = &pb.FieldSpec{}
 			if got := req.Params; !reflect.DeepEqual(got, tt.want) {
@@ -1054,10 +1054,10 @@ func TestFacetRefinements(t *testing.T) {
 				{Name: "legs", Value: Range{Start: 3, End: 5}},
 			},
 			want: []*pb.FacetRefinement{
-				{Name: proto.String("fur"), Value: proto.String("fluffy")},
-				{Name: proto.String("age"), Range: &pb.FacetRefinement_Range{End: proto.String("1.23e+02")}},
-				{Name: proto.String("age"), Range: &pb.FacetRefinement_Range{Start: proto.String("0e+00")}},
-				{Name: proto.String("legs"), Range: &pb.FacetRefinement_Range{Start: proto.String("3e+00"), End: proto.String("5e+00")}},
+				{Name: "fur", Value: proto.String("fluffy")},
+				{Name: "age", Range: &pb.FacetRefinement_Range{End: proto.String("1.23e+02")}},
+				{Name: "age", Range: &pb.FacetRefinement_Range{Start: proto.String("0e+00")}},
+				{Name: "legs", Range: &pb.FacetRefinement_Range{Start: proto.String("3e+00"), End: proto.String("5e+00")}},
 			},
 		},
 		{
@@ -1156,7 +1156,7 @@ func TestDelete(t *testing.T) {
 		expectedIn := &pb.DeleteDocumentRequest{
 			Params: &pb.DeleteDocumentParams{
 				DocId:     []string{"id"},
-				IndexSpec: &pb.IndexSpec{Name: proto.String("Doc")},
+				IndexSpec: &pb.IndexSpec{Name: "Doc"},
 			},
 		}
 		if !proto.Equal(in, expectedIn) {
@@ -1164,7 +1164,7 @@ func TestDelete(t *testing.T) {
 		}
 		*out = pb.DeleteDocumentResponse{
 			Status: []*pb.RequestStatus{
-				{Code: pb.SearchServiceError_OK.Enum()},
+				{Code: pb.SearchServiceError_OK},
 			},
 		}
 		return nil
@@ -1185,7 +1185,7 @@ func TestDeleteMulti(t *testing.T) {
 		expectedIn := &pb.DeleteDocumentRequest{
 			Params: &pb.DeleteDocumentParams{
 				DocId:     []string{"id1", "id2"},
-				IndexSpec: &pb.IndexSpec{Name: proto.String("Doc")},
+				IndexSpec: &pb.IndexSpec{Name: "Doc"},
 			},
 		}
 		if !proto.Equal(in, expectedIn) {
@@ -1193,8 +1193,8 @@ func TestDeleteMulti(t *testing.T) {
 		}
 		*out = pb.DeleteDocumentResponse{
 			Status: []*pb.RequestStatus{
-				{Code: pb.SearchServiceError_OK.Enum()},
-				{Code: pb.SearchServiceError_OK.Enum()},
+				{Code: pb.SearchServiceError_OK},
+				{Code: pb.SearchServiceError_OK},
 			},
 		}
 		return nil
@@ -1215,7 +1215,7 @@ func TestDeleteWrongNumberOfResults(t *testing.T) {
 		expectedIn := &pb.DeleteDocumentRequest{
 			Params: &pb.DeleteDocumentParams{
 				DocId:     []string{"id1", "id2"},
-				IndexSpec: &pb.IndexSpec{Name: proto.String("Doc")},
+				IndexSpec: &pb.IndexSpec{Name: "Doc"},
 			},
 		}
 		if !proto.Equal(in, expectedIn) {
@@ -1223,7 +1223,7 @@ func TestDeleteWrongNumberOfResults(t *testing.T) {
 		}
 		*out = pb.DeleteDocumentResponse{
 			Status: []*pb.RequestStatus{
-				{Code: pb.SearchServiceError_OK.Enum()},
+				{Code: pb.SearchServiceError_OK},
 			},
 		}
 		return nil
@@ -1244,7 +1244,7 @@ func TestDeleteMultiError(t *testing.T) {
 		expectedIn := &pb.DeleteDocumentRequest{
 			Params: &pb.DeleteDocumentParams{
 				DocId:     []string{"id1", "id2"},
-				IndexSpec: &pb.IndexSpec{Name: proto.String("Doc")},
+				IndexSpec: &pb.IndexSpec{Name: "Doc"},
 			},
 		}
 		if !proto.Equal(in, expectedIn) {
@@ -1252,8 +1252,8 @@ func TestDeleteMultiError(t *testing.T) {
 		}
 		*out = pb.DeleteDocumentResponse{
 			Status: []*pb.RequestStatus{
-				{Code: pb.SearchServiceError_OK.Enum()},
-				{Code: pb.SearchServiceError_PERMISSION_DENIED.Enum(), ErrorDetail: proto.String("foo")},
+				{Code: pb.SearchServiceError_OK},
+				{Code: pb.SearchServiceError_PERMISSION_DENIED, ErrorDetail: proto.String("foo")},
 			},
 		}
 		return nil

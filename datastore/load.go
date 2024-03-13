@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"google.golang.org/appengine"
 	pb "google.golang.org/appengine/internal/datastore"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -375,6 +375,9 @@ func protoToEntity(src *pb.EntityProto) (*Entity, error) {
 // propValue returns a Go value that combines the raw PropertyValue with a
 // meaning. For example, an Int64Value with GD_WHEN becomes a time.Time.
 func propValue(v *pb.PropertyValue, m pb.Property_Meaning) (interface{}, error) {
+	if v == nil {
+		return nil, fmt.Errorf("datastore: nil PropertyValue")
+	}
 	switch {
 	case v.Int64Value != nil:
 		if m == pb.Property_GD_WHEN {
@@ -386,32 +389,32 @@ func propValue(v *pb.PropertyValue, m pb.Property_Meaning) (interface{}, error) 
 		return *v.BooleanValue, nil
 	case v.StringValue != nil:
 		if m == pb.Property_BLOB {
-			return []byte(*v.StringValue), nil
+			return v.StringValue, nil
 		} else if m == pb.Property_BLOBKEY {
-			return appengine.BlobKey(*v.StringValue), nil
+			return appengine.BlobKey(v.StringValue), nil
 		} else if m == pb.Property_BYTESTRING {
-			return ByteString(*v.StringValue), nil
+			return ByteString(v.StringValue), nil
 		} else if m == pb.Property_ENTITY_PROTO {
 			var ent pb.EntityProto
-			err := proto.Unmarshal([]byte(*v.StringValue), &ent)
+			err := proto.Unmarshal(v.StringValue, &ent)
 			if err != nil {
 				return nil, err
 			}
 			return protoToEntity(&ent)
 		} else {
-			return *v.StringValue, nil
+			return string(v.StringValue), nil
 		}
 	case v.DoubleValue != nil:
 		return *v.DoubleValue, nil
-	case v.Referencevalue != nil:
-		key, err := referenceValueToKey(v.Referencevalue)
+	case v.ReferenceValue != nil:
+		key, err := referenceValueToKey(v.ReferenceValue)
 		if err != nil {
 			return nil, err
 		}
 		return key, nil
-	case v.Pointvalue != nil:
+	case v.PointValue != nil:
 		// NOTE: Strangely, latitude maps to X, longitude to Y.
-		return appengine.GeoPoint{Lat: v.Pointvalue.GetX(), Lng: v.Pointvalue.GetY()}, nil
+		return appengine.GeoPoint{Lat: v.PointValue.GetX(), Lng: v.PointValue.GetY()}, nil
 	}
 	return nil, nil
 }
