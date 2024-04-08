@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: [ '1.11.x', '1.12.x', '1.13.x', '1.14.x', '1.15.x', '1.16.x', '1.18.x', '1.19.x', '1.20.x']
+        go-version: ['1.19.x', '1.20.x', '1.21.x', '1.22.x']
 
     steps:
     - name: Update base image, intall Python2 and Python3
@@ -50,53 +50,6 @@ jobs:
     - name: Test gomod
       env:
         GO111MODULE: on
-      run: |
-        export APPENGINE_DEV_APPSERVER=$(which dev_appserver.py)
-        export CLOUDSDK_PYTHON="python3"
-        go test -v -cover -race google.golang.org/appengine/...
-        # TestAPICallAllocations doesn't run under race detector.
-        go test -v -cover google.golang.org/appengine/internal/... -run TestAPICallAllocations
-
-  test-gopath:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # GOPATH is deprecated in go 1.13.
-        go-version: [ '1.11.x', '1.12.x']
-
-    steps:
-    - name: Update base image, intall Python2 and Python3
-      run:  |
-       sudo apt-get update
-       sudo apt-get install -y python2
-       sudo apt-get install -y python3
-       export CLOUDSDK_PYTHON="python3"
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: ${{ matrix.go-version }}
-    - name: Checkout
-      uses: actions/checkout@v2
-    - name: Cache go modules
-      uses: actions/cache@v2
-      with:
-        path: |
-          ~/.cache/go-build
-          ~/go/pkg/mod
-        key: ${{ runner.os }}-${{ matrix.go-version }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ matrix.go-version }}-go-
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0
-    - name: Install
-      env:
-        GO111MODULE: off
-      run: |
-        go get -u -v $(go list -f '{{join .Imports "\n"}}{{"\n"}}{{join .TestImports "\n"}}' ./... | sort | uniq | grep -v appengine)
-        go get -u google.golang.org/appengine
-        gcloud components install app-engine-python app-engine-go cloud-datastore-emulator app-engine-python-extras --quiet
-    - name: Test gopath
       run: |
         export APPENGINE_DEV_APPSERVER=$(which dev_appserver.py)
         export CLOUDSDK_PYTHON="python3"

@@ -7,7 +7,7 @@ package mail
 import (
 	"testing"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/v2/internal/aetesting"
 	basepb "google.golang.org/appengine/v2/internal/base"
