@@ -563,7 +563,7 @@ func TestSaveStructOmitEmpty(t *testing.T) {
 				actualPropNames[i] = props[i].Name
 			}
 			// Sort actuals for comparing with already sorted expected names
-			sort.Sort(sort.StringSlice(actualPropNames))
+			sort.Strings(actualPropNames)
 			if !reflect.DeepEqual(actualPropNames, expectedPropNames) {
 				t.Errorf("Expected this properties: %v, got: %v", expectedPropNames, actualPropNames)
 			}
