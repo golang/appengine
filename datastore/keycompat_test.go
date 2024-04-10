@@ -15,6 +15,7 @@ func TestKeyConversion(t *testing.T) {
 		key        *Key
 		encodedKey string
 	}{
+
 		{
 			desc: "A control test for legacy to legacy key conversion int as the key",
 			key: &Key{
@@ -22,7 +23,7 @@ func TestKeyConversion(t *testing.T) {
 				intID: 1,
 				appID: "glibrary",
 			},
-			encodedKey: "aghnbGlicmFyeXIMCxIGUGVyc29uGAEM",
+			encodedKey: "aghnbGlicmFyeXIMCgoSBlBlcnNvbhgB",
 		},
 		{
 			desc: "A control test for legacy to legacy key conversion string as the key",
@@ -31,7 +32,7 @@ func TestKeyConversion(t *testing.T) {
 				stringID: "graph:7-day-active",
 				appID:    "glibrary",
 			},
-			encodedKey: "aghnbGlicmFyeXIdCxIFR3JhcGgiEmdyYXBoOjctZGF5LWFjdGl2ZQw",
+			encodedKey: "aghnbGlicmFyeXIdChsSBUdyYXBoIhJncmFwaDo3LWRheS1hY3RpdmU",
 		},
 
 		// These are keys encoded with cloud.google.com/go/datastore
@@ -43,9 +44,8 @@ func TestKeyConversion(t *testing.T) {
 				intID: 1033,
 				appID: "glibrary",
 			},
-			encodedKey: "Eg4KCVdvcmRJbmRleBCJCA",
+			encodedKey: "aghnbGlicmFyeXIQCg4SCVdvcmRJbmRleBiJCA",
 		},
-		// These are keys encoded with cloud.google.com/go/datastore
 		// Standard string
 		{
 			desc: "Convert new key format to old key with string id",
@@ -54,7 +54,7 @@ func TestKeyConversion(t *testing.T) {
 				stringID: "IAmAnID",
 				appID:    "glibrary",
 			},
-			encodedKey: "EhQKCVdvcmRJbmRleBoHSUFtQW5JRA",
+			encodedKey: "aghnbGlicmFyeXIWChQSCVdvcmRJbmRleCIHSUFtQW5JRA",
 		},
 
 		// These are keys encoded with cloud.google.com/go/datastore
@@ -71,19 +71,20 @@ func TestKeyConversion(t *testing.T) {
 					appID:    "glibrary",
 				},
 			},
-			encodedKey: "EhsKC0xldHRlckluZGV4GgxJQW1Bbm90aGVySUQSFAoJV29yZEluZGV4GgdJQW1BbklE",
+			encodedKey: "aghnbGlicmFyeXIzChsSC0xldHRlckluZGV4IgxJQW1Bbm90aGVySUQKFBIJV29yZEluZGV4IgdJQW1BbklE",
 		},
 	}
 
 	// Simulate the key converter enablement
 	keyConversion.appID = "glibrary"
 	for _, tc := range tests {
+		enc := tc.key.Encode()
 		dk, err := DecodeKey(tc.encodedKey)
 		if err != nil {
-			t.Fatalf("DecodeKey: %v", err)
+			t.Fatalf("DecodeKey: %v %s", err, enc)
 		}
 		if !reflect.DeepEqual(dk, tc.key) {
-			t.Errorf("%s: got %+v, want %+v", tc.desc, dk, tc.key)
+			t.Errorf("%s: got %+v, want %+v %s", tc.desc, dk, tc.key, enc)
 		}
 	}
 }

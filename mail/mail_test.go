@@ -7,7 +7,7 @@ package mail
 import (
 	"testing"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/internal/aetesting"
 	basepb "google.golang.org/appengine/internal/base"
@@ -43,18 +43,18 @@ func TestMessageConstruction(t *testing.T) {
 		t.Fatalf("Send: %v", err)
 	}
 	want := &pb.MailMessage{
-		Sender:   proto.String("dsymonds@example.com"),
+		Sender:   "dsymonds@example.com",
 		To:       []string{"nigeltao@example.com"},
-		Subject:  proto.String(""),
+		Subject:  "",
 		TextBody: proto.String("Hey, lunch time?"),
 		Attachment: []*pb.MailAttachment{
 			{
-				FileName:  proto.String("att1.txt"),
+				FileName:  "att1.txt",
 				Data:      []byte("data1"),
 				ContentID: proto.String("<att1>"),
 			},
 			{
-				FileName: proto.String("att2.txt"),
+				FileName: "att2.txt",
 				Data:     []byte("data2"),
 			},
 		},

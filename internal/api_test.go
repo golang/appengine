@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	basepb "google.golang.org/appengine/internal/base"
 	remotepb "google.golang.org/appengine/internal/remote_api"
@@ -73,7 +73,7 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if *apiReq.RequestId != "s3cr3t" && !f.allowMissingTicket {
 		writeResponse(&remotepb.Response{
 			RpcError: &remotepb.RpcError{
-				Code:   proto.Int32(int32(remotepb.RpcError_SECURITY_VIOLATION)),
+				Code:   int32(remotepb.RpcError_SECURITY_VIOLATION),
 				Detail: proto.String("bad security ticket"),
 			},
 		})
@@ -82,14 +82,14 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if got, want := r.Header.Get(dapperHeader), "trace-001"; got != want {
 		writeResponse(&remotepb.Response{
 			RpcError: &remotepb.RpcError{
-				Code:   proto.Int32(int32(remotepb.RpcError_BAD_REQUEST)),
+				Code:   int32(remotepb.RpcError_BAD_REQUEST),
 				Detail: proto.String(fmt.Sprintf("trace info = %q, want %q", got, want)),
 			},
 		})
 		return
 	}
 
-	service, method := *apiReq.ServiceName, *apiReq.Method
+	service, method := apiReq.ServiceName, apiReq.Method
 	var resOut proto.Message
 	if service == "actordb" && method == "LookupActor" {
 		req := &basepb.StringProto{}
@@ -98,8 +98,8 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("Bad encoded request: %v", err), 500)
 			return
 		}
-		if *req.Value == "Doctor Who" {
-			res.Value = proto.String("David Tennant")
+		if req.Value == "Doctor Who" {
+			res.Value = "David Tennant"
 		}
 		resOut = res
 	}
@@ -115,7 +115,7 @@ func (f *fakeAPIHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		case "OverQuota":
 			writeResponse(&remotepb.Response{
 				RpcError: &remotepb.RpcError{
-					Code:   proto.Int32(int32(remotepb.RpcError_OVER_QUOTA)),
+					Code:   int32(remotepb.RpcError_OVER_QUOTA),
 					Detail: proto.String("you are hogging the resources!"),
 				},
 			})
@@ -187,14 +187,14 @@ func TestAPICall(t *testing.T) {
 	defer cleanup()
 
 	req := &basepb.StringProto{
-		Value: proto.String("Doctor Who"),
+		Value: "Doctor Who",
 	}
 	res := &basepb.StringProto{}
 	err := Call(toContext(c), "actordb", "LookupActor", req, res)
 	if err != nil {
 		t.Fatalf("API call failed: %v", err)
 	}
-	if got, want := *res.Value, "David Tennant"; got != want {
+	if got, want := res.Value, "David Tennant"; got != want {
 		t.Errorf("Response is %q, want %q", got, want)
 	}
 }
@@ -208,14 +208,14 @@ func TestAPICallTicketUnavailable(t *testing.T) {
 
 	c.req.Header.Set(ticketHeader, "")
 	req := &basepb.StringProto{
-		Value: proto.String("Doctor Who"),
+		Value: "Doctor Who",
 	}
 	res := &basepb.StringProto{}
 	err := Call(toContext(c), "actordb", "LookupActor", req, res)
 	if err != nil {
 		t.Fatalf("API call failed: %v", err)
 	}
-	if got, want := *res.Value, "David Tennant"; got != want {
+	if got, want := res.Value, "David Tennant"; got != want {
 		t.Errorf("Response is %q, want %q", got, want)
 	}
 }
@@ -453,7 +453,7 @@ func TestAPICallAllocations(t *testing.T) {
 	}
 
 	req := &basepb.StringProto{
-		Value: proto.String("Doctor Who"),
+		Value: "Doctor Who",
 	}
 	res := &basepb.StringProto{}
 	var apiErr error

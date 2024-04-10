@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
@@ -48,6 +48,9 @@ func (e *ErrFieldMismatch) Error() string {
 func protoToKey(r *pb.Reference) (k *Key, err error) {
 	appID := r.GetApp()
 	namespace := r.GetNameSpace()
+	if r.Path == nil {
+		return nil, fmt.Errorf("path is empty: %w", ErrInvalidKey)
+	}
 	for _, e := range r.Path.Element {
 		k = &Key{
 			kind:      e.GetType(),
@@ -74,11 +77,11 @@ func keyToProto(defaultAppID string, k *Key) *pb.Reference {
 	for i := k; i != nil; i = i.parent {
 		n++
 	}
-	e := make([]*pb.Path_Element, n)
+	e := make([]*pb.Path_ElementType, n)
 	for i := k; i != nil; i = i.parent {
 		n--
-		e[n] = &pb.Path_Element{
-			Type: &i.kind,
+		e[n] = &pb.Path_ElementType{
+			Type: i.kind,
 		}
 		// At most one of {Name,Id} should be set.
 		// Neither will be set for incomplete keys.
@@ -93,7 +96,7 @@ func keyToProto(defaultAppID string, k *Key) *pb.Reference {
 		namespace = proto.String(k.namespace)
 	}
 	return &pb.Reference{
-		App:       proto.String(appID),
+		App:       appID,
 		NameSpace: namespace,
 		Path: &pb.Path{
 			Element: e,
@@ -138,10 +141,10 @@ func multiValid(key []*Key) error {
 
 // referenceValueToKey is the same as protoToKey except the input is a
 // PropertyValue_ReferenceValue instead of a Reference.
-func referenceValueToKey(r *pb.PropertyValue_ReferenceValue) (k *Key, err error) {
+func referenceValueToKey(r *pb.PropertyValue_ReferenceValueType) (k *Key, err error) {
 	appID := r.GetApp()
 	namespace := r.GetNameSpace()
-	for _, e := range r.Pathelement {
+	for _, e := range r.PathElement {
 		k = &Key{
 			kind:      e.GetType(),
 			stringID:  e.GetName(),
@@ -159,20 +162,20 @@ func referenceValueToKey(r *pb.PropertyValue_ReferenceValue) (k *Key, err error)
 
 // keyToReferenceValue is the same as keyToProto except the output is a
 // PropertyValue_ReferenceValue instead of a Reference.
-func keyToReferenceValue(defaultAppID string, k *Key) *pb.PropertyValue_ReferenceValue {
+func keyToReferenceValue(defaultAppID string, k *Key) *pb.PropertyValue_ReferenceValueType {
 	ref := keyToProto(defaultAppID, k)
-	pe := make([]*pb.PropertyValue_ReferenceValue_PathElement, len(ref.Path.Element))
+	pe := make([]*pb.PropertyValue_ReferenceValueType_PathElementType, len(ref.Path.Element))
 	for i, e := range ref.Path.Element {
-		pe[i] = &pb.PropertyValue_ReferenceValue_PathElement{
+		pe[i] = &pb.PropertyValue_ReferenceValueType_PathElementType{
 			Type: e.Type,
 			Id:   e.Id,
 			Name: e.Name,
 		}
 	}
-	return &pb.PropertyValue_ReferenceValue{
+	return &pb.PropertyValue_ReferenceValueType{
 		App:         ref.App,
 		NameSpace:   ref.NameSpace,
-		Pathelement: pe,
+		PathElement: pe,
 	}
 }
 

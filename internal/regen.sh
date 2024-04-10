@@ -2,7 +2,7 @@
 #
 # This script rebuilds the generated code for the protocol buffers.
 # To run this you will need protoc and goprotobuf installed;
-# see https://github.com/golang/protobuf for instructions.
+# see https://google.golang.org/protobuf for instructions.
 
 PKG=google.golang.org/appengine
 
@@ -27,14 +27,9 @@ cd $base
 # Run protoc once per package.
 for dir in $(find $PKG/internal -name '*.proto' | xargs dirname | sort | uniq); do
 	echo 1>&2 "* $dir"
-	protoc --go_out=. $dir/*.proto
-done
-
-for f in $(find $PKG/internal -name '*.pb.go'); do
-  # Remove proto.RegisterEnum calls.
-  # These cause duplicate registration panics when these packages
-  # are used on classic App Engine. proto.RegisterEnum only affects
-  # parsing the text format; we don't care about that.
-  # https://code.google.com/p/googleappengine/issues/detail?id=11670#c17
-  sed -i '/proto.RegisterEnum/d' $f
+	bname=$(basename $dir)
+	pushd ${pkgdir}/internal/${bname}
+	echo "cmd:" protoc -I=.  -I=${base}  --go_opt=paths=source_relative --go_out=. *.proto
+	protoc -I=. -I=${base} --go_opt=paths=source_relative --go_out=. *.proto
+	popd
 done

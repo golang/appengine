@@ -1,5 +1,5 @@
-syntax = "proto2";
-option go_package = "log";
+syntax = "proto3";
+option go_package = "google.golang.org/appengine/internal/log";
 
 package appengine;
 
@@ -12,9 +12,9 @@ message LogServiceError {
 }
 
 message UserAppLogLine {
-  required int64 timestamp_usec = 1;
-  required int64 level = 2;
-  required string message = 3;
+  int64 timestamp_usec = 1;
+  int64 level = 2;
+  string message = 3;
 }
 
 message UserAppLogGroup {
@@ -26,7 +26,7 @@ message FlushRequest {
 }
 
 message SetStatusRequest {
-  required string status = 1;
+ string status = 1;
 }
 
 
@@ -35,32 +35,32 @@ message LogOffset {
 }
 
 message LogLine {
-  required int64 time = 1;
-  required int32 level = 2;
-  required string log_message = 3;
+ int64 time = 1;
+ int32 level = 2;
+ string log_message = 3;
 }
 
 message RequestLog {
-  required string app_id = 1;
-  optional string module_id = 37 [default="default"];
-  required string version_id = 2;
-  required bytes request_id = 3;
+ string app_id = 1;
+  optional string module_id = 37 ;
+ string version_id = 2;
+ bytes request_id = 3;
   optional LogOffset offset = 35;
-  required string ip = 4;
+ string ip = 4;
   optional string nickname = 5;
-  required int64 start_time = 6;
-  required int64 end_time = 7;
-  required int64 latency = 8;
-  required int64 mcycles = 9;
-  required string method = 10;
-  required string resource = 11;
-  required string http_version = 12;
-  required int32 status = 13;
-  required int64 response_size = 14;
+ int64 start_time = 6;
+ int64 end_time = 7;
+ int64 latency = 8;
+ int64 mcycles = 9;
+ string method = 10;
+ string resource = 11;
+ string http_version = 12;
+ int32 status = 13;
+ int64 response_size = 14;
   optional string referrer = 15;
   optional string user_agent = 16;
-  required string url_map_entry = 17;
-  required string combined = 18;
+ string url_map_entry = 17;
+ string combined = 18;
   optional int64 api_mcycles = 19;
   optional string host = 20;
   optional double cost = 21;
@@ -70,8 +70,8 @@ message RequestLog {
 
   optional bool was_loading_request = 24;
   optional int64 pending_time = 25;
-  optional int32 replica_index = 26 [default = -1];
-  optional bool finished = 27 [default = true];
+  optional int32 replica_index = 26;
+  optional bool finished = 27 ;
   optional bytes clone_key = 28;
 
   repeated LogLine line = 29;
@@ -88,12 +88,12 @@ message RequestLog {
 }
 
 message LogModuleVersion {
-  optional string module_id = 1 [default="default"];
+  optional string module_id = 1 ;
   optional string version_id = 2;
 }
 
 message LogReadRequest {
-  required string app_id = 1;
+ string app_id = 1;
   repeated string version_id = 2;
   repeated LogModuleVersion module_version = 19;
 
@@ -134,11 +134,11 @@ message LogUsageRecord {
 }
 
 message LogUsageRequest {
-  required string app_id = 1;
+ string app_id = 1;
   repeated string version_id = 2;
   optional int32 start_time = 3;
   optional int32 end_time = 4;
-  optional uint32 resolution_hours = 5 [default = 1];
+  optional uint32 resolution_hours = 5;
   optional bool combine_versions = 6;
   optional int32 usage_version = 7;
   optional bool versions_only = 8;

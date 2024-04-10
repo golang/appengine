@@ -9,7 +9,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/v2/internal"
 	pb "google.golang.org/appengine/v2/internal/user"

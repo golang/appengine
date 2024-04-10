@@ -24,7 +24,7 @@ import (
 	"context"
 	"net/mail"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine/internal"
 	bpb "google.golang.org/appengine/internal/base"
@@ -77,11 +77,11 @@ func SendToAdmins(c context.Context, msg *Message) error {
 
 func send(c context.Context, method string, msg *Message) error {
 	req := &pb.MailMessage{
-		Sender:  &msg.Sender,
+		Sender:  msg.Sender,
 		To:      msg.To,
 		Cc:      msg.Cc,
 		Bcc:     msg.Bcc,
-		Subject: &msg.Subject,
+		Subject: msg.Subject,
 	}
 	if msg.ReplyTo != "" {
 		req.ReplyTo = &msg.ReplyTo
@@ -96,7 +96,7 @@ func send(c context.Context, method string, msg *Message) error {
 		req.Attachment = make([]*pb.MailAttachment, len(msg.Attachments))
 		for i, att := range msg.Attachments {
 			req.Attachment[i] = &pb.MailAttachment{
-				FileName: proto.String(att.Name),
+				FileName: att.Name,
 				Data:     att.Data,
 			}
 			if att.ContentID != "" {
@@ -107,8 +107,8 @@ func send(c context.Context, method string, msg *Message) error {
 	for key, vs := range msg.Headers {
 		for _, v := range vs {
 			req.Header = append(req.Header, &pb.MailHeader{
-				Name:  proto.String(key),
-				Value: proto.String(v),
+				Name:  key,
+				Value: v,
 			})
 		}
 	}

@@ -11,7 +11,7 @@ import (
 	"errors"
 	"reflect"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	basepb "google.golang.org/appengine/internal/base"
 	pb "google.golang.org/appengine/internal/datastore"
@@ -62,7 +62,7 @@ func RunTransactionOnce(c context.Context, f func(context.Context) error, xg boo
 	// Begin the transaction.
 	t := &transaction{}
 	req := &pb.BeginTransactionRequest{
-		App: proto.String(FullyQualifiedAppID(c)),
+		App: FullyQualifiedAppID(c),
 	}
 	if xg {
 		req.AllowMultipleEg = proto.Bool(true)

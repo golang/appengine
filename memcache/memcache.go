@@ -36,7 +36,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
@@ -104,7 +104,7 @@ const (
 )
 
 // protoToItem converts a protocol buffer item to a Go struct.
-func protoToItem(p *pb.MemcacheGetResponse_Item) *Item {
+func protoToItem(p *pb.MemcacheGetResponse_ItemType) *Item {
 	if p.GetIsDeleteLocked() {
 		// "delete lock" for a duration is not a feature available in the Go lib.
 		// Such items may exist in memcache though, e.g. created by the Java lib.
@@ -224,10 +224,10 @@ func DeleteMulti(c context.Context, key []string) error {
 		return nil
 	}
 	req := &pb.MemcacheDeleteRequest{
-		Item: make([]*pb.MemcacheDeleteRequest_Item, len(key)),
+		Item: make([]*pb.MemcacheDeleteRequest_ItemType, len(key)),
 	}
 	for i, k := range key {
-		req.Item[i] = &pb.MemcacheDeleteRequest_Item{Key: []byte(k)}
+		req.Item[i] = &pb.MemcacheDeleteRequest_ItemType{Key: []byte(k)}
 	}
 	res := &pb.MemcacheDeleteResponse{}
 	if err := internal.Call(c, "memcache", "Delete", req, res); err != nil {
@@ -304,10 +304,10 @@ func set(c context.Context, item []*Item, value [][]byte, policy pb.MemcacheSetR
 		return nil
 	}
 	req := &pb.MemcacheSetRequest{
-		Item: make([]*pb.MemcacheSetRequest_Item, len(item)),
+		Item: make([]*pb.MemcacheSetRequest_ItemType, len(item)),
 	}
 	for i, t := range item {
-		p := &pb.MemcacheSetRequest_Item{
+		p := &pb.MemcacheSetRequest_ItemType{
 			Key: []byte(t.Key),
 		}
 		if value == nil {
@@ -545,12 +545,12 @@ func Stats(c context.Context) (*Statistics, error) {
 		return nil, ErrNoStats
 	}
 	return &Statistics{
-		Hits:     *res.Stats.Hits,
-		Misses:   *res.Stats.Misses,
-		ByteHits: *res.Stats.ByteHits,
-		Items:    *res.Stats.Items,
-		Bytes:    *res.Stats.Bytes,
-		Oldest:   int64(*res.Stats.OldestItemAge),
+		Hits:     res.Stats.Hits,
+		Misses:   res.Stats.Misses,
+		ByteHits: res.Stats.ByteHits,
+		Items:    res.Stats.Items,
+		Bytes:    res.Stats.Bytes,
+		Oldest:   int64(res.Stats.OldestItemAge),
 	}, nil
 }
 

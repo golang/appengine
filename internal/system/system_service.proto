@@ -1,5 +1,5 @@
-syntax = "proto2";
-option go_package = "system";
+syntax = "proto3";
+option go_package = "google.golang.org/appengine/internal/system";
 
 package appengine;
 

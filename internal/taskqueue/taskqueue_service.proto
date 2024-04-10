@@ -1,5 +1,5 @@
-syntax = "proto2";
-option go_package = "taskqueue";
+syntax = "proto3";
+option go_package = "google.golang.org/appengine/internal/taskqueue";
 
 import "google.golang.org/appengine/internal/datastore/datastore_v3.proto";
 
@@ -43,17 +43,15 @@ message TaskQueueServiceError {
 }
 
 message TaskPayload {
-  extensions 10 to max;
-  option message_set_wire_format = true;
 }
 
 message TaskQueueRetryParameters {
   optional int32 retry_limit = 1;
   optional int64 age_limit_sec = 2;
 
-  optional double min_backoff_sec = 3 [default = 0.1];
-  optional double max_backoff_sec = 4 [default = 3600];
-  optional int32 max_doublings = 5 [default = 16];
+  optional double min_backoff_sec = 3;
+  optional double max_backoff_sec = 4;
+  optional int32 max_doublings = 5;
 }
 
 message TaskQueueAcl {
@@ -62,8 +60,8 @@ message TaskQueueAcl {
 }
 
 message TaskQueueHttpHeader {
-  required bytes key = 1;
-  required bytes value = 2;
+  bytes key = 1;
+  bytes value = 2;
 }
 
 message TaskQueueMode {
@@ -74,39 +72,42 @@ message TaskQueueMode {
 }
 
 message TaskQueueAddRequest {
-  required bytes queue_name = 1;
-  required bytes task_name = 2;
-  required int64 eta_usec = 3;
+ bytes queue_name = 1;
+ bytes task_name = 2;
+ int64 eta_usec = 3;
 
   enum RequestMethod {
+    NONE = 0;
     GET = 1;
     POST = 2;
     HEAD = 3;
     PUT = 4;
     DELETE = 5;
   }
-  optional RequestMethod method = 5 [default=POST];
+  optional RequestMethod method = 5 ;
 
   optional bytes url = 4;
 
-  repeated group Header = 6 {
-    required bytes key = 7;
-    required bytes value = 8;
+  repeated HeaderType Header = 6;
+  message HeaderType {
+   bytes key = 7;
+   bytes value = 8;
   }
 
   optional bytes body = 9 [ctype=CORD];
   optional Transaction transaction = 10;
   optional bytes app_id = 11;
 
-  optional group CronTimetable = 12 {
-    required bytes schedule = 13;
-    required bytes timezone = 14;
+  optional CronTimetableType CronTimetable = 12;
+  message CronTimetableType {
+   bytes schedule = 13;
+   bytes timezone = 14;
   }
 
   optional bytes description = 15;
   optional TaskPayload payload = 16;
   optional TaskQueueRetryParameters retry_parameters = 17;
-  optional TaskQueueMode.Mode mode = 18 [default=PUSH];
+  optional TaskQueueMode.Mode mode = 18 ;
   optional bytes tag = 19;
 }
 
@@ -119,14 +120,15 @@ message TaskQueueBulkAddRequest {
 }
 
 message TaskQueueBulkAddResponse {
-  repeated group TaskResult = 1 {
-    required TaskQueueServiceError.ErrorCode result = 2;
+  repeated TaskResultType TaskResult = 1;
+  message TaskResultType {
+   TaskQueueServiceError.ErrorCode result = 2;
     optional bytes chosen_task_name = 3;
   }
 }
 
 message TaskQueueDeleteRequest {
-  required bytes queue_name = 1;
+ bytes queue_name = 1;
   repeated bytes task_name = 2;
   optional bytes app_id = 3;
 }
@@ -137,23 +139,23 @@ message TaskQueueDeleteResponse {
 
 message TaskQueueForceRunRequest {
   optional bytes app_id = 1;
-  required bytes queue_name = 2;
-  required bytes task_name = 3;
+ bytes queue_name = 2;
+ bytes task_name = 3;
 }
 
 message TaskQueueForceRunResponse {
-  required TaskQueueServiceError.ErrorCode result = 3;
+ TaskQueueServiceError.ErrorCode result = 3;
 }
 
 message TaskQueueUpdateQueueRequest {
   optional bytes app_id = 1;
-  required bytes queue_name = 2;
-  required double bucket_refill_per_second = 3;
-  required int32 bucket_capacity = 4;
+ bytes queue_name = 2;
+ double bucket_refill_per_second = 3;
+ int32 bucket_capacity = 4;
   optional string user_specified_rate = 5;
   optional TaskQueueRetryParameters retry_parameters = 6;
   optional int32 max_concurrent_requests = 7;
-  optional TaskQueueMode.Mode mode = 8 [default = PUSH];
+  optional TaskQueueMode.Mode mode = 8;
   optional TaskQueueAcl acl = 9;
   repeated TaskQueueHttpHeader header_override = 10;
 }
@@ -163,50 +165,52 @@ message TaskQueueUpdateQueueResponse {
 
 message TaskQueueFetchQueuesRequest {
   optional bytes app_id = 1;
-  required int32 max_rows = 2;
+ int32 max_rows = 2;
 }
 
 message TaskQueueFetchQueuesResponse {
-  repeated group Queue = 1 {
-    required bytes queue_name = 2;
-    required double bucket_refill_per_second = 3;
-    required double bucket_capacity = 4;
+  repeated QueueType Queue = 1;
+  message QueueType {
+   bytes queue_name = 2;
+   double bucket_refill_per_second = 3;
+   double bucket_capacity = 4;
     optional string user_specified_rate = 5;
-    required bool paused = 6 [default=false];
+   bool paused = 6 ;
     optional TaskQueueRetryParameters retry_parameters = 7;
     optional int32 max_concurrent_requests = 8;
-    optional TaskQueueMode.Mode mode = 9 [default = PUSH];
+    optional TaskQueueMode.Mode mode = 9;
     optional TaskQueueAcl acl = 10;
     repeated TaskQueueHttpHeader header_override = 11;
-    optional string creator_name = 12 [ctype=CORD, default="apphosting"];
+    optional string creator_name = 12 [ctype=CORD];
   }
 }
 
 message TaskQueueFetchQueueStatsRequest {
   optional bytes app_id = 1;
   repeated bytes queue_name = 2;
-  optional int32 max_num_tasks = 3 [default = 0];
+  optional int32 max_num_tasks = 3;
 }
 
 message TaskQueueScannerQueueInfo {
-  required int64 executed_last_minute = 1;
-  required int64 executed_last_hour = 2;
-  required double sampling_duration_seconds = 3;
+ int64 executed_last_minute = 1;
+ int64 executed_last_hour = 2;
+ double sampling_duration_seconds = 3;
   optional int32 requests_in_flight = 4;
   optional double enforced_rate = 5;
 }
 
 message TaskQueueFetchQueueStatsResponse {
-  repeated group QueueStats = 1 {
-    required int32 num_tasks = 2;
-    required int64 oldest_eta_usec = 3;
+  repeated QueueStatsType QueueStats = 1;
+  message QueueStatsType {
+   int32 num_tasks = 2;
+   int64 oldest_eta_usec = 3;
     optional TaskQueueScannerQueueInfo scanner_info = 4;
   }
 }
 message TaskQueuePauseQueueRequest {
-  required bytes app_id = 1;
-  required bytes queue_name = 2;
-  required bool pause = 3;
+ bytes app_id = 1;
+ bytes queue_name = 2;
+  bool pause = 3;
 }
 
 message TaskQueuePauseQueueResponse {
@@ -214,22 +218,22 @@ message TaskQueuePauseQueueResponse {
 
 message TaskQueuePurgeQueueRequest {
   optional bytes app_id = 1;
-  required bytes queue_name = 2;
+  bytes queue_name = 2;
 }
 
 message TaskQueuePurgeQueueResponse {
 }
 
 message TaskQueueDeleteQueueRequest {
-  required bytes app_id = 1;
-  required bytes queue_name = 2;
+  bytes app_id = 1;
+  bytes queue_name = 2;
 }
 
 message TaskQueueDeleteQueueResponse {
 }
 
 message TaskQueueDeleteGroupRequest {
-  required bytes app_id = 1;
+  bytes app_id = 1;
 }
 
 message TaskQueueDeleteGroupResponse {
@@ -237,21 +241,23 @@ message TaskQueueDeleteGroupResponse {
 
 message TaskQueueQueryTasksRequest {
   optional bytes app_id = 1;
-  required bytes queue_name = 2;
+  bytes queue_name = 2;
 
   optional bytes start_task_name = 3;
   optional int64 start_eta_usec = 4;
   optional bytes start_tag = 6;
-  optional int32 max_rows = 5 [default = 1];
+  optional int32 max_rows = 5;
 }
 
 message TaskQueueQueryTasksResponse {
-  repeated group Task = 1 {
-    required bytes task_name = 2;
-    required int64 eta_usec = 3;
+  repeated TaskType Task = 1;
+  message TaskType {
+    bytes task_name = 2;
+    int64 eta_usec = 3;
     optional bytes url = 4;
 
     enum RequestMethod {
+      NONE = 0;
       GET = 1;
       POST = 2;
       HEAD = 3;
@@ -260,26 +266,29 @@ message TaskQueueQueryTasksResponse {
     }
     optional RequestMethod method = 5;
 
-    optional int32 retry_count = 6 [default=0];
+    optional int32 retry_count = 6 ;
 
-    repeated group Header = 7 {
-      required bytes key = 8;
-      required bytes value = 9;
+    repeated HeaderType Header = 7;
+    message HeaderType {
+      bytes key = 8;
+      bytes value = 9;
     }
 
     optional int32 body_size = 10;
     optional bytes body = 11 [ctype=CORD];
-    required int64 creation_time_usec = 12;
+    int64 creation_time_usec = 12;
 
-    optional group CronTimetable = 13 {
-      required bytes schedule = 14;
-      required bytes timezone = 15;
+    optional CronTimetableType CronTimetable = 13;
+    message CronTimetableType {
+      bytes schedule = 14;
+      bytes timezone = 15;
     }
 
-    optional group RunLog = 16 {
-      required int64 dispatched_usec = 17;
-      required int64 lag_usec = 18;
-      required int64 elapsed_usec = 19;
+    optional RunLogType RunLog = 16;
+    message RunLogType {
+      int64 dispatched_usec = 17;
+      int64 lag_usec = 18;
+      int64 elapsed_usec = 19;
       optional int64 response_code = 20;
       optional string retry_reason = 27;
     }
@@ -289,54 +298,55 @@ message TaskQueueQueryTasksResponse {
     optional TaskQueueRetryParameters retry_parameters = 23;
     optional int64 first_try_usec = 24;
     optional bytes tag = 25;
-    optional int32 execution_count = 26 [default=0];
+    optional int32 execution_count = 26 ;
   }
 }
 
 message TaskQueueFetchTaskRequest {
   optional bytes app_id = 1;
-  required bytes queue_name = 2;
-  required bytes task_name = 3;
+  bytes queue_name = 2;
+  bytes task_name = 3;
 }
 
 message TaskQueueFetchTaskResponse {
-  required TaskQueueQueryTasksResponse task = 1;
+  TaskQueueQueryTasksResponse task = 1;
 }
 
 message TaskQueueUpdateStorageLimitRequest {
-  required bytes app_id = 1;
-  required int64 limit = 2;
+  bytes app_id = 1;
+  int64 limit = 2;
 }
 
 message TaskQueueUpdateStorageLimitResponse {
-  required int64 new_limit = 1;
+  int64 new_limit = 1;
 }
 
 message TaskQueueQueryAndOwnTasksRequest {
-  required bytes queue_name = 1;
-  required double lease_seconds = 2;
-  required int64 max_tasks = 3;
-  optional bool group_by_tag = 4 [default=false];
+  bytes queue_name = 1;
+  double lease_seconds = 2;
+  int64 max_tasks = 3;
+  optional bool group_by_tag = 4 ;
   optional bytes tag = 5;
 }
 
 message TaskQueueQueryAndOwnTasksResponse {
-  repeated group Task = 1 {
-    required bytes task_name = 2;
-    required int64 eta_usec = 3;
-    optional int32 retry_count = 4 [default=0];
+  repeated TaskType Task = 1;
+  message TaskType {
+    bytes task_name = 2;
+    int64 eta_usec = 3;
+    optional int32 retry_count = 4 ;
     optional bytes body = 5 [ctype=CORD];
     optional bytes tag = 6;
   }
 }
 
 message TaskQueueModifyTaskLeaseRequest {
-  required bytes queue_name = 1;
-  required bytes task_name = 2;
-  required int64 eta_usec = 3;
-  required double lease_seconds = 4;
+  bytes queue_name = 1;
+  bytes task_name = 2;
+  int64 eta_usec = 3;
+  double lease_seconds = 4;
 }
 
 message TaskQueueModifyTaskLeaseResponse {
-  required int64 updated_eta_usec = 1;
+  int64 updated_eta_usec = 1;
 }

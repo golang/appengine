@@ -38,7 +38,7 @@ import (
 // The clientID is an application-provided string used to identify the client.
 func Create(c context.Context, clientID string) (token string, err error) {
 	req := &pb.CreateChannelRequest{
-		ApplicationKey: &clientID,
+		ApplicationKey: clientID,
 	}
 	resp := &pb.CreateChannelResponse{}
 	err = internal.Call(c, service, "CreateChannel", req, resp)
@@ -49,8 +49,8 @@ func Create(c context.Context, clientID string) (token string, err error) {
 // Send sends a message on the channel associated with clientID.
 func Send(c context.Context, clientID, message string) error {
 	req := &pb.SendMessageRequest{
-		ApplicationKey: &clientID,
-		Message:        &message,
+		ApplicationKey: clientID,
+		Message:        message,
 	}
 	resp := &basepb.VoidProto{}
 	return remapError(internal.Call(c, service, "SendChannelMessage", req, resp))

@@ -36,7 +36,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
@@ -179,9 +179,9 @@ func protoToAppLogs(logLines []*pb.LogLine) []AppLog {
 
 	for i, line := range logLines {
 		appLogs[i] = AppLog{
-			Time:    time.Unix(0, *line.Time*1e3),
-			Level:   int(*line.Level),
-			Message: *line.LogMessage,
+			Time:    time.Unix(0, line.Time*1e3),
+			Level:   int(line.Level),
+			Message: line.LogMessage,
 		}
 	}
 
@@ -197,27 +197,27 @@ func protoToRecord(rl *pb.RequestLog) *Record {
 		offset = nil
 	}
 	return &Record{
-		AppID:             *rl.AppId,
+		AppID:             rl.AppId,
 		ModuleID:          rl.GetModuleId(),
-		VersionID:         *rl.VersionId,
+		VersionID:         rl.VersionId,
 		RequestID:         rl.RequestId,
 		Offset:            offset,
-		IP:                *rl.Ip,
+		IP:                rl.Ip,
 		Nickname:          rl.GetNickname(),
 		AppEngineRelease:  string(rl.GetAppEngineRelease()),
-		StartTime:         time.Unix(0, *rl.StartTime*1e3),
-		EndTime:           time.Unix(0, *rl.EndTime*1e3),
-		Latency:           time.Duration(*rl.Latency) * time.Microsecond,
-		MCycles:           *rl.Mcycles,
-		Method:            *rl.Method,
-		Resource:          *rl.Resource,
-		HTTPVersion:       *rl.HttpVersion,
-		Status:            *rl.Status,
-		ResponseSize:      *rl.ResponseSize,
+		StartTime:         time.Unix(0, rl.StartTime*1e3),
+		EndTime:           time.Unix(0, rl.EndTime*1e3),
+		Latency:           time.Duration(rl.Latency) * time.Microsecond,
+		MCycles:           rl.Mcycles,
+		Method:            rl.Method,
+		Resource:          rl.Resource,
+		HTTPVersion:       rl.HttpVersion,
+		Status:            rl.Status,
+		ResponseSize:      rl.ResponseSize,
 		Referrer:          rl.GetReferrer(),
 		UserAgent:         rl.GetUserAgent(),
-		URLMapEntry:       *rl.UrlMapEntry,
-		Combined:          *rl.Combined,
+		URLMapEntry:       rl.UrlMapEntry,
+		Combined:          rl.Combined,
 		Host:              rl.GetHost(),
 		Cost:              rl.GetCost(),
 		TaskQueueName:     rl.GetTaskQueueName(),
@@ -243,7 +243,7 @@ func (params *Query) Run(c context.Context) *Result {
 
 func makeRequest(params *Query, appID, versionID string) (*pb.LogReadRequest, error) {
 	req := &pb.LogReadRequest{}
-	req.AppId = &appID
+	req.AppId = appID
 	if !params.StartTime.IsZero() {
 		req.StartTime = proto.Int64(params.StartTime.UnixNano() / 1e3)
 	}

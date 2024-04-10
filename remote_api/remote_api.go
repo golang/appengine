@@ -15,7 +15,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"google.golang.org/protobuf/runtime/protoimpl"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
@@ -77,7 +79,7 @@ func handle(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	service, method := *remReq.ServiceName, *remReq.Method
+	service, method := remReq.ServiceName, remReq.Method
 	if !requestSupported(service, method) {
 		w.WriteHeader(http.StatusBadRequest)
 		log.Errorf(c, "Unsupported RPC /%s.%s", service, method)
@@ -93,15 +95,15 @@ func handle(w http.ResponseWriter, req *http.Request) {
 		remRes.Response = rawRes.buf
 	} else if ae, ok := err.(*internal.APIError); ok {
 		remRes.ApplicationError = &pb.ApplicationError{
-			Code:   &ae.Code,
-			Detail: &ae.Detail,
+			Code:   ae.Code,
+			Detail: ae.Detail,
 		}
 	} else {
 		// This shouldn't normally happen.
 		log.Errorf(c, "appengine/remote_api: Unexpected error of type %T: %v", err, err)
 		remRes.ApplicationError = &pb.ApplicationError{
-			Code:   proto.Int32(0),
-			Detail: proto.String(err.Error()),
+			Code:   0,
+			Detail: err.Error(),
 		}
 	}
 	out, err := proto.Marshal(remRes)
@@ -123,6 +125,20 @@ func handle(w http.ResponseWriter, req *http.Request) {
 // without having to know the real type.
 type rawMessage struct {
 	buf []byte
+}
+
+var file_rawmessage_proto_msgTypes = make([]protoimpl.MessageInfo, 1)
+
+func (rm *rawMessage) ProtoReflect() protoreflect.Message {
+	mi := &file_rawmessage_proto_msgTypes[0]
+	if protoimpl.UnsafeEnabled && rm != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(rm))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(rm)
 }
 
 func (rm *rawMessage) Marshal() ([]byte, error) {

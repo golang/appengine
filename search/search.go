@@ -22,7 +22,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
@@ -111,7 +111,7 @@ func Open(name string) (*Index, error) {
 	}
 	return &Index{
 		spec: pb.IndexSpec{
-			Name: &name,
+			Name: name,
 		},
 	}, nil
 }
@@ -383,7 +383,7 @@ func moreSearch(t *Iterator) error {
 	req := &pb.SearchRequest{
 		Params: &pb.SearchParams{
 			IndexSpec:  &t.index.spec,
-			Query:      &t.searchQuery,
+			Query:      t.searchQuery,
 			Cursor:     t.searchCursor,
 			CursorType: pb.SearchParams_PER_RESULT.Enum(),
 			FieldSpec: &pb.FieldSpec{
@@ -415,9 +415,9 @@ func moreSearch(t *Iterator) error {
 		}
 	}
 	for _, e := range t.exprs {
-		req.Params.FieldSpec.Expression = append(req.Params.FieldSpec.Expression, &pb.FieldSpec_Expression{
-			Name:       proto.String(e.Name),
-			Expression: proto.String(e.Expr),
+		req.Params.FieldSpec.Expression = append(req.Params.FieldSpec.Expression, &pb.FieldSpec_ExpressionType{
+			Name:       e.Name,
+			Expression: e.Expr,
 		})
 	}
 	for _, f := range t.facetOpts {
@@ -439,7 +439,7 @@ func moreSearch(t *Iterator) error {
 	if len(res.FacetResult) > 0 {
 		t.facetRes = res.FacetResult
 	}
-	t.count = int(*res.MatchedCount)
+	t.count = int(res.MatchedCount)
 	if t.limit > 0 {
 		t.more = nil
 	} else {
@@ -559,7 +559,7 @@ type facetOpt struct {
 }
 
 func (o *facetOpt) setParams(params *pb.SearchParams) error {
-	req := &pb.FacetRequest{Name: &o.name}
+	req := &pb.FacetRequest{Name: o.name}
 	params.IncludeFacet = append(params.IncludeFacet, req)
 	if len(o.values) == 0 {
 		return nil
@@ -693,7 +693,7 @@ var (
 func sortToProto(sort *SortOptions, params *pb.SearchParams) error {
 	for _, e := range sort.Expressions {
 		spec := &pb.SortSpec{
-			SortExpression: proto.String(e.Expr),
+			SortExpression: e.Expr,
 		}
 		if e.Reverse {
 			spec.SortDescending = proto.Bool(false)
@@ -727,7 +727,7 @@ func sortToProto(sort *SortOptions, params *pb.SearchParams) error {
 func refinementsToProto(refinements []Facet, params *pb.SearchParams) error {
 	for _, r := range refinements {
 		ref := &pb.FacetRefinement{
-			Name: proto.String(r.Name),
+			Name: r.Name,
 		}
 		switch v := r.Value.(type) {
 		case Atom:
@@ -995,9 +995,9 @@ func fieldsToProto(src []Field) ([]*pb.Field, error) {
 					f.Name, x)
 			}
 			fieldValue.Type = pb.FieldValue_GEO.Enum()
-			fieldValue.Geo = &pb.FieldValue_Geo{
-				Lat: proto.Float64(x.Lat),
-				Lng: proto.Float64(x.Lng),
+			fieldValue.Geo = &pb.FieldValue_GeoType{
+				Lat: x.Lat,
+				Lng: x.Lng,
 			}
 		default:
 			return nil, fmt.Errorf("search: unsupported field type: %v", reflect.TypeOf(f.Value))
@@ -1017,7 +1017,7 @@ func fieldsToProto(src []Field) ([]*pb.Field, error) {
 			return nil, fmt.Errorf("search: %q field is invalid UTF-8: %q", f.Name, *p)
 		}
 		dst = append(dst, &pb.Field{
-			Name:  proto.String(f.Name),
+			Name:  f.Name,
 			Value: fieldValue,
 		})
 	}
@@ -1048,7 +1048,7 @@ func facetsToProto(src []Facet) ([]*pb.Facet, error) {
 			return nil, fmt.Errorf("search: unsupported facet type: %v", reflect.TypeOf(f.Value))
 		}
 		dst = append(dst, &pb.Facet{
-			Name:  proto.String(f.Name),
+			Name:  f.Name,
 			Value: facetValue,
 		})
 	}

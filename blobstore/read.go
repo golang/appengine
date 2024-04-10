@@ -12,8 +12,6 @@ import (
 	"os"
 	"sync"
 
-	"github.com/golang/protobuf/proto"
-
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
 
@@ -132,9 +130,9 @@ func (r *reader) Seek(offset int64, whence int) (ret int64, err error) {
 // the data is saved as r.buf.
 func (r *reader) fetch(off int64) error {
 	req := &blobpb.FetchDataRequest{
-		BlobKey:    proto.String(string(r.blobKey)),
-		StartIndex: proto.Int64(off),
-		EndIndex:   proto.Int64(off + readBufferSize - 1), // EndIndex is inclusive.
+		BlobKey:    string(r.blobKey),
+		StartIndex: off,
+		EndIndex:   off + readBufferSize - 1, // EndIndex is inclusive.
 	}
 	res := &blobpb.FetchDataResponse{}
 	if err := internal.Call(r.c, "blobstore", "FetchData", req, res); err != nil {

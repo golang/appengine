@@ -8,8 +8,6 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
-
 	"google.golang.org/appengine/internal/aetesting"
 	pb "google.golang.org/appengine/internal/modules"
 )
@@ -41,7 +39,7 @@ func TestSetNumInstances(t *testing.T) {
 		if *req.Version != version {
 			t.Errorf("Version = %v, want %v", req.Version, version)
 		}
-		if *req.Instances != instances {
+		if req.Instances != instances {
 			t.Errorf("Instances = %v, want %d", req.Instances, instances)
 		}
 		return nil
@@ -75,7 +73,7 @@ func TestDefaultVersion(t *testing.T) {
 		if *req.Module != module {
 			t.Errorf("Module = %v, want %v", req.Module, module)
 		}
-		res.Version = proto.String(version)
+		res.Version = version
 		return nil
 	})
 	got, err := DefaultVersion(c, module)
@@ -89,10 +87,10 @@ func TestDefaultVersion(t *testing.T) {
 
 func TestStart(t *testing.T) {
 	c := aetesting.FakeSingleContext(t, "modules", "StartModule", func(req *pb.StartModuleRequest, res *pb.StartModuleResponse) error {
-		if *req.Module != module {
+		if req.Module != module {
 			t.Errorf("Module = %v, want %v", req.Module, module)
 		}
-		if *req.Version != version {
+		if req.Version != version {
 			t.Errorf("Version = %v, want %v", req.Version, version)
 		}
 		return nil

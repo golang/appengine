@@ -36,7 +36,7 @@ func Enabled(ctx context.Context, api, capability string) bool {
 	}
 
 	req := &pb.IsEnabledRequest{
-		Package:    &api,
+		Package:    api,
 		Capability: []string{capability},
 	}
 	res := &pb.IsEnabledResponse{}

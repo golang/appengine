@@ -1,5 +1,5 @@
-syntax = "proto2";
-option go_package = "blobstore";
+syntax = "proto3";
+option go_package = "google.golang.org/appengine/internal/blobstore";
 
 package appengine;
 
@@ -18,7 +18,7 @@ message BlobstoreServiceError {
 }
 
 message CreateUploadURLRequest {
-  required string success_path = 1;
+  string success_path = 1;
   optional int64 max_upload_size_bytes = 2;
   optional int64 max_upload_size_per_blob_bytes = 3;
   optional string gs_bucket_name = 4;
@@ -26,7 +26,7 @@ message CreateUploadURLRequest {
 }
 
 message CreateUploadURLResponse {
-  required string url = 1;
+  string url = 1;
 }
 
 message DeleteBlobRequest {
@@ -35,23 +35,23 @@ message DeleteBlobRequest {
 }
 
 message FetchDataRequest {
-  required string blob_key = 1;
-  required int64 start_index = 2;
-  required int64 end_index = 3;
+  string blob_key = 1;
+  int64 start_index = 2;
+  int64 end_index = 3;
 }
 
 message FetchDataResponse {
-  required bytes data = 1000 [ctype = CORD];
+  bytes data = 1000 [ctype = CORD];
 }
 
 message CloneBlobRequest {
-  required bytes blob_key = 1;
-  required bytes mime_type = 2;
-  required bytes target_app_id = 3;
+  bytes blob_key = 1;
+  bytes mime_type = 2;
+  bytes target_app_id = 3;
 }
 
 message CloneBlobResponse {
-  required bytes blob_key = 1;
+  bytes blob_key = 1;
 }
 
 message DecodeBlobKeyRequest {
@@ -63,9 +63,9 @@ message DecodeBlobKeyResponse {
 }
 
 message CreateEncodedGoogleStorageKeyRequest {
-  required string filename = 1;
+  string filename = 1;
 }
 
 message CreateEncodedGoogleStorageKeyResponse {
-  required string blob_key = 1;
+  string blob_key = 1;
 }

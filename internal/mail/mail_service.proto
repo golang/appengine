@@ -1,5 +1,5 @@
-syntax = "proto2";
-option go_package = "mail";
+syntax = "proto3";
+option go_package = "google.golang.org/appengine/internal/mail";
 
 package appengine;
 
@@ -16,25 +16,25 @@ message MailServiceError {
 }
 
 message MailAttachment {
-  required string FileName = 1;
-  required bytes Data = 2;
+  string FileName = 1;
+  bytes Data = 2;
   optional string ContentID = 3;
 }
 
 message MailHeader {
-  required string name = 1;
-  required string value = 2;
+  string name = 1;
+  string value = 2;
 }
 
 message MailMessage {
-  required string Sender = 1;
+  string Sender = 1;
   optional string ReplyTo = 2;
 
   repeated string To = 3;
   repeated string Cc = 4;
   repeated string Bcc = 5;
 
-  required string Subject = 6;
+  string Subject = 6;
 
   optional string TextBody = 7;
   optional string HtmlBody = 8;

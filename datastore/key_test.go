@@ -27,16 +27,16 @@ func TestKeyEncoding(t *testing.T) {
 				intID: 1,
 				appID: "glibrary",
 			},
-			exp: "aghnbGlicmFyeXIMCxIGUGVyc29uGAEM",
+			exp: "aghnbGlicmFyeXIMCgoSBlBlcnNvbhgB",
 		},
 		{
-			desc: "A simple key with a string ID",
+			desc: "A simple key with a string ID2",
 			key: &Key{
 				kind:     "Graph",
 				stringID: "graph:7-day-active",
 				appID:    "glibrary",
 			},
-			exp: "aghnbGlicmFyeXIdCxIFR3JhcGgiEmdyYXBoOjctZGF5LWFjdGl2ZQw",
+			exp: "aghnbGlicmFyeXIdChsSBUdyYXBoIhJncmFwaDo3LWRheS1hY3RpdmU",
 		},
 		{
 			desc: "A key with a parent",
@@ -50,7 +50,7 @@ func TestKeyEncoding(t *testing.T) {
 				},
 				appID: "glibrary",
 			},
-			exp: "aghnbGlicmFyeXIhCxIJV29yZEluZGV4GIChPgwLEglXb3JkSW5kZXgYiQgM",
+			exp: "aghnbGlicmFyeXIhCg8SCVdvcmRJbmRleBiAoT4KDhIJV29yZEluZGV4GIkI",
 		},
 	}
 	for _, tc := range testCases {

@@ -23,9 +23,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/golang/protobuf/proto"
 	"golang.org/x/text/encoding/htmlindex"
-
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/datastore"
 	"google.golang.org/appengine/internal"
@@ -100,7 +98,7 @@ func Send(response http.ResponseWriter, blobKey appengine.BlobKey) {
 // opts parameter may be nil.
 func UploadURL(c context.Context, successPath string, opts *UploadURLOptions) (*url.URL, error) {
 	req := &blobpb.CreateUploadURLRequest{
-		SuccessPath: proto.String(successPath),
+		SuccessPath: successPath,
 	}
 	if opts != nil {
 		if n := opts.MaxUploadBytes; n != 0 {
@@ -117,7 +115,7 @@ func UploadURL(c context.Context, successPath string, opts *UploadURLOptions) (*
 	if err := internal.Call(c, "blobstore", "CreateUploadURL", req, res); err != nil {
 		return nil, err
 	}
-	return url.Parse(*res.Url)
+	return url.Parse(res.Url)
 }
 
 // UploadURLOptions are the options to create an upload URL.
@@ -296,11 +294,11 @@ func NewReader(c context.Context, blobKey appengine.BlobKey) Reader {
 // The filename should be of the form "/gs/bucket_name/object_name".
 func BlobKeyForFile(c context.Context, filename string) (appengine.BlobKey, error) {
 	req := &blobpb.CreateEncodedGoogleStorageKeyRequest{
-		Filename: &filename,
+		Filename: filename,
 	}
 	res := &blobpb.CreateEncodedGoogleStorageKeyResponse{}
 	if err := internal.Call(c, "blobstore", "CreateEncodedGoogleStorageKey", req, res); err != nil {
 		return "", err
 	}
-	return appengine.BlobKey(*res.BlobKey), nil
+	return appengine.BlobKey(res.BlobKey), nil
 }

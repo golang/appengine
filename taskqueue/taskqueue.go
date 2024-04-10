@@ -25,7 +25,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/internal"
@@ -216,7 +216,7 @@ func newAddReq(c context.Context, task *Task, queueName string) (*pb.TaskQueueAd
 	req := &pb.TaskQueueAddRequest{
 		QueueName: []byte(queueName),
 		TaskName:  []byte(task.Name),
-		EtaUsec:   proto.Int64(eta.UnixNano() / 1e3),
+		EtaUsec:   eta.UnixNano() / 1e3,
 	}
 	method := task.method()
 	if method == "PULL" {
@@ -236,7 +236,7 @@ func newAddReq(c context.Context, task *Task, queueName string) (*pb.TaskQueueAd
 		req.Url = []byte(path)
 		for k, vs := range task.Header {
 			for _, v := range vs {
-				req.Header = append(req.Header, &pb.TaskQueueAddRequest_Header{
+				req.Header = append(req.Header, &pb.TaskQueueAddRequest_HeaderType{
 					Key:   []byte(k),
 					Value: []byte(v),
 				})
@@ -250,7 +250,7 @@ func newAddReq(c context.Context, task *Task, queueName string) (*pb.TaskQueueAd
 		if _, ok := task.Header[currentNamespace]; !ok {
 			// Fetch the current namespace of this request.
 			ns := internal.NamespaceFromContext(c)
-			req.Header = append(req.Header, &pb.TaskQueueAddRequest_Header{
+			req.Header = append(req.Header, &pb.TaskQueueAddRequest_HeaderType{
 				Key:   []byte(currentNamespace),
 				Value: []byte(ns),
 			})
@@ -258,7 +258,7 @@ func newAddReq(c context.Context, task *Task, queueName string) (*pb.TaskQueueAd
 		if _, ok := task.Header[defaultNamespace]; !ok {
 			// Fetch the X-AppEngine-Default-Namespace header of this request.
 			if ns := getDefaultNamespace(c); ns != "" {
-				req.Header = append(req.Header, &pb.TaskQueueAddRequest_Header{
+				req.Header = append(req.Header, &pb.TaskQueueAddRequest_HeaderType{
 					Key:   []byte(defaultNamespace),
 					Value: []byte(ns),
 				})
@@ -324,24 +324,24 @@ func AddMulti(c context.Context, tasks []*Task, queueName string) ([]*Task, erro
 	if err := internal.Call(c, "taskqueue", "BulkAdd", req, res); err != nil {
 		return nil, err
 	}
-	if len(res.Taskresult) != len(tasks) {
+	if len(res.TaskResult) != len(tasks) {
 		return nil, errors.New("taskqueue: server error")
 	}
 	tasksOut := make([]*Task, len(tasks))
-	for i, tr := range res.Taskresult {
+	for i, tr := range res.TaskResult {
 		tasksOut[i] = new(Task)
 		*tasksOut[i] = *tasks[i]
 		tasksOut[i].Method = tasksOut[i].method()
 		if tasksOut[i].Name == "" {
 			tasksOut[i].Name = string(tr.ChosenTaskName)
 		}
-		if *tr.Result != pb.TaskQueueServiceError_OK {
-			if alreadyAddedErrors[*tr.Result] {
+		if tr.Result != pb.TaskQueueServiceError_OK {
+			if alreadyAddedErrors[tr.Result] {
 				me[i] = ErrTaskAlreadyAdded
 			} else {
 				me[i] = &internal.APIError{
 					Service: "taskqueue",
-					Code:    int32(*tr.Result),
+					Code:    int32(tr.Result),
 				}
 			}
 			any = true
@@ -407,8 +407,8 @@ func lease(c context.Context, maxTasks int, queueName string, leaseTime int, gro
 	}
 	req := &pb.TaskQueueQueryAndOwnTasksRequest{
 		QueueName:    []byte(queueName),
-		LeaseSeconds: proto.Float64(float64(leaseTime)),
-		MaxTasks:     proto.Int64(int64(maxTasks)),
+		LeaseSeconds: float64(leaseTime),
+		MaxTasks:     int64(maxTasks),
 		GroupByTag:   proto.Bool(groupByTag),
 		Tag:          tag,
 	}
@@ -422,7 +422,7 @@ func lease(c context.Context, maxTasks int, queueName string, leaseTime int, gro
 			Payload:    t.Body,
 			Name:       string(t.TaskName),
 			Method:     "PULL",
-			ETA:        time.Unix(0, *t.EtaUsec*1e3),
+			ETA:        time.Unix(0, t.EtaUsec*1e3),
 			RetryCount: *t.RetryCount,
 			Tag:        string(t.Tag),
 		}
@@ -467,14 +467,14 @@ func ModifyLease(c context.Context, task *Task, queueName string, leaseTime int)
 	req := &pb.TaskQueueModifyTaskLeaseRequest{
 		QueueName:    []byte(queueName),
 		TaskName:     []byte(task.Name),
-		EtaUsec:      proto.Int64(task.ETA.UnixNano() / 1e3), // Used to verify ownership.
-		LeaseSeconds: proto.Float64(float64(leaseTime)),
+		EtaUsec:      task.ETA.UnixNano() / 1e3, // Used to verify ownership.
+		LeaseSeconds: float64(leaseTime),
 	}
 	res := &pb.TaskQueueModifyTaskLeaseResponse{}
 	if err := internal.Call(c, "taskqueue", "ModifyTaskLease", req, res); err != nil {
 		return err
 	}
-	task.ETA = time.Unix(0, *res.UpdatedEtaUsec*1e3)
+	task.ETA = time.Unix(0, res.UpdatedEtaUsec*1e3)
 	return nil
 }
 
@@ -503,16 +503,16 @@ func QueueStats(c context.Context, queueNames []string) ([]QueueStatistics, erro
 	if err := internal.Call(c, "taskqueue", "FetchQueueStats", req, res); err != nil {
 		return nil, err
 	}
-	qs := make([]QueueStatistics, len(res.Queuestats))
-	for i, qsg := range res.Queuestats {
+	qs := make([]QueueStatistics, len(res.QueueStats))
+	for i, qsg := range res.QueueStats {
 		qs[i] = QueueStatistics{
-			Tasks: int(*qsg.NumTasks),
+			Tasks: int(qsg.NumTasks),
 		}
-		if eta := *qsg.OldestEtaUsec; eta > -1 {
+		if eta := qsg.OldestEtaUsec; eta > -1 {
 			qs[i].OldestETA = time.Unix(0, eta*1e3)
 		}
 		if si := qsg.ScannerInfo; si != nil {
-			qs[i].Executed1Minute = int(*si.ExecutedLastMinute)
+			qs[i].Executed1Minute = int(si.ExecutedLastMinute)
 			qs[i].InFlight = int(si.GetRequestsInFlight())
 			qs[i].EnforcedRate = si.GetEnforcedRate()
 		}
