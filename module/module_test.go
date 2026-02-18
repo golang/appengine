@@ -28,9 +28,9 @@ const module = "test-module"
 const instances = 3
 
 func TestList_AdminAPI(t *testing.T) {
-	os.Setenv("MODULES_USE_ADMIN_API", "true")
+	os.Setenv("APPENGINE_MODULES_USE_ADMIN_API", "true")
 	os.Setenv("GOOGLE_CLOUD_PROJECT", "test-project")
-	defer os.Unsetenv("MODULES_USE_ADMIN_API")
+	defer os.Unsetenv("APPENGINE_MODULES_USE_ADMIN_API")
 
 	// Mocking the Admin API response structure
 	resp := &admin.ListServicesResponse{
@@ -69,9 +69,9 @@ func TestList_Legacy(t *testing.T) {
 
 func TestNumInstances_AdminAPI(t *testing.T) {
 	// Set the toggle to use the Admin API path
-	os.Setenv("MODULES_USE_ADMIN_API", "true")
+	os.Setenv("APPENGINE_MODULES_USE_ADMIN_API", "true")
 	os.Setenv("GOOGLE_CLOUD_PROJECT", "test-project")
-	defer os.Unsetenv("MODULES_USE_ADMIN_API")
+	defer os.Unsetenv("APPENGINE_MODULES_USE_ADMIN_API")
 	defer os.Unsetenv("GOOGLE_CLOUD_PROJECT")
 
 	tests := []struct {
@@ -147,9 +147,9 @@ func TestNumInstances_AdminAPI(t *testing.T) {
 
 func TestSetNumInstances_AdminAPI(t *testing.T) {
 	// 1. Setup environment for Admin API path
-	os.Setenv("MODULES_USE_ADMIN_API", "true")
+	os.Setenv("APPENGINE_MODULES_USE_ADMIN_API", "true")
 	os.Setenv("GOOGLE_CLOUD_PROJECT", "test-project")
-	defer os.Unsetenv("MODULES_USE_ADMIN_API")
+	defer os.Unsetenv("APPENGINE_MODULES_USE_ADMIN_API")
 	defer os.Unsetenv("GOOGLE_CLOUD_PROJECT")
 
 	tests := []struct {
@@ -245,10 +245,10 @@ func TestSetNumInstances_Legacy(t *testing.T) {
 
 func TestVersions_AdminAPI(t *testing.T) {
 	// 1. Setup environment for Admin API path
-	os.Setenv("MODULES_USE_ADMIN_API", "true")
+	os.Setenv("APPENGINE_MODULES_USE_ADMIN_API", "true")
 	os.Setenv("GOOGLE_CLOUD_PROJECT", "test-project")
 	os.Setenv("GAE_SERVICE", "default") // For getModuleorDefault()
-	defer os.Unsetenv("MODULES_USE_ADMIN_API")
+	defer os.Unsetenv("APPENGINE_MODULES_USE_ADMIN_API")
 	defer os.Unsetenv("GOOGLE_CLOUD_PROJECT")
 	defer os.Unsetenv("GAE_SERVICE")
 
@@ -337,9 +337,9 @@ func TestVersions_Legacy(t *testing.T) {
 
 func TestDefaultVersion_AdminAPI(t *testing.T) {
 	// Setup environment for Admin API path
-	os.Setenv("MODULES_USE_ADMIN_API", "true")
+	os.Setenv("APPENGINE_MODULES_USE_ADMIN_API", "true")
 	os.Setenv("GOOGLE_CLOUD_PROJECT", "test-project")
-	defer os.Unsetenv("MODULES_USE_ADMIN_API")
+	defer os.Unsetenv("APPENGINE_MODULES_USE_ADMIN_API")
 	defer os.Unsetenv("GOOGLE_CLOUD_PROJECT")
 
 	tests := []struct {
@@ -467,9 +467,9 @@ func TestDefaultVersion_Legacy(t *testing.T) {
 
 func TestStart_AdminAPI(t *testing.T) {
 	// 1. Setup environment for Admin API path
-	os.Setenv("MODULES_USE_ADMIN_API", "true")
+	os.Setenv("APPENGINE_MODULES_USE_ADMIN_API", "true")
 	os.Setenv("GOOGLE_CLOUD_PROJECT", "test-project")
-	defer os.Unsetenv("MODULES_USE_ADMIN_API")
+	defer os.Unsetenv("APPENGINE_MODULES_USE_ADMIN_API")
 	defer os.Unsetenv("GOOGLE_CLOUD_PROJECT")
 
 	// 2. Mock Admin API Server
@@ -529,9 +529,9 @@ func TestStart_Legacy(t *testing.T) {
 
 func TestStop_AdminAPI(t *testing.T) {
 	// 1. Setup environment for Admin API path
-	os.Setenv("MODULES_USE_ADMIN_API", "true")
+	os.Setenv("APPENGINE_MODULES_USE_ADMIN_API", "true")
 	os.Setenv("GOOGLE_CLOUD_PROJECT", "test-project")
-	defer os.Unsetenv("MODULES_USE_ADMIN_API")
+	defer os.Unsetenv("APPENGINE_MODULES_USE_ADMIN_API")
 	defer os.Unsetenv("GOOGLE_CLOUD_PROJECT")
 
 	// 2. Mock Admin API Server

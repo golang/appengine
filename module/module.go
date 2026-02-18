@@ -57,7 +57,7 @@ func getModuleorDefault() string {
 
 // useAdminAPI checks if the Admin API implementation is enabled via environment variable.
 func useAdminAPI() bool {
-	return strings.ToLower(os.Getenv("MODULES_USE_ADMIN_API")) == "true"
+	return strings.ToLower(os.Getenv("APPENGINE_MODULES_USE_ADMIN_API")) == "true"
 }
 
 // getService initializes the App Engine Admin API service.
