@@ -8,6 +8,8 @@ Package module provides functions for interacting with modules.
 The appengine package contains functions that report the identity of the app,
 including the module name.
 */
+
+/* test comment*/
 package module // import "google.golang.org/appengine/module"
 
 import (
