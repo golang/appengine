@@ -16,6 +16,7 @@ import (
 	"google.golang.org/appengine/internal"
 	pb "google.golang.org/appengine/internal/taskqueue"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/durationpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2beta3"
@@ -277,6 +278,34 @@ func buildCloudTaskProto(ctx context.Context, queueName string, task *Task) (*ta
 		taskObj.ScheduleTime = timestamppb.New(task.ETA)
 	} else if task.Delay > 0 {
 		taskObj.ScheduleTime = timestamppb.New(time.Now().Add(task.Delay))
+	}
+
+	if task.RetryOptions != nil {
+		rc := &taskspb.RetryConfig{}
+		hasRC := false
+		if task.RetryOptions.RetryLimit > 0 {
+			rc.MaxAttempts = task.RetryOptions.RetryLimit
+			hasRC = true
+		}
+		if task.RetryOptions.AgeLimit > 0 {
+			rc.MaxRetryDuration = durationpb.New(task.RetryOptions.AgeLimit)
+			hasRC = true
+		}
+		if task.RetryOptions.MinBackoff > 0 {
+			rc.MinBackoff = durationpb.New(task.RetryOptions.MinBackoff)
+			hasRC = true
+		}
+		if task.RetryOptions.MaxBackoff > 0 {
+			rc.MaxBackoff = durationpb.New(task.RetryOptions.MaxBackoff)
+			hasRC = true
+		}
+		if task.RetryOptions.MaxDoublings > 0 || (task.RetryOptions.MaxDoublings == 0 && task.RetryOptions.ApplyZeroMaxDoublings) {
+			rc.MaxDoublings = task.RetryOptions.MaxDoublings
+			hasRC = true
+		}
+		if hasRC {
+			taskObj.RetryConfig = rc
+		}
 	}
 
 	return taskObj, taskName, nil
