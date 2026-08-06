@@ -283,6 +283,9 @@ var alreadyAddedErrors = map[pb.TaskQueueServiceError_ErrorCode]bool{
 // Add returns an equivalent Task with defaults filled in, including setting
 // the task's Name field to the chosen name if the original was empty.
 func Add(c context.Context, task *Task, queueName string) (*Task, error) {
+	if useCloudTasks() && task.Method != "PULL" {
+		return addInCloudTasks(c, task, queueName)
+	}
 	req, err := newAddReq(c, task, queueName)
 	if err != nil {
 		return nil, err
@@ -309,6 +312,11 @@ func Add(c context.Context, task *Task, queueName string) (*Task, error) {
 // each task's Name field to the chosen name if the original was empty.
 // If a given task is badly formed or could not be added, an appengine.MultiError is returned.
 func AddMulti(c context.Context, tasks []*Task, queueName string) ([]*Task, error) {
+	if useCloudTasks() {
+		if len(tasks) > 0 && tasks[0].Method != "PULL" {
+			return addMultiInCloudTasks(c, tasks, queueName)
+		}
+	}
 	req := &pb.TaskQueueBulkAddRequest{
 		AddRequest: make([]*pb.TaskQueueAddRequest, len(tasks)),
 	}
@@ -367,6 +375,11 @@ func Delete(c context.Context, task *Task, queueName string) error {
 // Each task is deleted independently; one may fail to delete while the others
 // are successfully deleted.
 func DeleteMulti(c context.Context, tasks []*Task, queueName string) error {
+	if useCloudTasks() {
+		if len(tasks) > 0 && tasks[0].Method != "PULL" {
+			return deleteMultiInCloudTasks(c, tasks, queueName)
+		}
+	}
 	taskNames := make([][]byte, len(tasks))
 	for i, t := range tasks {
 		taskNames[i] = []byte(t.Name)
