@@ -17,23 +17,6 @@ import (
 	pb "google.golang.org/appengine/internal/datastore"
 )
 
-// Transaction hooks for taskqueue outbox pattern
-var (
-	PostCommitHook func(ctx context.Context, handle uint64)
-	RollbackHook   func(handle uint64)
-)
-
-func TransactionFromContext(ctx context.Context) *pb.Transaction {
-	if t := transactionFromContext(ctx); t != nil {
-		return &t.transaction
-	}
-	return nil
-}
-
-func TransactionlessContext(ctx context.Context) context.Context {
-	return withTransaction(ctx, nil)
-}
-
 var transactionSetters = make(map[reflect.Type]reflect.Value)
 
 // RegisterTransactionSetter registers a function that sets transaction information
@@ -106,9 +89,6 @@ func RunTransactionOnce(c context.Context, f func(context.Context) error, xg boo
 		// Ignore the error return value, since we are already returning a non-nil
 		// error (or we're panicking).
 		Call(c, "datastore_v3", "Rollback", &t.transaction, &basepb.VoidProto{})
-		if RollbackHook != nil {
-			RollbackHook(t.transaction.GetHandle())
-		}
 	}()
 	if err := f(withTransaction(c, t)); err != nil {
 		return &t.transaction, err
@@ -130,13 +110,6 @@ func RunTransactionOnce(c context.Context, f func(context.Context) error, xg boo
 		if ae.Code == int32(pb.Error_CONCURRENT_TRANSACTION) {
 			return &t.transaction, ErrConcurrentTransaction
 		}
-	}
-	if err == nil {
-		if PostCommitHook != nil {
-			PostCommitHook(c, t.transaction.GetHandle())
-		}
-	} else if RollbackHook != nil {
-		RollbackHook(t.transaction.GetHandle())
 	}
 	return &t.transaction, err
 }
