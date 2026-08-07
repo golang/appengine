@@ -453,7 +453,7 @@ func Call(ctx context.Context, service, method string, in, out proto.Message) er
 	// Default RPC timeout is 60s.
 	timeout := 60 * time.Second
 	if deadline, ok := ctx.Deadline(); ok {
-		timeout = deadline.Sub(time.Now())
+		timeout = time.Until(deadline)
 	}
 
 	data, err := proto.Marshal(in)
@@ -634,7 +634,7 @@ func (c *aeContext) logFlusher(stop <-chan int) {
 			tick.Stop()
 			return
 		case <-tick.C:
-			force := time.Now().Sub(lastFlush) > forceFlushInterval
+			force := time.Since(lastFlush) > forceFlushInterval
 			if c.flushLog(force) {
 				lastFlush = time.Now()
 			}
