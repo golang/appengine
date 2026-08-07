@@ -503,6 +503,9 @@ type QueueStatistics struct {
 
 // QueueStats retrieves statistics about queues.
 func QueueStats(c context.Context, queueNames []string) ([]QueueStatistics, error) {
+	if useCloudTasks() {
+		return queueStatsInCloudTasks(c, queueNames)
+	}
 	req := &pb.TaskQueueFetchQueueStatsRequest{
 		QueueName: make([][]byte, len(queueNames)),
 	}

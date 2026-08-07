@@ -17,7 +17,9 @@ import (
 	pb "google.golang.org/appengine/v2/internal/taskqueue"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
+
 
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2beta3"
 	taskspb "cloud.google.com/go/cloudtasks/apiv2beta3/cloudtaskspb"
@@ -584,3 +586,42 @@ func mapOperationErrorCode(code int, msg string, isDelete bool) error {
 	}
 	return fmt.Errorf("cloud tasks operation failed (%d): %s", code, msg)
 }
+
+func queueStatsInCloudTasks(ctx context.Context, queueNames []string) ([]QueueStatistics, error) {
+	client, err := cloudtasks.NewClient(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cloudtasks client: %v", err)
+	}
+	defer client.Close()
+
+	qs := make([]QueueStatistics, len(queueNames))
+	for i, q := range queueNames {
+		fullQueueName, err := getQueuePath(ctx, q)
+		if err != nil {
+			return nil, err
+		}
+		req := &taskspb.GetQueueRequest{
+			Name: fullQueueName,
+			ReadMask: &fieldmaskpb.FieldMask{
+				Paths: []string{"stats"},
+			},
+		}
+		queue, err := client.GetQueue(ctx, req)
+		if err != nil {
+			return nil, err
+		}
+		if queue != nil && queue.Stats != nil {
+			qs[i] = QueueStatistics{
+				Tasks:           int(queue.Stats.TasksCount),
+				Executed1Minute: int(queue.Stats.ExecutedLastMinuteCount),
+				InFlight:        int(queue.Stats.ConcurrentDispatchesCount),
+				EnforcedRate:    queue.Stats.EffectiveExecutionRate,
+			}
+			if queue.Stats.OldestEstimatedArrivalTime != nil {
+				qs[i].OldestETA = queue.Stats.OldestEstimatedArrivalTime.AsTime()
+			}
+		}
+	}
+	return qs, nil
+}
+
