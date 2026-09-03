@@ -14,7 +14,7 @@ import (
 	"google.golang.org/appengine/v2/internal"
 	"google.golang.org/protobuf/proto"
 
-	taskspb "cloud.google.com/go/cloudtasks/apiv2beta3/cloudtaskspb"
+	taskspb "cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
 )
 
 const (

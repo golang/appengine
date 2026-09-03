@@ -21,8 +21,10 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 
 
-	cloudtasks "cloud.google.com/go/cloudtasks/apiv2beta3"
-	taskspb "cloud.google.com/go/cloudtasks/apiv2beta3/cloudtaskspb"
+	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
+	taskspb "cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
+	cloudtasksbeta "cloud.google.com/go/cloudtasks/apiv2beta3"
+	taskspbbeta "cloud.google.com/go/cloudtasks/apiv2beta3/cloudtaskspb"
 )
 
 const (
@@ -588,7 +590,8 @@ func mapOperationErrorCode(code int, msg string, isDelete bool) error {
 }
 
 func queueStatsInCloudTasks(ctx context.Context, queueNames []string) ([]QueueStatistics, error) {
-	client, err := cloudtasks.NewClient(ctx)
+	// QueueStats is retained on v2beta3 as it is out of scope for v2 GA
+	client, err := cloudtasksbeta.NewClient(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cloudtasks client: %v", err)
 	}
@@ -600,7 +603,7 @@ func queueStatsInCloudTasks(ctx context.Context, queueNames []string) ([]QueueSt
 		if err != nil {
 			return nil, err
 		}
-		req := &taskspb.GetQueueRequest{
+		req := &taskspbbeta.GetQueueRequest{
 			Name: fullQueueName,
 			ReadMask: &fieldmaskpb.FieldMask{
 				Paths: []string{"stats"},
