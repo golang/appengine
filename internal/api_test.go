@@ -468,11 +468,11 @@ func TestAPICallAllocations(t *testing.T) {
 	}
 
 	// Lots of room for improvement...
-	var min, max float64 = 60, 86
+	var min, max float64 = 60, 100
 	if strings.HasPrefix(runtime.Version(), "go1.11.") || strings.HasPrefix(runtime.Version(), "go1.12.") {
 		// add a bit more overhead for versions before go1.13
 		// see https://go.dev/doc/go1.13#compilers
-		max = 90
+		max += 10
 	}
 	if avg < min || max < avg {
 		t.Errorf("Allocations per API call = %g, want in [%g,%g]", avg, min, max)

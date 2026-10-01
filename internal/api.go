@@ -22,7 +22,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/golang/protobuf/proto"
@@ -359,6 +358,14 @@ func (c *aeContext) WriteHeader(code int) {
 }
 
 func post(ctx context.Context, body []byte, timeout time.Duration) (b []byte, err error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	defer func() {
+		if ctx.Err() == context.DeadlineExceeded {
+			err = errTimeout
+		}
+	}()
+
 	apiURL := apiURL(ctx)
 	hreq := &http.Request{
 		Method: "POST",
@@ -373,6 +380,7 @@ func post(ctx context.Context, body []byte, timeout time.Duration) (b []byte, er
 		ContentLength: int64(len(body)),
 		Host:          apiURL.Host,
 	}
+	hreq = hreq.WithContext(ctx)
 	c := fromContext(ctx)
 	if c != nil {
 		if info := c.req.Header.Get(dapperHeader); info != "" {
@@ -382,21 +390,6 @@ func post(ctx context.Context, body []byte, timeout time.Duration) (b []byte, er
 			hreq.Header.Set(traceHeader, info)
 		}
 	}
-
-	tr := apiHTTPClient.Transport.(*http.Transport)
-
-	var timedOut int32 // atomic; set to 1 if timed out
-	t := time.AfterFunc(timeout, func() {
-		atomic.StoreInt32(&timedOut, 1)
-		tr.CancelRequest(hreq)
-	})
-	defer t.Stop()
-	defer func() {
-		// Check if timeout was exceeded.
-		if atomic.LoadInt32(&timedOut) != 0 {
-			err = errTimeout
-		}
-	}()
 
 	hresp, err := apiHTTPClient.Do(hreq)
 	if err != nil {
