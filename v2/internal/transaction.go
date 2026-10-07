@@ -17,6 +17,23 @@ import (
 	pb "google.golang.org/appengine/v2/internal/datastore"
 )
 
+// Transaction hooks for taskqueue outbox pattern
+var (
+	PostCommitHook func(ctx context.Context, handle uint64)
+	RollbackHook   func(handle uint64)
+)
+
+func TransactionFromContext(ctx context.Context) *pb.Transaction {
+	if t := transactionFromContext(ctx); t != nil {
+		return &t.transaction
+	}
+	return nil
+}
+
+func TransactionlessContext(ctx context.Context) context.Context {
+	return withTransaction(ctx, nil)
+}
+
 var transactionSetters = make(map[reflect.Type]reflect.Value)
 
 // RegisterTransactionSetter registers a function that sets transaction information
@@ -89,6 +106,9 @@ func RunTransactionOnce(c context.Context, f func(context.Context) error, xg boo
 		// Ignore the error return value, since we are already returning a non-nil
 		// error (or we're panicking).
 		Call(c, "datastore_v3", "Rollback", &t.transaction, &basepb.VoidProto{})
+		if RollbackHook != nil {
+			RollbackHook(t.transaction.GetHandle())
+		}
 	}()
 	if err := f(withTransaction(c, t)); err != nil {
 		return &t.transaction, err
@@ -98,6 +118,15 @@ func RunTransactionOnce(c context.Context, f func(context.Context) error, xg boo
 	// Commit the transaction.
 	res := &pb.CommitResponse{}
 	err := Call(c, "datastore_v3", "Commit", &t.transaction, res)
+	// The hooks run before the error is examined, so that every failed commit,
+	// including a concurrent transaction, releases what was staged for it.
+	if err != nil {
+		if RollbackHook != nil {
+			RollbackHook(t.transaction.GetHandle())
+		}
+	} else if PostCommitHook != nil {
+		PostCommitHook(c, t.transaction.GetHandle())
+	}
 	if ae, ok := err.(*APIError); ok {
 		/* TODO: restore this conditional
 		if appengine.IsDevAppServer() {
