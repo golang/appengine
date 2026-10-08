@@ -496,7 +496,9 @@ func addInCloudTasks(ctx context.Context, task *Task, queueName string) (*Task, 
 		if err != nil {
 			return nil, fmt.Errorf("failed to encode transactional task: %v", err)
 		}
-		key := datastore.NewIncompleteKey(ctx, pendingTaskKind, nil)
+		// Stage in the default ("") namespace so the sweeper at /_ah/cloudtask/sweep
+		// finds tasks staged from namespaced requests.
+		key := datastore.NewIncompleteKey(internal.NamespacedContext(ctx, ""), pendingTaskKind, nil)
 		pendingTask := &PendingCloudTask{
 			QueueName:        queueName,
 			CloudTaskName:    taskName,

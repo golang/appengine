@@ -317,6 +317,7 @@ func dispatchKeys(ctx context.Context, keys []*datastore.Key, handledBySweeper b
 }
 
 func sweep(ctx context.Context) error {
+	ctx = internal.NamespacedContext(ctx, "")
 	now := time.Now()
 	var toDispatch, expiredFailed []*datastore.Key
 	// Each status is read separately with a limit, so that memory use is
