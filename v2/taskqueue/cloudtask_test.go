@@ -712,3 +712,33 @@ func TestAddMultiAndDeleteMultiInCloudTasks_TooManyTasksRejected(t *testing.T) {
 		t.Fatalf("DeleteMulti(1001 tasks) err = %#v, want INVALID_REQUEST APIError", err)
 	}
 }
+
+func TestAddMultiAndDeleteMultiInCloudTasks_NotDoneOperationRejected(t *testing.T) {
+	v2Srv := &fakeCloudTasksV2Server{
+		batchCreateTasksFunc: func(_ context.Context, _ *taskspb.BatchCreateTasksRequest) (*longrunningpb.Operation, error) {
+			return &longrunningpb.Operation{
+				Name: "operations/batch-create-incomplete",
+				Done: false,
+			}, nil
+		},
+		batchDeleteTasksFunc: func(_ context.Context, _ *taskspb.BatchDeleteTasksRequest) (*longrunningpb.Operation, error) {
+			return &longrunningpb.Operation{
+				Name: "operations/batch-delete-incomplete",
+				Done: false,
+			}, nil
+		},
+	}
+	ctx := setupCloudTasksTestEnv(t, v2Srv, nil)
+
+	_, err := AddMulti(ctx, []*Task{{Path: "/a"}, {Path: "/b"}}, "default")
+	me, ok := err.(appengine.MultiError)
+	if !ok || len(me) != 2 || me[0] == nil || !strings.Contains(me[0].Error(), "done=false") {
+		t.Fatalf("AddMulti with done=false got err=%#v, want MultiError containing done=false", err)
+	}
+
+	err = DeleteMulti(ctx, []*Task{{Name: "a"}, {Name: "b"}}, "default")
+	me, ok = err.(appengine.MultiError)
+	if !ok || len(me) != 2 || me[0] == nil || !strings.Contains(me[0].Error(), "done=false") {
+		t.Fatalf("DeleteMulti with done=false got err=%#v, want MultiError containing done=false", err)
+	}
+}
