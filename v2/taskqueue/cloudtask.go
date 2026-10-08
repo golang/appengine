@@ -535,6 +535,13 @@ func addInCloudTasks(ctx context.Context, task *Task, queueName string) (*Task, 
 }
 
 func addMultiInCloudTasks(ctx context.Context, tasks []*Task, queueName string) ([]*Task, error) {
+	if len(tasks) > batchCreateChunkSize {
+		return nil, &internal.APIError{
+			Service: "taskqueue",
+			Code:    int32(pb.TaskQueueServiceError_TOO_MANY_TASKS),
+		}
+	}
+
 	// If AddMulti is called inside a Datastore transaction, each task in the batch
 	// is transactionally staged in Datastore via addInCloudTasks so that all tasks
 	// commit atomically with the Datastore transaction.
@@ -569,7 +576,7 @@ func addMultiInCloudTasks(ctx context.Context, tasks []*Task, queueName string) 
 		return nil, err
 	}
 
-	me := make(appengine.MultiError, len(tasks))
+	me, any := make(appengine.MultiError, len(tasks)), false
 	results := make([]*Task, len(tasks))
 
 	client, err := getCloudTasksClient()
@@ -577,34 +584,29 @@ func addMultiInCloudTasks(ctx context.Context, tasks []*Task, queueName string) 
 		return nil, err
 	}
 
-	processChunk := func(chunkStart, chunkEnd int) {
-		chunkTasks := tasks[chunkStart:chunkEnd]
-
-		createReqs := make([]*taskspb.CreateTaskRequest, 0, len(chunkTasks))
-		// reqTaskIdx[j] is the index in tasks of createReqs[j]. Tasks that fail
-		// to build are not sent, so request indices can differ from task indices.
-		reqTaskIdx := make([]int, 0, len(chunkTasks))
-		for i, t := range chunkTasks {
-			taskObj, taskName, err := buildCloudTaskProto(ctx, queueName, t)
-			if err != nil {
-				me[chunkStart+i] = err
-				continue
-			}
-			results[chunkStart+i] = new(Task)
-			*results[chunkStart+i] = *t
-			results[chunkStart+i].Name = taskName
-			results[chunkStart+i].Method = t.method()
-
-			createReqs = append(createReqs, &taskspb.CreateTaskRequest{
-				Parent: fullQueueName,
-				Task:   taskObj,
-			})
-			reqTaskIdx = append(reqTaskIdx, chunkStart+i)
+	createReqs := make([]*taskspb.CreateTaskRequest, 0, len(tasks))
+	// reqTaskIdx[j] is the index in tasks of createReqs[j]. Tasks that fail
+	// to build are not sent, so request indices can differ from task indices.
+	reqTaskIdx := make([]int, 0, len(tasks))
+	for i, t := range tasks {
+		taskObj, taskName, err := buildCloudTaskProto(ctx, queueName, t)
+		if err != nil {
+			me[i] = err
+			any = true
+			continue
 		}
-		if len(createReqs) == 0 {
-			return
-		}
+		results[i] = new(Task)
+		*results[i] = *t
+		results[i].Name = taskName
+		results[i].Method = t.method()
 
+		createReqs = append(createReqs, &taskspb.CreateTaskRequest{
+			Parent: fullQueueName,
+			Task:   taskObj,
+		})
+		reqTaskIdx = append(reqTaskIdx, i)
+	}
+	if len(createReqs) > 0 {
 		batchReq := &taskspb.BatchCreateTasksRequest{
 			Parent:   fullQueueName,
 			Requests: createReqs,
@@ -617,6 +619,7 @@ func addMultiInCloudTasks(ctx context.Context, tasks []*Task, queueName string) 
 					res, err := addInCloudTasks(ctx, tasks[ti], queueName)
 					if err != nil {
 						me[ti] = err
+						any = true
 					} else {
 						results[ti] = res
 					}
@@ -625,79 +628,66 @@ func addMultiInCloudTasks(ctx context.Context, tasks []*Task, queueName string) 
 				for _, ti := range reqTaskIdx {
 					me[ti] = err
 				}
+				any = true
 			}
-			return
-		}
-		if op == nil {
+		} else if op == nil {
 			for _, ti := range reqTaskIdx {
 				me[ti] = fmt.Errorf("cloud tasks batch create returned nil operation")
 			}
-			return
-		}
-		// BatchCreateTasks executes synchronously on the Cloud Tasks backend;
-		// the returned Operation is already completed with its response and
-		// metadata populated in memory.
-		resp, waitErr := op.Wait(ctx)
-		meta, _ := op.Metadata()
-		var failedReqs map[int32]*rpcstatus.Status
-		if meta != nil {
-			failedReqs = meta.FailedRequests
-		}
-		respIdx := 0
-		for j, ti := range reqTaskIdx {
-			if st, failed := failedReqs[int32(j)]; failed && st != nil && st.Code != 0 {
-				me[ti] = mapOperationErrorCode(int(st.Code), st.Message, false)
-				continue
+			any = true
+		} else {
+			// BatchCreateTasks executes synchronously on the Cloud Tasks backend;
+			// the returned Operation is already completed with its response and
+			// metadata populated in memory.
+			resp, waitErr := op.Wait(ctx)
+			meta, _ := op.Metadata()
+			var failedReqs map[int32]*rpcstatus.Status
+			if meta != nil {
+				failedReqs = meta.FailedRequests
 			}
-			// resp.Tasks contains only the successfully created tasks, in request order.
-			if resp != nil && respIdx < len(resp.Tasks) {
-				createdTask := resp.Tasks[respIdx]
-				respIdx++
-				if createdTask != nil && createdTask.Name != "" && results[ti] != nil {
-					if idx := strings.LastIndex(createdTask.Name, "/"); idx != -1 {
-						results[ti].Name = createdTask.Name[idx+1:]
-					} else {
-						results[ti].Name = createdTask.Name
-					}
+			respIdx := 0
+			for j, ti := range reqTaskIdx {
+				if st, failed := failedReqs[int32(j)]; failed && st != nil && st.Code != 0 {
+					me[ti] = mapOperationErrorCode(int(st.Code), st.Message, false)
+					any = true
+					continue
 				}
-			} else if waitErr != nil {
-				me[ti] = waitErr
-			} else {
-				me[ti] = fmt.Errorf("cloud tasks batch create response missing task at index %d", j)
+				// resp.Tasks contains only the successfully created tasks, in request order.
+				if resp != nil && respIdx < len(resp.Tasks) {
+					createdTask := resp.Tasks[respIdx]
+					respIdx++
+					if createdTask != nil && createdTask.Name != "" && results[ti] != nil {
+						if idx := strings.LastIndex(createdTask.Name, "/"); idx != -1 {
+							results[ti].Name = createdTask.Name[idx+1:]
+						} else {
+							results[ti].Name = createdTask.Name
+						}
+					}
+				} else if waitErr != nil {
+					me[ti] = waitErr
+					any = true
+				} else {
+					me[ti] = fmt.Errorf("cloud tasks batch create response missing task at index %d", j)
+					any = true
+				}
 			}
 		}
 	}
 
-	chunkSize := batchCreateChunkSize
-	if len(tasks) <= chunkSize {
-		if len(tasks) > 0 {
-			processChunk(0, len(tasks))
-		}
-	} else {
-		var wg sync.WaitGroup
-		for chunkStart := 0; chunkStart < len(tasks); chunkStart += chunkSize {
-			chunkEnd := chunkStart + chunkSize
-			if chunkEnd > len(tasks) {
-				chunkEnd = len(tasks)
-			}
-			wg.Add(1)
-			go func(start, end int) {
-				defer wg.Done()
-				processChunk(start, end)
-			}(chunkStart, chunkEnd)
-		}
-		wg.Wait()
-	}
-
-	for _, err := range me {
-		if err != nil {
-			return results, me
-		}
+	if any {
+		return results, me
 	}
 	return results, nil
 }
 
 func deleteMultiInCloudTasks(ctx context.Context, tasks []*Task, queueName string) error {
+	if len(tasks) > batchDeleteChunkSize {
+		return &internal.APIError{
+			Service: "taskqueue",
+			Code:    int32(pb.TaskQueueServiceError_INVALID_REQUEST),
+		}
+	}
+
 	fullQueueName, err := getQueuePath(ctx, queueName)
 	if err != nil {
 		return err
@@ -708,73 +698,50 @@ func deleteMultiInCloudTasks(ctx context.Context, tasks []*Task, queueName strin
 		return err
 	}
 
-	me := make(appengine.MultiError, len(tasks))
+	me, any := make(appengine.MultiError, len(tasks)), false
 
-	processChunk := func(chunkStart, chunkEnd int) {
-		chunkTasks := tasks[chunkStart:chunkEnd]
+	names := make([]string, len(tasks))
+	for i, t := range tasks {
+		names[i] = fmt.Sprintf("%s/tasks/%s", fullQueueName, t.Name)
+	}
 
-		names := make([]string, len(chunkTasks))
-		for i, t := range chunkTasks {
-			names[i] = fmt.Sprintf("%s/tasks/%s", fullQueueName, t.Name)
+	batchReq := &taskspb.BatchDeleteTasksRequest{
+		Parent: fullQueueName,
+		Names:  names,
+	}
+
+	op, err := client.BatchDeleteTasks(ctx, batchReq)
+	if err != nil {
+		for i := range tasks {
+			me[i] = err
 		}
-
-		batchReq := &taskspb.BatchDeleteTasksRequest{
-			Parent: fullQueueName,
-			Names:  names,
-		}
-
-		op, err := client.BatchDeleteTasks(ctx, batchReq)
-		if err != nil {
-			for i := range chunkTasks {
-				me[chunkStart+i] = err
-			}
-			return
-		}
-		if op != nil {
-			// BatchDeleteTasks executes synchronously on the Cloud Tasks backend;
-			// the returned Operation is already completed with its metadata
-			// populated in memory.
-			waitErr := op.Wait(ctx)
-			meta, _ := op.Metadata()
-			for i := range chunkTasks {
-				if meta != nil && meta.FailedRequests != nil {
-					if st, failed := meta.FailedRequests[int32(i)]; failed && st != nil && st.Code != 0 {
-						me[chunkStart+i] = mapOperationErrorCode(int(st.Code), st.Message, true)
-						continue
+		return me
+	}
+	if op != nil {
+		// BatchDeleteTasks executes synchronously on the Cloud Tasks backend;
+		// the returned Operation is already completed with its metadata
+		// populated in memory.
+		waitErr := op.Wait(ctx)
+		meta, _ := op.Metadata()
+		for i := range tasks {
+			if meta != nil && meta.FailedRequests != nil {
+				if st, failed := meta.FailedRequests[int32(i)]; failed && st != nil && st.Code != 0 {
+					me[i] = mapOperationErrorCode(int(st.Code), st.Message, true)
+					if me[i] != nil {
+						any = true
 					}
+					continue
 				}
-				if waitErr != nil {
-					me[chunkStart+i] = waitErr
-				}
+			}
+			if waitErr != nil {
+				me[i] = waitErr
+				any = true
 			}
 		}
 	}
 
-	chunkSize := batchDeleteChunkSize
-	if len(tasks) <= chunkSize {
-		if len(tasks) > 0 {
-			processChunk(0, len(tasks))
-		}
-	} else {
-		var wg sync.WaitGroup
-		for chunkStart := 0; chunkStart < len(tasks); chunkStart += chunkSize {
-			chunkEnd := chunkStart + chunkSize
-			if chunkEnd > len(tasks) {
-				chunkEnd = len(tasks)
-			}
-			wg.Add(1)
-			go func(start, end int) {
-				defer wg.Done()
-				processChunk(start, end)
-			}(chunkStart, chunkEnd)
-		}
-		wg.Wait()
-	}
-
-	for _, err := range me {
-		if err != nil {
-			return me
-		}
+	if any {
+		return me
 	}
 	return nil
 }

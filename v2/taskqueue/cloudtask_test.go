@@ -688,46 +688,27 @@ func TestIgnoreFieldMismatch_MultiError(t *testing.T) {
 	}
 }
 
-func TestAddMultiInCloudTasks_MultiChunkConcurrent(t *testing.T) {
-	v2Srv := &fakeCloudTasksV2Server{
-		batchCreateTasksFunc: func(_ context.Context, req *taskspb.BatchCreateTasksRequest) (*longrunningpb.Operation, error) {
-			created := make([]*taskspb.Task, len(req.GetRequests()))
-			for i, r := range req.GetRequests() {
-				created[i] = &taskspb.Task{
-					Name: req.GetParent() + "/tasks/" + strings.TrimPrefix(r.GetTask().GetAppEngineHttpRequest().GetRelativeUri(), "/"),
-				}
-			}
-			respAny, err := anypb.New(&taskspb.BatchCreateTasksResponse{Tasks: created})
-			if err != nil {
-				return nil, err
-			}
-			metaAny, err := anypb.New(&taskspb.BatchCreateTasksMetadata{})
-			if err != nil {
-				return nil, err
-			}
-			return &longrunningpb.Operation{
-				Name:     "operations/batch-create-multi",
-				Done:     true,
-				Metadata: metaAny,
-				Result:   &longrunningpb.Operation_Response{Response: respAny},
-			}, nil
-		},
-	}
+func TestAddMultiAndDeleteMultiInCloudTasks_TooManyTasksRejected(t *testing.T) {
+	v2Srv := &fakeCloudTasksV2Server{}
 	ctx := setupCloudTasksTestEnv(t, v2Srv, nil)
 
-	const total = 250
-	tasks := make([]*Task, total)
-	for i := 0; i < total; i++ {
-		tasks[i] = &Task{Path: "/t-" + string(rune('a'+(i%26)))}
+	addTasks := make([]*Task, 101)
+	for i := range addTasks {
+		addTasks[i] = &Task{Path: "/worker"}
 	}
-	res, err := AddMulti(ctx, tasks, "default")
-	if err != nil {
-		t.Fatalf("AddMulti(250 tasks) failed: %v", err)
+	_, err := AddMulti(ctx, addTasks, "default")
+	apiErr, ok := err.(*internal.APIError)
+	if !ok || apiErr.Code != int32(pb.TaskQueueServiceError_TOO_MANY_TASKS) {
+		t.Fatalf("AddMulti(101 tasks) err = %#v, want TOO_MANY_TASKS APIError", err)
 	}
-	for i := 0; i < total; i++ {
-		want := "t-" + string(rune('a'+(i%26)))
-		if res[i] == nil || res[i].Name != want {
-			t.Fatalf("res[%d] = %+v, want Name %q", i, res[i], want)
-		}
+
+	delTasks := make([]*Task, 1001)
+	for i := range delTasks {
+		delTasks[i] = &Task{Name: "t"}
+	}
+	err = DeleteMulti(ctx, delTasks, "default")
+	apiErr, ok = err.(*internal.APIError)
+	if !ok || apiErr.Code != int32(pb.TaskQueueServiceError_INVALID_REQUEST) {
+		t.Fatalf("DeleteMulti(1001 tasks) err = %#v, want INVALID_REQUEST APIError", err)
 	}
 }
