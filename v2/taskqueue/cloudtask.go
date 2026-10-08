@@ -635,6 +635,11 @@ func addMultiInCloudTasks(ctx context.Context, tasks []*Task, queueName string) 
 				me[ti] = fmt.Errorf("cloud tasks batch create returned nil operation")
 			}
 			any = true
+		} else if !op.Done() {
+			for _, ti := range reqTaskIdx {
+				me[ti] = fmt.Errorf("cloud tasks batch create operation returned done=false")
+			}
+			any = true
 		} else {
 			// BatchCreateTasks executes synchronously on the Cloud Tasks backend;
 			// the returned Operation is already completed with its response and
@@ -718,6 +723,13 @@ func deleteMultiInCloudTasks(ctx context.Context, tasks []*Task, queueName strin
 		return me
 	}
 	if op != nil {
+		if !op.Done() {
+			err := fmt.Errorf("cloud tasks batch delete operation returned done=false")
+			for i := range tasks {
+				me[i] = err
+			}
+			return me
+		}
 		// BatchDeleteTasks executes synchronously on the Cloud Tasks backend;
 		// the returned Operation is already completed with its metadata
 		// populated in memory.
