@@ -56,7 +56,7 @@ func TestGetResponseHit(t *testing.T) {
 	})
 	apiItem, err := Get(c, key)
 	if apiItem == nil || apiItem.Key != key || string(apiItem.Value) != value {
-		t.Errorf("got %q, %q want {%q,%q}, nil", apiItem, err, key, value)
+		t.Errorf("got %v, %v want {%q,%q}, nil", apiItem, err, key, value)
 	}
 }
 
@@ -301,7 +301,7 @@ func TestPeekRequest(t *testing.T) {
 		t.Errorf("got %v want nil", err)
 	}
 	if item == nil || item.Key != key || string(item.Value) != value {
-		t.Errorf("got %q, %q want {%q,%q}, nil", item, err, key, value)
+		t.Errorf("got %v, %v want {%q,%q}, nil", item, err, key, value)
 	}
 	if item.Timestamps.Expiration.Unix() != t1 {
 		t.Errorf("got %d, want %d", item.Timestamps.Expiration.Unix(), t1)

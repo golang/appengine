@@ -282,7 +282,16 @@ var alreadyAddedErrors = map[pb.TaskQueueServiceError_ErrorCode]bool{
 // An empty queue name means that the default queue will be used.
 // Add returns an equivalent Task with defaults filled in, including setting
 // the task's Name field to the chosen name if the original was empty.
+//
+// When APPENGINE_USE_CLOUDTASK_PUSH_QUEUE is enabled and c is in a Datastore
+// transaction, each push task is staged as its own Datastore entity group and
+// sent after the transaction commits, so the transaction must be cross-group
+// (datastore.TransactionOptions{XG: true}) unless it touches no other entity
+// group. At most 5 tasks can be added in one transaction.
 func Add(c context.Context, task *Task, queueName string) (*Task, error) {
+	if useCloudTasks() && task.Method != "PULL" {
+		return addInCloudTasks(c, task, queueName)
+	}
 	req, err := newAddReq(c, task, queueName)
 	if err != nil {
 		return nil, err
@@ -308,7 +317,21 @@ func Add(c context.Context, task *Task, queueName string) (*Task, error) {
 // AddMulti returns a slice of equivalent tasks with defaults filled in, including setting
 // each task's Name field to the chosen name if the original was empty.
 // If a given task is badly formed or could not be added, an appengine.MultiError is returned.
+//
+// When APPENGINE_USE_CLOUDTASK_PUSH_QUEUE is enabled and c is in a Datastore
+// transaction, each push task is staged as its own Datastore entity group and
+// sent after the transaction commits, so the transaction must be cross-group
+// (datastore.TransactionOptions{XG: true}) unless it touches no other entity
+// group. At most 5 tasks can be added in one transaction.
 func AddMulti(c context.Context, tasks []*Task, queueName string) ([]*Task, error) {
+	if useCloudTasks() {
+		if len(tasks) == 0 {
+			return []*Task{}, nil
+		}
+		if tasks[0].Method != "PULL" {
+			return addMultiInCloudTasks(c, tasks, queueName)
+		}
+	}
 	req := &pb.TaskQueueBulkAddRequest{
 		AddRequest: make([]*pb.TaskQueueAddRequest, len(tasks)),
 	}
@@ -367,6 +390,14 @@ func Delete(c context.Context, task *Task, queueName string) error {
 // Each task is deleted independently; one may fail to delete while the others
 // are successfully deleted.
 func DeleteMulti(c context.Context, tasks []*Task, queueName string) error {
+	if useCloudTasks() {
+		if len(tasks) == 0 {
+			return nil
+		}
+		if tasks[0].Method != "PULL" {
+			return deleteMultiInCloudTasks(c, tasks, queueName)
+		}
+	}
 	taskNames := make([][]byte, len(tasks))
 	for i, t := range tasks {
 		taskNames[i] = []byte(t.Name)
@@ -490,6 +521,9 @@ type QueueStatistics struct {
 
 // QueueStats retrieves statistics about queues.
 func QueueStats(c context.Context, queueNames []string) ([]QueueStatistics, error) {
+	if useCloudTasks() {
+		return queueStatsInCloudTasks(c, queueNames)
+	}
 	req := &pb.TaskQueueFetchQueueStatsRequest{
 		QueueName: make([][]byte, len(queueNames)),
 	}
