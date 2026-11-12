@@ -181,8 +181,8 @@ func (s structFLS) Load(fields []Field, meta *DocumentMetadata) error {
 					FacetName:  facet.Name,
 					Reason:     fmt.Sprintf("type mismatch: %v for %d data", ft, vt),
 				}
-				continue
 			}
+			continue
 		}
 		f.Set(v)
 	}

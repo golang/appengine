@@ -114,6 +114,21 @@ func TestLoadingStruct(t *testing.T) {
 			}{Set: Atom("yes")},
 			wantErr: true,
 		},
+		{
+			// A type-mismatched facet must be skipped, not assigned, even when a
+			// previous facet already recorded an error. Before the fix the skip
+			// only happened for the first error, so this assigned an Atom to a
+			// float64 field and panicked.
+			desc: "Type-mismatched facet after a prior error",
+			meta: &DocumentMetadata{Facets: []Facet{
+				{Name: "Missing", Value: Atom("x")},
+				{Name: "Legs", Value: Atom("four")},
+			}},
+			want: &struct {
+				Legs float64 `search:",facet"`
+			}{},
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range testCases {
