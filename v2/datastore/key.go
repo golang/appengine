@@ -87,25 +87,38 @@ func (k *Key) Incomplete() bool {
 	return k.stringID == "" && k.intID == 0
 }
 
+// validLeaf returns whether k is valid, assuming its ancestors have already
+// been checked. Building a key one element at a time and calling valid after
+// each one costs O(depth^2), since valid rewalks the whole ancestor chain.
+func (k *Key) validLeaf() bool {
+	if k == nil {
+		return false
+	}
+	if k.kind == "" || k.appID == "" {
+		return false
+	}
+	if k.stringID != "" && k.intID != 0 {
+		return false
+	}
+	if k.parent != nil {
+		if k.parent.Incomplete() {
+			return false
+		}
+		if k.parent.appID != k.appID || k.parent.namespace != k.namespace {
+			return false
+		}
+	}
+	return true
+}
+
 // valid returns whether the key is valid.
 func (k *Key) valid() bool {
 	if k == nil {
 		return false
 	}
 	for ; k != nil; k = k.parent {
-		if k.kind == "" || k.appID == "" {
+		if !k.validLeaf() {
 			return false
-		}
-		if k.stringID != "" && k.intID != 0 {
-			return false
-		}
-		if k.parent != nil {
-			if k.parent.Incomplete() {
-				return false
-			}
-			if k.parent.appID != k.appID || k.parent.namespace != k.namespace {
-				return false
-			}
 		}
 	}
 	return true

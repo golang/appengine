@@ -10,6 +10,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"google.golang.org/appengine/internal"
 )
@@ -187,6 +188,32 @@ func TestIncompleteKeyWithParent(t *testing.T) {
 	}
 	if !robert.valid() {
 		t.Errorf("robert is invalid: %v", robert)
+	}
+}
+
+func TestDecodeDeepKey(t *testing.T) {
+	c := internal.WithAppIDOverride(context.Background(), "s~some-app")
+
+	// Decoding should cost time linear in the depth of the path. Checking each
+	// path element against the whole chain it was built on made it quadratic:
+	// this key took 48s to decode before, and 43ms after.
+	const n = 32000
+	var k *Key
+	for i := 1; i <= n; i++ {
+		k = NewKey(c, "Person", "", int64(i), k)
+	}
+	encoded := k.Encode()
+
+	start := time.Now()
+	k2, err := DecodeKey(encoded)
+	if err != nil {
+		t.Fatalf("failed decoding key: %v", err)
+	}
+	if d := time.Since(start); d > 10*time.Second {
+		t.Errorf("decoding a %d element key (%d bytes) took %v", n, len(encoded), d)
+	}
+	if !k2.Equal(k) {
+		t.Errorf("decoded key does not match the %d element key it was encoded from", n)
 	}
 }
 

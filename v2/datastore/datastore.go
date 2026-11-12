@@ -57,7 +57,7 @@ func protoToKey(r *pb.Reference) (k *Key, err error) {
 			appID:     appID,
 			namespace: namespace,
 		}
-		if !k.valid() {
+		if !k.validLeaf() {
 			return k, ErrInvalidKey
 		}
 	}
@@ -150,7 +150,7 @@ func referenceValueToKey(r *pb.PropertyValue_ReferenceValue) (k *Key, err error)
 			appID:     appID,
 			namespace: namespace,
 		}
-		if !k.valid() {
+		if !k.validLeaf() {
 			return nil, ErrInvalidKey
 		}
 	}
