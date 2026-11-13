@@ -216,6 +216,7 @@ func TestRunningFunction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed making http.Request: %v", err)
 	}
+	req.Header.Set("X-AppEngine-QueueName", "default")
 	rw := httptest.NewRecorder()
 	runFunc(c.ctx, rw, req)
 
@@ -248,6 +249,7 @@ func TestCustomType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed making http.Request: %v", err)
 	}
+	req.Header.Set("X-AppEngine-QueueName", "default")
 	rw := httptest.NewRecorder()
 	runFunc(c.ctx, rw, req)
 
@@ -265,6 +267,7 @@ func TestCustomType(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed making http.Request: %v", err)
 	}
+	req.Header.Set("X-AppEngine-QueueName", "default")
 	rw = httptest.NewRecorder()
 	runFunc(c.ctx, rw, req)
 
@@ -294,6 +297,7 @@ func TestRunningVariadic(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed making http.Request: %v", err)
 	}
+	req.Header.Set("X-AppEngine-QueueName", "default")
 	rw := httptest.NewRecorder()
 	runFunc(c.ctx, rw, req)
 
@@ -325,6 +329,7 @@ func TestErrorFunction(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed making http.Request: %v", err)
 		}
+		req.Header.Set("X-AppEngine-QueueName", "default")
 		rw := httptest.NewRecorder()
 		runFunc(c.ctx, rw, req)
 	}
@@ -333,6 +338,7 @@ func TestErrorFunction(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Failed making http.Request: %v", err)
 		}
+		req.Header.Set("X-AppEngine-QueueName", "default")
 		rw := httptest.NewRecorder()
 		runFunc(c.ctx, rw, req)
 		if rw.Code != http.StatusInternalServerError {
@@ -379,6 +385,7 @@ func TestDuplicateFunction(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed making http.Request: %v", err)
 	}
+	req.Header.Set("X-AppEngine-QueueName", "default")
 	rw := httptest.NewRecorder()
 	runFunc(c.ctx, rw, req)
 
@@ -420,6 +427,7 @@ func TestGetRequestHeadersFromContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed making http.Request: %v", err)
 	}
+	req.Header.Set("X-AppEngine-QueueName", "default")
 	rw := httptest.NewRecorder()
 	runFunc(c.ctx, rw, req)
 
@@ -456,6 +464,7 @@ func TestStandardContext(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed making http.Request: %v", err)
 	}
+	req.Header.Set("X-AppEngine-QueueName", "default")
 	rw := httptest.NewRecorder()
 	runFunc(c.ctx, rw, req)
 
@@ -554,5 +563,33 @@ func TestFileKey(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("Call %v, file %q: got %q, want %q", i, tc.file, got, tc.want)
 		}
+	}
+}
+
+func TestRunFuncRequiresQueueHeader(t *testing.T) {
+	c := newFakeContext()
+	// Fake out the adding of a task.
+	var task *taskqueue.Task
+	taskqueueAdder = func(_ context.Context, tk *taskqueue.Task, queue string) (*taskqueue.Task, error) {
+		task = tk
+		return tk, nil
+	}
+
+	regFuncRuns, regFuncMsg = 0, "" // reset state
+	regFunc.Call(c.ctx, "forged")
+
+	// A request that did not come from the Task Queue service.
+	req, err := http.NewRequest("POST", path, bytes.NewBuffer(task.Payload))
+	if err != nil {
+		t.Fatalf("Failed making http.Request: %v", err)
+	}
+	rw := httptest.NewRecorder()
+	runFunc(c.ctx, rw, req)
+
+	if regFuncRuns != 0 {
+		t.Errorf("regFuncRuns: got %d, want 0", regFuncRuns)
+	}
+	if rw.Code != http.StatusForbidden {
+		t.Errorf("response code: got %d, want %d", rw.Code, http.StatusForbidden)
 	}
 }

@@ -324,6 +324,16 @@ func init() {
 func runFunc(c context.Context, w http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 
+	// App Engine strips X-AppEngine-* headers from external requests, so
+	// their absence means the request did not come from the Task Queue
+	// service and must not be allowed to invoke a registered function.
+	if req.Header.Get("X-AppEngine-QueueName") == "" {
+		log.Errorf(c, "delay: request is missing the X-AppEngine-QueueName header")
+		log.Warningf(c, "delay: dropping task")
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
 	c = context.WithValue(c, headersContextKey, taskqueue.ParseRequestHeaders(req.Header))
 
 	var inv invocation
