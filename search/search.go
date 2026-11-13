@@ -182,7 +182,11 @@ func (x *Index) PutMulti(c context.Context, ids []string, srcs []interface{}) ([
 	if err := internal.Call(c, "search", "IndexDocument", req, res); err != nil {
 		return nil, err
 	}
-	multiErr, hasErr := make(appengine.MultiError, len(res.Status)), false
+	if len(res.Status) != len(docs) {
+		return nil, fmt.Errorf("search: internal error: wrong number of results (%d Statuses, expected %d)",
+			len(res.Status), len(docs))
+	}
+	multiErr, hasErr := make(appengine.MultiError, len(docs)), false
 	for i, s := range res.Status {
 		if s.GetCode() != pb.SearchServiceError_OK {
 			multiErr[i] = fmt.Errorf("search: %s: %s", s.GetCode(), s.GetErrorDetail())
@@ -193,9 +197,9 @@ func (x *Index) PutMulti(c context.Context, ids []string, srcs []interface{}) ([
 		return res.DocId, multiErr
 	}
 
-	if len(res.Status) != len(docs) || len(res.DocId) != len(docs) {
-		return nil, fmt.Errorf("search: internal error: wrong number of results (%d Statuses, %d DocIDs, expected %d)",
-			len(res.Status), len(res.DocId), len(docs))
+	if len(res.DocId) != len(docs) {
+		return nil, fmt.Errorf("search: internal error: wrong number of results (%d DocIDs, expected %d)",
+			len(res.DocId), len(docs))
 	}
 	return res.DocId, nil
 }

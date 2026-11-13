@@ -685,6 +685,35 @@ func TestPutMultiError(t *testing.T) {
 	}
 }
 
+func TestPutMultiShortStatus(t *testing.T) {
+	index, err := Open("Doc")
+	if err != nil {
+		t.Fatalf("err from Open: %v", err)
+	}
+
+	// The service returns fewer statuses than the number of documents sent,
+	// including a non-OK one. The returned MultiError must stay the same
+	// length as srcs so its indices keep corresponding to the input
+	// documents, so a short response is an internal error rather than a
+	// MultiError that silently drops or misattributes per-document results.
+	c := aetesting.FakeSingleContext(t, "search", "IndexDocument", func(in *pb.IndexDocumentRequest, out *pb.IndexDocumentResponse) error {
+		*out = pb.IndexDocumentResponse{
+			Status: []*pb.RequestStatus{
+				{Code: pb.SearchServiceError_INVALID_REQUEST.Enum(), ErrorDetail: proto.String("foo")},
+			},
+		}
+		return nil
+	})
+
+	_, err = index.PutMulti(c, nil, []interface{}{&searchFields, &searchFields, &searchFields})
+	if err == nil {
+		t.Fatal("got nil, want error")
+	}
+	if merr, ok := err.(appengine.MultiError); ok {
+		t.Fatalf("got MultiError of length %d for 3 documents, want a single internal error", len(merr))
+	}
+}
+
 func TestPutMultiWrongNumberOfIDs(t *testing.T) {
 	index, err := Open("Doc")
 	if err != nil {
