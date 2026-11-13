@@ -7,6 +7,7 @@ package search
 import (
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -1266,5 +1267,35 @@ func TestDeleteMultiError(t *testing.T) {
 		t.Fatalf("got %v, want nil MultiError[0]", err.(appengine.MultiError)[0])
 	case err.(appengine.MultiError)[1] == nil:
 		t.Fatalf("got nil, want not-nill MultiError[1]")
+	}
+}
+
+func TestProtoToRange(t *testing.T) {
+	testCases := []struct {
+		desc string
+		rng  *pb.FacetRefinement_Range
+		want Range
+	}{
+		{
+			desc: "both bounds finite",
+			rng:  &pb.FacetRefinement_Range{Start: proto.String("1.5e+00"), End: proto.String("3e+00")},
+			want: Range{Start: 1.5, End: 3},
+		},
+		{
+			desc: "no lower bound",
+			rng:  &pb.FacetRefinement_Range{End: proto.String("3e+00")},
+			want: Range{Start: math.Inf(-1), End: 3},
+		},
+		{
+			desc: "no upper bound",
+			rng:  &pb.FacetRefinement_Range{Start: proto.String("1.5e+00")},
+			want: Range{Start: 1.5, End: math.Inf(1)},
+		},
+	}
+	for _, tc := range testCases {
+		got := protoToRange(tc.rng)
+		if got != tc.want {
+			t.Errorf("%s: protoToRange(%v) = %v, want %v", tc.desc, tc.rng, got, tc.want)
+		}
 	}
 }

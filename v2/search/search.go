@@ -768,10 +768,10 @@ func rangeToProto(r Range) (*pb.FacetRange, error) {
 
 func protoToRange(rng *pb.FacetRefinement_Range) Range {
 	r := Range{Start: negInf, End: posInf}
-	if x, err := strconv.ParseFloat(rng.GetStart(), 64); err != nil {
+	if x, err := strconv.ParseFloat(rng.GetStart(), 64); err == nil {
 		r.Start = x
 	}
-	if x, err := strconv.ParseFloat(rng.GetEnd(), 64); err != nil {
+	if x, err := strconv.ParseFloat(rng.GetEnd(), 64); err == nil {
 		r.End = x
 	}
 	return r
