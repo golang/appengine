@@ -252,6 +252,10 @@ func Get(c context.Context, key *Key, dst interface{}) error {
 // As a special case, PropertyList is an invalid type for dst, even though a
 // PropertyList is a slice of structs. It is treated as invalid to avoid being
 // mistakenly passed when []PropertyList was intended.
+//
+// If any entity cannot be retrieved, GetMulti returns a MultiError. However,
+// successfully retrieved entities are still loaded into the corresponding dst elements,
+// even if a MultiError is returned.
 func GetMulti(c context.Context, key []*Key, dst interface{}) error {
 	v := reflect.ValueOf(dst)
 	multiArgType, _ := checkMultiArg(v)
